@@ -41,7 +41,11 @@ export default function AuthPage() {
   // We use a useEffect to avoid React Router error of updating during render
   useEffect(() => {
     if (user && !isLoading) {
-      navigate("/");
+      // Add a small delay to ensure all state updates have completed
+      const timer = setTimeout(() => {
+        navigate("/");
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [user, isLoading, navigate]);
 
