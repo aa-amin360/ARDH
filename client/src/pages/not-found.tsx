@@ -1,5 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { AlertCircle, Home, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 export default function NotFound() {
   return (
@@ -11,10 +13,24 @@ export default function NotFound() {
             <h1 className="text-2xl font-bold text-gray-900">404 Page Not Found</h1>
           </div>
 
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
+          <p className="mt-4 text-gray-600">
+            The page you're looking for doesn't exist or has been moved.
           </p>
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <Link href="/">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Home size={16} />
+              Go Home
+            </Button>
+          </Link>
+          <Link href="/auth">
+            <Button className="flex items-center gap-2">
+              <LogIn size={16} />
+              Login / Register
+            </Button>
+          </Link>
+        </CardFooter>
       </Card>
     </div>
   );
