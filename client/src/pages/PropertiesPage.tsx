@@ -73,7 +73,10 @@ export default function PropertiesPage() {
     isError,
     refetch
   } = useQuery<Property[]>({
-    queryKey: ["/api/properties"]
+    queryKey: ["/api/properties"],
+    // Adding retry options and staleTime to improve data fetching reliability
+    retry: 3,
+    staleTime: 60000 // 1 minute
   });
 
   // Create property mutation
