@@ -1,13 +1,9 @@
 import express, { Request, Response, type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import session from "express-session";
-import memorystore from "memorystore";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
 import { z } from "zod";
+import { setupAuth } from "./auth";
 import {
-  loginSchema,
   insertUserSchema,
   insertPropertySchema,
   insertIncomeSchema,
@@ -16,59 +12,9 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Configure session middleware
-  const MemoryStore = memorystore(session);
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'keyboard cat',
-    resave: false,
-    saveUninitialized: false,
-    store: new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
-    }),
-    cookie: { 
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  }));
-  
-  // Set up passport
-  app.use(passport.initialize());
-  app.use(passport.session());
-  
-  // Configure passport to use a local strategy
-  passport.use(new LocalStrategy(async (username, password, done) => {
-    try {
-      const user = await storage.getUserByUsername(username);
-      
-      if (!user) {
-        return done(null, false, { message: 'Incorrect username.' });
-      }
-      
-      // In a production app, we'd use bcrypt to hash and compare passwords
-      if (user.password !== password) {
-        return done(null, false, { message: 'Incorrect password.' });
-      }
-      
-      return done(null, user);
-    } catch (err) {
-      return done(err);
-    }
-  }));
-  
-  // Tell passport how to serialize/deserialize the user
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-  
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
-  
+  // Set up authentication
+  setupAuth(app);
+
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
     if (req.isAuthenticated()) {
@@ -84,57 +30,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     return res.status(403).json({ message: 'Forbidden. Admin access required.' });
   };
-  
-  // Auth routes
-  app.post('/api/auth/login', (req, res, next) => {
-    try {
-      loginSchema.parse(req.body);
-      
-      passport.authenticate('local', (err: any, user: any, info: any) => {
-        if (err) {
-          return next(err);
-        }
-        if (!user) {
-          return res.status(401).json({ message: info.message });
-        }
-        req.login(user, (err) => {
-          if (err) {
-            return next(err);
-          }
-          return res.json({
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role,
-            email: user.email
-          });
-        });
-      })(req, res, next);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      next(error);
-    }
-  });
-  
-  app.post('/api/auth/logout', (req, res) => {
-    req.logout((err) => {
-      if (err) return res.status(500).json({ message: 'Logout failed' });
-      res.json({ message: 'Logged out successfully' });
-    });
-  });
-  
-  app.get('/api/auth/me', isAuthenticated, (req, res) => {
-    const user = req.user as any;
-    res.json({
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      role: user.role,
-      email: user.email
-    });
-  });
   
   // User routes (admin only)
   app.get('/api/users', isAdmin, async (req, res, next) => {
