@@ -1,14 +1,25 @@
 import {
-  User, InsertUser, users,
-  Property, InsertProperty, properties,
-  Income, InsertIncome, incomes,
-  Expense, InsertExpense, expenses,
-  WaterTank, InsertWaterTank, waterTanks,
-  IncomeSummary, ExpenseSummary, PropertySummary
+  User,
+  InsertUser,
+  Property,
+  InsertProperty,
+  Income,
+  InsertIncome,
+  Expense,
+  InsertExpense,
+  WaterTank,
+  InsertWaterTank,
+  IncomeSummary,
+  ExpenseSummary,
+  PropertySummary,
+  users,
+  properties,
+  incomes,
+  expenses,
+  waterTanks
 } from "@shared/schema";
-import { db } from "./db";
-import { and, asc, count, desc, eq, gt, gte, lt, lte, sql, sum } from "drizzle-orm";
-import { pool } from "./db";
+import { eq, desc, sql, count } from "drizzle-orm";
+import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
