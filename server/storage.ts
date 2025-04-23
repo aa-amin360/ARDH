@@ -1,0 +1,527 @@
+import {
+  User,
+  InsertUser,
+  Property,
+  InsertProperty,
+  Income,
+  InsertIncome,
+  Expense,
+  InsertExpense,
+  WaterTank,
+  InsertWaterTank,
+  IncomeSummary,
+  ExpenseSummary,
+  PropertySummary
+} from "@shared/schema";
+
+// modify the interface with any CRUD methods
+// you might need
+export interface IStorage {
+  // User management
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  getUsers(): Promise<User[]>;
+  
+  // Properties
+  getProperty(id: number): Promise<Property | undefined>;
+  getProperties(): Promise<Property[]>;
+  createProperty(property: InsertProperty): Promise<Property>;
+  updateProperty(id: number, property: Partial<InsertProperty>): Promise<Property | undefined>;
+  deleteProperty(id: number): Promise<boolean>;
+  
+  // Income
+  getIncome(id: number): Promise<Income | undefined>;
+  getIncomes(): Promise<Income[]>;
+  createIncome(income: InsertIncome): Promise<Income>;
+  updateIncome(id: number, income: Partial<InsertIncome>): Promise<Income | undefined>;
+  deleteIncome(id: number): Promise<boolean>;
+  
+  // Expense
+  getExpense(id: number): Promise<Expense | undefined>;
+  getExpenses(): Promise<Expense[]>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+  
+  // Water Tank
+  getWaterTank(id: number): Promise<WaterTank | undefined>;
+  getWaterTanks(): Promise<WaterTank[]>;
+  createWaterTank(waterTank: InsertWaterTank): Promise<WaterTank>;
+  updateWaterTank(id: number, waterTank: Partial<InsertWaterTank>): Promise<WaterTank | undefined>;
+  deleteWaterTank(id: number): Promise<boolean>;
+  
+  // Summary/Dashboard data
+  getIncomeSummary(): Promise<IncomeSummary>;
+  getExpenseSummary(): Promise<ExpenseSummary>;
+  getPropertySummary(): Promise<PropertySummary>;
+  getRecentTransactions(limit: number): Promise<(Income | Expense)[]>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<number, User>;
+  private properties: Map<number, Property>;
+  private incomes: Map<number, Income>;
+  private expenses: Map<number, Expense>;
+  private waterTanks: Map<number, WaterTank>;
+  
+  private userCounter: number;
+  private propertyCounter: number;
+  private incomeCounter: number;
+  private expenseCounter: number;
+  private waterTankCounter: number;
+
+  constructor() {
+    this.users = new Map();
+    this.properties = new Map();
+    this.incomes = new Map();
+    this.expenses = new Map();
+    this.waterTanks = new Map();
+    
+    this.userCounter = 1;
+    this.propertyCounter = 1;
+    this.incomeCounter = 1;
+    this.expenseCounter = 1;
+    this.waterTankCounter = 1;
+    
+    this.seedData();
+  }
+
+  // Seed some initial data
+  private seedData() {
+    // Create admin user
+    const adminUser: InsertUser = {
+      username: "admin",
+      password: "admin123", // In a real app, this would be hashed
+      role: "admin",
+      name: "Admin User",
+      email: "admin@example.com"
+    };
+    this.createUser(adminUser);
+    
+    // Create data entry user
+    const dataEntryUser: InsertUser = {
+      username: "dataentry",
+      password: "data123", // In a real app, this would be hashed
+      role: "data_entry",
+      name: "Data Entry User",
+      email: "data@example.com"
+    };
+    this.createUser(dataEntryUser);
+    
+    // Create sample properties
+    const propertyTypes: ("1BHK" | "2BHK" | "3BHK" | "penthouse")[] = ["1BHK", "2BHK", "3BHK", "penthouse"];
+    const maintenanceFees = { "1BHK": 1000, "2BHK": 1500, "3BHK": 2000, "penthouse": 3000 };
+    const rents = { "1BHK": 25000, "2BHK": 35000, "3BHK": 50000, "penthouse": 80000 };
+    
+    // Create 9 1BHK flats
+    for (let i = 101; i <= 109; i++) {
+      this.createProperty({
+        flatNumber: i.toString(),
+        flatType: "1BHK",
+        ownerName: `Owner ${i}`,
+        expectedRent: rents["1BHK"],
+        maintenanceFee: maintenanceFees["1BHK"],
+        isRented: i !== 109, // One vacant flat
+        currentTenant: i !== 109 ? `Tenant ${i}` : undefined,
+        floorArea: 600,
+        notes: `1BHK flat ${i}`
+      });
+    }
+    
+    // Create 9 2BHK flats
+    for (let i = 201; i <= 209; i++) {
+      this.createProperty({
+        flatNumber: i.toString(),
+        flatType: "2BHK",
+        ownerName: `Owner ${i}`,
+        expectedRent: rents["2BHK"],
+        maintenanceFee: maintenanceFees["2BHK"],
+        isRented: true,
+        currentTenant: `Tenant ${i}`,
+        floorArea: 950,
+        notes: `2BHK flat ${i}`
+      });
+    }
+    
+    // Create 1 3BHK flat
+    this.createProperty({
+      flatNumber: "301",
+      flatType: "3BHK",
+      ownerName: "Owner 301",
+      expectedRent: rents["3BHK"],
+      maintenanceFee: maintenanceFees["3BHK"],
+      isRented: false,
+      floorArea: 1500,
+      notes: "3BHK flat 301"
+    });
+    
+    // Create 1 penthouse
+    this.createProperty({
+      flatNumber: "401",
+      flatType: "penthouse",
+      ownerName: "Owner 401",
+      expectedRent: rents["penthouse"],
+      maintenanceFee: maintenanceFees["penthouse"],
+      isRented: false,
+      floorArea: 2500,
+      notes: "Penthouse 401"
+    });
+    
+    // Create sample incomes (rent payments for last few months)
+    const months = [4, 5, 6]; // Apr, May, Jun
+    const properties = Array.from(this.properties.values());
+    const rentedProperties = properties.filter(p => p.isRented);
+    
+    months.forEach(month => {
+      // Rent incomes
+      rentedProperties.forEach(property => {
+        this.createIncome({
+          date: new Date(2023, month - 1, 15),
+          amount: property.expectedRent,
+          type: "rent",
+          description: `Rent received for ${property.flatNumber}`,
+          propertyId: property.id,
+          receivedFrom: "Nestaway",
+          createdBy: 1 // Admin user
+        });
+      });
+      
+      // Maintenance incomes
+      properties.forEach(property => {
+        this.createIncome({
+          date: new Date(2023, month - 1, 10),
+          amount: property.maintenanceFee,
+          type: "maintenance",
+          description: `Maintenance fee for ${property.flatNumber}`,
+          propertyId: property.id,
+          receivedFrom: "Nestaway",
+          createdBy: 1 // Admin user
+        });
+      });
+    });
+    
+    // Create sample expenses
+    const expenseCategories: any = [
+      { category: "electricity", amount: 9500, description: "Common area electricity" },
+      { category: "generator_fuel", amount: 5000, description: "Generator diesel" },
+      { category: "cctv_maintenance", amount: 3500, description: "CCTV maintenance" },
+      { category: "internet", amount: 2500, description: "Common area internet" },
+      { category: "elevator_maintenance", amount: 12000, description: "Elevator maintenance" },
+      { category: "general_building_maintenance", amount: 15000, description: "General building repairs" },
+      { category: "water_tank", amount: 8000, description: "Water tank clean-up" },
+      { category: "drainage_cleaning", amount: 5000, description: "Drainage cleaning" },
+      { category: "misc", amount: 7500, description: "Miscellaneous expenses" }
+    ];
+    
+    months.forEach(month => {
+      expenseCategories.forEach(({ category, amount, description }) => {
+        this.createExpense({
+          date: new Date(2023, month - 1, Math.floor(Math.random() * 28) + 1),
+          amount,
+          category,
+          description: `${description} - ${month}/2023`,
+          vendor: "Local vendor",
+          createdBy: 1 // Admin user
+        });
+      });
+    });
+    
+    // Create water tank deliveries
+    const waterTankDeliveries = [
+      { date: new Date(2023, 5, 5), liters: 5000, cost: 3200 },
+      { date: new Date(2023, 5, 15), liters: 5000, cost: 3200 },
+      { date: new Date(2023, 5, 25), liters: 5000, cost: 3200 },
+      { date: new Date(2023, 4, 5), liters: 5000, cost: 3200 },
+      { date: new Date(2023, 4, 15), liters: 5000, cost: 3200 },
+      { date: new Date(2023, 4, 25), liters: 5000, cost: 3200 }
+    ];
+    
+    waterTankDeliveries.forEach(({ date, liters, cost }) => {
+      this.createWaterTank({
+        date,
+        liters,
+        tankerNumber: `TN-${Math.floor(1000 + Math.random() * 9000)}`,
+        personInCharge: "Building Manager",
+        cost,
+        createdBy: 1 // Admin user
+      });
+    });
+  }
+
+  // User management
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userCounter++;
+    const now = new Date();
+    const user: User = { ...insertUser, id, createdAt: now };
+    this.users.set(id, user);
+    return user;
+  }
+  
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+  
+  // Properties
+  async getProperty(id: number): Promise<Property | undefined> {
+    return this.properties.get(id);
+  }
+  
+  async getProperties(): Promise<Property[]> {
+    return Array.from(this.properties.values());
+  }
+  
+  async createProperty(insertProperty: InsertProperty): Promise<Property> {
+    const id = this.propertyCounter++;
+    const now = new Date();
+    const property: Property = { 
+      ...insertProperty, 
+      id, 
+      createdAt: now,
+      updatedAt: now
+    };
+    this.properties.set(id, property);
+    return property;
+  }
+  
+  async updateProperty(id: number, updates: Partial<InsertProperty>): Promise<Property | undefined> {
+    const property = this.properties.get(id);
+    if (!property) return undefined;
+    
+    const updatedProperty = { 
+      ...property, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.properties.set(id, updatedProperty);
+    return updatedProperty;
+  }
+  
+  async deleteProperty(id: number): Promise<boolean> {
+    return this.properties.delete(id);
+  }
+  
+  // Income
+  async getIncome(id: number): Promise<Income | undefined> {
+    return this.incomes.get(id);
+  }
+  
+  async getIncomes(): Promise<Income[]> {
+    return Array.from(this.incomes.values());
+  }
+  
+  async createIncome(insertIncome: InsertIncome): Promise<Income> {
+    const id = this.incomeCounter++;
+    const now = new Date();
+    const income: Income = { ...insertIncome, id, createdAt: now };
+    this.incomes.set(id, income);
+    return income;
+  }
+  
+  async updateIncome(id: number, updates: Partial<InsertIncome>): Promise<Income | undefined> {
+    const income = this.incomes.get(id);
+    if (!income) return undefined;
+    
+    const updatedIncome = { ...income, ...updates };
+    this.incomes.set(id, updatedIncome);
+    return updatedIncome;
+  }
+  
+  async deleteIncome(id: number): Promise<boolean> {
+    return this.incomes.delete(id);
+  }
+  
+  // Expenses
+  async getExpense(id: number): Promise<Expense | undefined> {
+    return this.expenses.get(id);
+  }
+  
+  async getExpenses(): Promise<Expense[]> {
+    return Array.from(this.expenses.values());
+  }
+  
+  async createExpense(insertExpense: InsertExpense): Promise<Expense> {
+    const id = this.expenseCounter++;
+    const now = new Date();
+    const expense: Expense = { ...insertExpense, id, createdAt: now };
+    this.expenses.set(id, expense);
+    return expense;
+  }
+  
+  async updateExpense(id: number, updates: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const expense = this.expenses.get(id);
+    if (!expense) return undefined;
+    
+    const updatedExpense = { ...expense, ...updates };
+    this.expenses.set(id, updatedExpense);
+    return updatedExpense;
+  }
+  
+  async deleteExpense(id: number): Promise<boolean> {
+    return this.expenses.delete(id);
+  }
+  
+  // Water Tank
+  async getWaterTank(id: number): Promise<WaterTank | undefined> {
+    return this.waterTanks.get(id);
+  }
+  
+  async getWaterTanks(): Promise<WaterTank[]> {
+    return Array.from(this.waterTanks.values());
+  }
+  
+  async createWaterTank(insertWaterTank: InsertWaterTank): Promise<WaterTank> {
+    const id = this.waterTankCounter++;
+    const now = new Date();
+    const waterTank: WaterTank = { ...insertWaterTank, id, createdAt: now };
+    this.waterTanks.set(id, waterTank);
+    return waterTank;
+  }
+  
+  async updateWaterTank(id: number, updates: Partial<InsertWaterTank>): Promise<WaterTank | undefined> {
+    const waterTank = this.waterTanks.get(id);
+    if (!waterTank) return undefined;
+    
+    const updatedWaterTank = { ...waterTank, ...updates };
+    this.waterTanks.set(id, updatedWaterTank);
+    return updatedWaterTank;
+  }
+  
+  async deleteWaterTank(id: number): Promise<boolean> {
+    return this.waterTanks.delete(id);
+  }
+  
+  // Dashboard data
+  async getIncomeSummary(): Promise<IncomeSummary> {
+    const incomes = Array.from(this.incomes.values());
+    const total = incomes.reduce((sum, income) => sum + income.amount, 0);
+    
+    // Group by type
+    const byType = this.groupBy(incomes, 'type').map(([type, items]) => ({
+      type,
+      amount: items.reduce((sum, income) => sum + income.amount, 0)
+    }));
+    
+    // Group by month
+    const byMonth = this.groupByMonth(incomes).map(([month, items]) => ({
+      month,
+      amount: items.reduce((sum, income) => sum + income.amount, 0)
+    }));
+    
+    return { total, byType, byMonth };
+  }
+  
+  async getExpenseSummary(): Promise<ExpenseSummary> {
+    const expenses = Array.from(this.expenses.values());
+    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    // Group by category
+    const byCategory = this.groupBy(expenses, 'category').map(([category, items]) => ({
+      category,
+      amount: items.reduce((sum, expense) => sum + expense.amount, 0)
+    }));
+    
+    // Group by month
+    const byMonth = this.groupByMonth(expenses).map(([month, items]) => ({
+      month,
+      amount: items.reduce((sum, expense) => sum + expense.amount, 0)
+    }));
+    
+    return { total, byCategory, byMonth };
+  }
+  
+  async getPropertySummary(): Promise<PropertySummary> {
+    const properties = Array.from(this.properties.values());
+    const total = properties.length;
+    
+    // Group by type
+    const byType = this.groupBy(properties, 'flatType').map(([type, items]) => ({
+      type,
+      count: items.length
+    }));
+    
+    // Calculate occupancy rate
+    const rentedCount = properties.filter(p => p.isRented).length;
+    const occupancyRate = (rentedCount / total) * 100;
+    
+    // Calculate total monthly rent (expected from Nestaway)
+    const totalMonthlyRent = properties
+      .filter(p => p.isRented)
+      .reduce((sum, property) => sum + property.expectedRent, 0);
+    
+    // Calculate total maintenance collection
+    const totalMaintenanceCollection = properties.reduce(
+      (sum, property) => sum + property.maintenanceFee, 
+      0
+    );
+    
+    return { 
+      total, 
+      byType, 
+      occupancyRate, 
+      totalMonthlyRent, 
+      totalMaintenanceCollection 
+    };
+  }
+  
+  async getRecentTransactions(limit: number): Promise<(Income | Expense)[]> {
+    const incomes = Array.from(this.incomes.values()).map(income => ({
+      ...income,
+      transactionType: 'income' as const
+    }));
+    
+    const expenses = Array.from(this.expenses.values()).map(expense => ({
+      ...expense,
+      transactionType: 'expense' as const
+    }));
+    
+    const allTransactions = [...incomes, ...expenses];
+    
+    // Sort by date (most recent first)
+    allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    return allTransactions.slice(0, limit);
+  }
+  
+  // Helper methods
+  private groupBy<T>(items: T[], key: keyof T): [string, T[]][] {
+    const groups = new Map<string, T[]>();
+    
+    items.forEach(item => {
+      const value = String(item[key]);
+      if (!groups.has(value)) {
+        groups.set(value, []);
+      }
+      groups.get(value)!.push(item);
+    });
+    
+    return Array.from(groups.entries());
+  }
+  
+  private groupByMonth<T extends { date: Date }>(items: T[]): [string, T[]][] {
+    const groups = new Map<string, T[]>();
+    
+    items.forEach(item => {
+      const date = new Date(item.date);
+      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!groups.has(month)) {
+        groups.set(month, []);
+      }
+      groups.get(month)!.push(item);
+    });
+    
+    return Array.from(groups.entries());
+  }
+}
+
+export const storage = new MemStorage();
