@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route, RouteComponentProps } from "wouter";
+import AppLayout from "@/components/layout/AppLayout";
 
 interface ProtectedRouteProps {
   path: string;
@@ -15,7 +16,7 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
       <Route path={path}>
         {() => (
           <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-8 w-8 animate-spin text-border" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
       </Route>
@@ -32,7 +33,11 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
 
   return (
     <Route path={path}>
-      {(params) => <Component {...params} />}
+      {(params) => (
+        <AppLayout>
+          <Component {...params} />
+        </AppLayout>
+      )}
     </Route>
   );
 }
