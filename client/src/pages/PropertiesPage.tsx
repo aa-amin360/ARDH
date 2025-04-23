@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { insertPropertySchema } from "@shared/schema";
+import { insertPropertySchema, type Property } from "@shared/schema";
 import { FLATS, OWNERS, MAINTENANCE_FEES, getOwnerByFlatNumber, getFlatTypeByFlatNumber, getMaintenanceFeeByFlatNumber } from "@shared/constants";
 
 // Extended schema with validation
@@ -59,7 +59,7 @@ export default function PropertiesPage() {
   const [isReadOnly, setIsReadOnly] = useState(true);
   
   // Fetch properties
-  const { data: properties = [], isLoading, isError } = useQuery({
+  const { data: properties = [], isLoading, isError } = useQuery<Property[]>({
     queryKey: ["/api/properties"]
   });
 
@@ -167,27 +167,30 @@ export default function PropertiesPage() {
   };
 
   // Get the selected property based on the flat number
-  function getSelectedProperty() {
-    return properties.find((p: any) => p.flatNumber === selectedFlatNumber);
+  function getSelectedProperty(): Property | undefined {
+    return properties.find((p) => p.flatNumber === selectedFlatNumber);
   }
 
   // Handle property selection
   const handlePropertySelect = (flatNumber: string) => {
     setSelectedFlatNumber(flatNumber);
-    const property = properties.find((p: any) => p.flatNumber === flatNumber);
+    const property = properties.find((p) => p.flatNumber === flatNumber);
     
     if (property) {
       form.reset({
         flatNumber: property.flatNumber,
-        flatType: property.flatType,
+        flatType: property.flatType as any,
+        apartmentFloor: property.apartmentFloor as any,
+        leaseStatus: property.leaseStatus as any,
         ownerName: property.ownerName,
         expectedRent: property.expectedRent,
         maintenanceFee: property.maintenanceFee,
+        waterCost: property.waterCost || undefined,
         isRented: property.isRented,
         currentTenant: property.currentTenant || "",
         floorArea: property.floorArea || 0,
         notes: property.notes || ""
-      } as any);
+      });
     }
   };
 

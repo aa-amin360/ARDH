@@ -28,9 +28,9 @@ import {
 // Extended schema with validation
 const incomeFormSchema = insertIncomeSchema.extend({
   amount: z.coerce.number().positive(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "Date must be in the format YYYY-MM-DD",
-  }).transform(val => new Date(val)),
+  date: z.string().refine(val => !isNaN(Date.parse(val)), {
+    message: "Please enter a valid date",
+  }),
   propertyId: z.coerce.number().optional(),
 });
 
@@ -98,18 +98,14 @@ export default function IncomePage() {
 
   function onSubmit(values: IncomeFormValues) {
     // Process the values for submission
-    const propertyId = values.propertyId ? parseInt(values.propertyId as string) : 0;
+    const propertyId = values.propertyId ? parseInt(values.propertyId as unknown as string) : 0;
     
     const formattedValues = {
       ...values,
       receivedFrom: values.receivedFrom || "Unknown",
       propertyId: propertyId === 0 ? null : propertyId,
-      date: values.date instanceof Date 
-        ? values.date.toISOString() 
-        : new Date(values.date as any).toISOString(), // Ensure date is formatted as ISO string
-      amount: typeof values.amount === 'string' 
-        ? parseFloat(values.amount) 
-        : values.amount, // Ensure amount is a number
+      date: new Date(values.date).toISOString(), // Ensure date is formatted as ISO string
+      amount: Number(values.amount), // Ensure amount is a number
     };
     createIncomeMutation.mutate(formattedValues as any);
   }
