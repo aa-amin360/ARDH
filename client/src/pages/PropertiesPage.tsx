@@ -6,7 +6,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Save, Eye } from "lucide-react";
-import { SelectItem } from "@radix-ui/react-select";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +18,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
