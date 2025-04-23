@@ -32,34 +32,37 @@ import {
   FormMessage,
 } from "../components/ui/form";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../components/ui/card";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { DatePicker } from "../components/ui/date-picker";
-import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
-import { 
-  PlusCircle, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Loader2 
+import { Button } from "../components/ui/button";
+import {
+  Loader2,
+  PlusCircle,
+  Edit,
+  Trash2,
+  Search,
 } from "lucide-react";
 
 import { Tenant, InsertTenant, Property } from "@shared/schema";
 import { FLATS } from "@shared/constants";
 
+// Define the tenant form values type with the flat_number field
 type TenantFormValues = {
   name: string;
   phone: string;
@@ -165,7 +168,7 @@ export default function TenantsPage() {
     },
   });
 
-  // Define form for add/edit tenant
+  // Define form for add/edit tenant with validation schema
   const form = useForm<TenantFormValues>({
     resolver: zodResolver(
       z.object({
@@ -188,7 +191,7 @@ export default function TenantsPage() {
       phone: "",
       email: "",
       propertyId: 0,
-      flatNumber: "", // Added default for flatNumber
+      flatNumber: "", // Default value for flatNumber
       leaseStartDate: new Date(),
       leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
       rentAmount: 0,
@@ -199,7 +202,7 @@ export default function TenantsPage() {
     },
   });
 
-  // When a tenant is selected for editing
+  // When a tenant is selected for editing, populate the form
   useEffect(() => {
     if (selectedTenant && isEditDialogOpen) {
       form.reset({
@@ -340,7 +343,7 @@ export default function TenantsPage() {
                   {filteredTenants.map((tenant) => (
                     <TableRow key={tenant.id}>
                       <TableCell className="font-medium">{tenant.name}</TableCell>
-                      <TableCell>{getPropertyFlatNumber(tenant.propertyId)}</TableCell>
+                      <TableCell>{tenant.flatNumber || getPropertyFlatNumber(tenant.propertyId)}</TableCell>
                       <TableCell>
                         <div>{tenant.phone}</div>
                         <div className="text-sm text-muted-foreground">{tenant.email}</div>
@@ -420,7 +423,16 @@ export default function TenantsPage() {
                     <FormItem>
                       <FormLabel>Property</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(Number(value))}
+                        onValueChange={(value) => {
+                          // Update the propertyId field
+                          field.onChange(Number(value));
+                          
+                          // When a property is selected, update the flatNumber field automatically
+                          const selectedProperty = properties.find(p => p.id === Number(value));
+                          if (selectedProperty) {
+                            form.setValue("flatNumber", selectedProperty.flatNumber);
+                          }
+                        }}
                         value={field.value ? field.value.toString() : ""}
                       >
                         <FormControl>
@@ -429,25 +441,18 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {/* First display properties from database */}
-                          {properties.map((property) => {
-                            // Find if this flat is in our predefined list
-                            const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
-                            return (
-                              <SelectItem key={property.id} value={property.id.toString()}>
-                                {property.flatNumber} ({flatInfo?.flatType || property.flatType})
-                              </SelectItem>
-                            );
-                          })}
-                          
-                          {/* Then add any flats from our constants that aren't in properties */}
-                          {FLATS.filter(flat => 
-                            !properties.some(p => p.flatNumber === flat.flatNumber)
-                          ).map((flat, idx) => (
-                            <SelectItem key={`flat-${idx}`} value={`flat-${flat.flatNumber}`} disabled>
-                              {flat.flatNumber} ({flat.flatType}) - Add property first
-                            </SelectItem>
-                          ))}
+                          {/* Filter out non-leasable properties */}
+                          {properties
+                            .filter(property => property.leaseStatus !== 'Non-Leasable')
+                            .map((property) => {
+                              // Find if this flat is in our predefined list
+                              const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
+                              return (
+                                <SelectItem key={property.id} value={property.id.toString()}>
+                                  {property.flatNumber} ({flatInfo?.flatType || property.flatType})
+                                </SelectItem>
+                              );
+                            })}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -455,6 +460,20 @@ export default function TenantsPage() {
                   )}
                 />
               </div>
+
+              {/* Hidden field for flatNumber - populated automatically when property is selected */}
+              <FormField
+                control={form.control}
+                name="flatNumber"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="hidden" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -526,11 +545,11 @@ export default function TenantsPage() {
                   name="rentAmount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Monthly Rent (₹)</FormLabel>
+                      <FormLabel>Rent Amount (₹)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="0"
+                          placeholder="Rent amount"
                           {...field}
                           onChange={(e) => field.onChange(Number(e.target.value))}
                         />
@@ -548,7 +567,7 @@ export default function TenantsPage() {
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="0"
+                          placeholder="Security deposit"
                           {...field}
                           onChange={(e) => field.onChange(Number(e.target.value))}
                         />
@@ -559,33 +578,31 @@ export default function TenantsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="notice_period">Notice Period</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="notice_period">Notice Period</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -594,10 +611,7 @@ export default function TenantsPage() {
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Additional notes about the tenant"
-                        {...field}
-                      />
+                      <Textarea placeholder="Additional notes" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -605,11 +619,18 @@ export default function TenantsPage() {
               />
 
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
                 <Button type="submit" disabled={createTenantMutation.isPending}>
                   {createTenantMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Save Tenant
+                  Save
                 </Button>
               </DialogFooter>
             </form>
@@ -649,7 +670,16 @@ export default function TenantsPage() {
                     <FormItem>
                       <FormLabel>Property</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(Number(value))}
+                        onValueChange={(value) => {
+                          // Update the propertyId field
+                          field.onChange(Number(value));
+                          
+                          // When a property is selected, update the flatNumber field automatically
+                          const selectedProperty = properties.find(p => p.id === Number(value));
+                          if (selectedProperty) {
+                            form.setValue("flatNumber", selectedProperty.flatNumber);
+                          }
+                        }}
                         value={field.value ? field.value.toString() : ""}
                       >
                         <FormControl>
@@ -658,25 +688,18 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {/* First display properties from database */}
-                          {properties.map((property) => {
-                            // Find if this flat is in our predefined list
-                            const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
-                            return (
-                              <SelectItem key={property.id} value={property.id.toString()}>
-                                {property.flatNumber} ({flatInfo?.flatType || property.flatType})
-                              </SelectItem>
-                            );
-                          })}
-                          
-                          {/* Then add any flats from our constants that aren't in properties */}
-                          {FLATS.filter(flat => 
-                            !properties.some(p => p.flatNumber === flat.flatNumber)
-                          ).map((flat, idx) => (
-                            <SelectItem key={`flat-${idx}`} value={`flat-${flat.flatNumber}`} disabled>
-                              {flat.flatNumber} ({flat.flatType}) - Add property first
-                            </SelectItem>
-                          ))}
+                          {/* Filter out non-leasable properties */}
+                          {properties
+                            .filter(property => property.leaseStatus !== 'Non-Leasable')
+                            .map((property) => {
+                              // Find if this flat is in our predefined list
+                              const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
+                              return (
+                                <SelectItem key={property.id} value={property.id.toString()}>
+                                  {property.flatNumber} ({flatInfo?.flatType || property.flatType})
+                                </SelectItem>
+                              );
+                            })}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -684,6 +707,20 @@ export default function TenantsPage() {
                   )}
                 />
               </div>
+
+              {/* Hidden field for flatNumber - populated automatically when property is selected */}
+              <FormField
+                control={form.control}
+                name="flatNumber"
+                render={({ field }) => (
+                  <FormItem className="hidden">
+                    <FormControl>
+                      <Input type="hidden" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -755,11 +792,11 @@ export default function TenantsPage() {
                   name="rentAmount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Monthly Rent (₹)</FormLabel>
+                      <FormLabel>Rent Amount (₹)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="0"
+                          placeholder="Rent amount"
                           {...field}
                           onChange={(e) => field.onChange(Number(e.target.value))}
                         />
@@ -777,7 +814,7 @@ export default function TenantsPage() {
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="0"
+                          placeholder="Security deposit"
                           {...field}
                           onChange={(e) => field.onChange(Number(e.target.value))}
                         />
@@ -788,33 +825,31 @@ export default function TenantsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="notice_period">Notice Period</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="notice_period">Notice Period</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -823,10 +858,7 @@ export default function TenantsPage() {
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Additional notes about the tenant"
-                        {...field}
-                      />
+                      <Textarea placeholder="Additional notes" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -834,11 +866,18 @@ export default function TenantsPage() {
               />
 
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
                 <Button type="submit" disabled={updateTenantMutation.isPending}>
                   {updateTenantMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Update Tenant
+                  Save
                 </Button>
               </DialogFooter>
             </form>
@@ -846,41 +885,32 @@ export default function TenantsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Tenant Confirmation Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Delete Tenant</DialogTitle>
+            <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this tenant? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            {selectedTenant && (
-              <div className="grid gap-2">
-                <div className="font-medium">Tenant Details:</div>
-                <div>{selectedTenant.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {getPropertyFlatNumber(selectedTenant.propertyId)}
-                </div>
-              </div>
-            )}
-          </div>
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
             >
               Cancel
             </Button>
             <Button
+              type="button"
               variant="destructive"
+              disabled={deleteTenantMutation.isPending}
               onClick={() => {
                 if (selectedTenant) {
                   deleteTenantMutation.mutate(selectedTenant.id);
                 }
               }}
-              disabled={deleteTenantMutation.isPending}
             >
               {deleteTenantMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
