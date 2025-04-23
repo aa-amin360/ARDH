@@ -33,6 +33,7 @@ const expenseFormSchema = insertExpenseSchema.extend({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "Date must be in the format YYYY-MM-DD",
   }).transform(val => new Date(val)),
+  subcategory: z.string().min(1, "Subcategory is required"),
   time: z.string().optional(),
   propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
   vendor: z.string().optional(),
@@ -85,7 +86,8 @@ export default function ExpensesPage() {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      category: "electricity", // Set a default category
+      category: "Utility", // Set a default category
+      subcategory: "", // Initialize empty subcategory
       amount: 0,
       date: new Date().toISOString().split("T")[0],
       description: "",
@@ -163,8 +165,8 @@ export default function ExpensesPage() {
         throw new Error("Please attach a receipt or image for this expense");
       }
       
-      // Additional validation for water_tank category
-      if (values.category === "water_tank") {
+      // Additional validation for Water Tanker subcategory
+      if (values.category === "Utility" && values.subcategory === "Water Tanker") {
         if (!values.tankerNumber) {
           throw new Error("Tanker number is required for water tank expenses");
         }
@@ -188,7 +190,8 @@ export default function ExpensesPage() {
         description: "The expense has been added successfully.",
       });
       form.reset({
-        category: "electricity",
+        category: "Utility",
+        subcategory: "",
         amount: 0,
         date: new Date().toISOString().split("T")[0],
         description: "",
@@ -307,6 +310,57 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
+                    
+                    <FormField
+                      control={form.control}
+                      name="subcategory"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subcategory</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={!form.getValues("category")}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subcategory" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {form.getValues("category") === "Utility" && (
+                                <>
+                                  <SelectItem value="Electrical Bill">Electrical Bill</SelectItem>
+                                  <SelectItem value="Water Tanker">Water Tanker</SelectItem>
+                                  <SelectItem value="Generator Diesel">Generator Diesel</SelectItem>
+                                  <SelectItem value="WiFi Bill">WiFi Bill</SelectItem>
+                                  <SelectItem value="General Building Maintenance">General Building Maintenance</SelectItem>
+                                </>
+                              )}
+                              
+                              {form.getValues("category") === "General Maintenance Works" && (
+                                <>
+                                  <SelectItem value="CCTV Maintenance">CCTV Maintenance</SelectItem>
+                                  <SelectItem value="Elevator Maintenance">Elevator Maintenance</SelectItem>
+                                  <SelectItem value="Cleaning works">Cleaning works</SelectItem>
+                                </>
+                              )}
+                              
+                              {form.getValues("category") === "Charity" && (
+                                <SelectItem value="Other misc Donation">Other misc Donation</SelectItem>
+                              )}
+                              
+                              {form.getValues("category") === "Guest Related" && (
+                                <SelectItem value="Guest Hospitality Exp / Meal">Guest Hospitality Exp / Meal</SelectItem>
+                              )}
+                              
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <FormField
                       control={form.control}
@@ -398,8 +452,8 @@ export default function ExpensesPage() {
                     )}
                   />
 
-                  {/* Water tanker specific fields - only show when water_tank category is selected */}
-                  {selectedCategory === "water_tank" && (
+                  {/* Water tanker specific fields - only show when Water Tanker subcategory is selected */}
+                  {selectedCategory === "Utility" && form.getValues("subcategory") === "Water Tanker" && (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4 p-4 border rounded-lg bg-slate-50">
                       <FormField
                         control={form.control}
@@ -641,8 +695,8 @@ export default function ExpensesPage() {
                           <TableCell className="whitespace-nowrap">
                             {formatDate(expense.date)}
                           </TableCell>
-                          <TableCell className="capitalize">
-                            {expense.category.replace("_", " ")}
+                          <TableCell>
+                            {expense.category} - {expense.subcategory || "Other"}
                           </TableCell>
                           <TableCell>{expense.description}</TableCell>
                           <TableCell>
