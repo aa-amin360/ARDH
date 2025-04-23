@@ -53,6 +53,7 @@ export default function ExpensesPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [filteredVendors, setFilteredVendors] = useState<any[]>([]);
 
   // Query to fetch expenses
   const {
@@ -61,6 +62,14 @@ export default function ExpensesPage() {
     isError,
   } = useQuery({
     queryKey: ["/api/expenses"],
+  });
+  
+  // Query to fetch vendors
+  const {
+    data: vendors = [],
+    isLoading: vendorsLoading,
+  } = useQuery({
+    queryKey: ["/api/vendors"],
   });
 
   // Form
@@ -94,6 +103,17 @@ export default function ExpensesPage() {
     control: form.control,
     name: "attachmentUrl"
   });
+  
+  // Filter vendors based on selected category
+  useEffect(() => {
+    if (vendors?.length > 0 && selectedCategory) {
+      const filtered = vendors.filter((vendor: any) => 
+        vendor.serviceType === selectedCategory || 
+        vendor.serviceType === 'general'
+      );
+      setFilteredVendors(filtered);
+    }
+  }, [selectedCategory, vendors]);
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

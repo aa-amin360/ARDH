@@ -354,6 +354,30 @@ export default function IncomePage() {
                 Export
               </Button>
             </CardHeader>
+            {/* Last income entered section */}
+            {incomes && incomes.length > 0 && (
+              <div className="mx-6 mb-4 p-4 bg-muted rounded-md">
+                <h3 className="text-sm font-medium mb-2">Last Income Entered:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="font-medium">{formatDate(incomes[0].date)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Type</p>
+                    <p className="font-medium capitalize">{incomes[0].type.replace("_", " ")}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Amount</p>
+                    <p className="font-medium">{formatCurrency(incomes[0].amount)}</p>
+                  </div>
+                  <div className="col-span-1 md:col-span-3">
+                    <p className="text-xs text-muted-foreground">Description</p>
+                    <p>{incomes[0].description}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <CardContent>
               {isLoading ? (
                 <div className="flex justify-center my-8">
