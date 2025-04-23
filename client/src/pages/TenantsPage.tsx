@@ -424,9 +424,23 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {properties.map((property) => (
-                            <SelectItem key={property.id} value={property.id.toString()}>
-                              {property.flatNumber} ({property.flatType})
+                          {/* First display properties from database */}
+                          {properties.map((property) => {
+                            // Find if this flat is in our predefined list
+                            const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
+                            return (
+                              <SelectItem key={property.id} value={property.id.toString()}>
+                                {property.flatNumber} ({flatInfo?.flatType || property.flatType})
+                              </SelectItem>
+                            );
+                          })}
+                          
+                          {/* Then add any flats from our constants that aren't in properties */}
+                          {FLATS.filter(flat => 
+                            !properties.some(p => p.flatNumber === flat.flatNumber)
+                          ).map((flat, idx) => (
+                            <SelectItem key={`flat-${idx}`} value={`flat-${flat.flatNumber}`} disabled>
+                              {flat.flatNumber} ({flat.flatType}) - Add property first
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -540,31 +554,33 @@ export default function TenantsPage() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="notice_period">Notice Period</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="notice_period">Notice Period</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -573,7 +589,10 @@ export default function TenantsPage() {
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Additional notes about the tenant" {...field} />
+                      <Textarea
+                        placeholder="Additional notes about the tenant"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -581,13 +600,6 @@ export default function TenantsPage() {
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
                 <Button type="submit" disabled={createTenantMutation.isPending}>
                   {createTenantMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -641,11 +653,16 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {properties.map((property) => (
-                            <SelectItem key={property.id} value={property.id.toString()}>
-                              {property.flatNumber} ({property.flatType})
-                            </SelectItem>
-                          ))}
+                          {/* First display properties from database */}
+                          {properties.map((property) => {
+                            // Find if this flat is in our predefined list
+                            const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
+                            return (
+                              <SelectItem key={property.id} value={property.id.toString()}>
+                                {property.flatNumber} ({flatInfo?.flatType || property.flatType})
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -757,31 +774,33 @@ export default function TenantsPage() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="notice_period">Notice Period</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="notice_period">Notice Period</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -790,7 +809,10 @@ export default function TenantsPage() {
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Additional notes about the tenant" {...field} />
+                      <Textarea
+                        placeholder="Additional notes about the tenant"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -798,13 +820,6 @@ export default function TenantsPage() {
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
                 <Button type="submit" disabled={updateTenantMutation.isPending}>
                   {updateTenantMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -817,18 +832,28 @@ export default function TenantsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Tenant Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogTitle>Delete Tenant</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this tenant? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
+          <div className="py-4">
+            {selectedTenant && (
+              <div className="grid gap-2">
+                <div className="font-medium">Tenant Details:</div>
+                <div>{selectedTenant.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {getPropertyFlatNumber(selectedTenant.propertyId)}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
             <Button
-              type="button"
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
             >
@@ -848,7 +873,7 @@ export default function TenantsPage() {
               )}
               Delete
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
