@@ -30,9 +30,9 @@ import {
 // Extended schema with validation
 const expenseFormSchema = insertExpenseSchema.extend({
   amount: z.coerce.number().positive(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: "Date must be in the format YYYY-MM-DD",
-  }).transform(val => new Date(val)),
+  date: z.string().refine(val => !isNaN(Date.parse(val)), {
+    message: "Please enter a valid date",
+  }),
   subcategory: z.string().min(1, "Subcategory is required"),
   time: z.string().optional(),
   propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
@@ -68,7 +68,7 @@ export default function ExpensesPage() {
   
   // Query to fetch vendors
   const {
-    data: vendors = [],
+    data: vendors = [] as any[],
     isLoading: vendorsLoading,
   } = useQuery({
     queryKey: ["/api/vendors"],
@@ -204,7 +204,7 @@ export default function ExpensesPage() {
         liters: 0,
         personInCharge: "",
         attachmentUrl: "",
-      });
+      } as any);
       setSelectedFile(null);
       setImagePreview(null);
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
@@ -224,15 +224,11 @@ export default function ExpensesPage() {
     const formattedValues = {
       ...values,
       vendor: values.receipt,
-      date: values.date instanceof Date 
-        ? values.date.toISOString() 
-        : new Date(values.date as any).toISOString(), // Ensure date is formatted as ISO string
-      amount: typeof values.amount === 'string' 
-        ? parseFloat(values.amount) 
-        : values.amount, // Ensure amount is a number
+      date: new Date(values.date).toISOString(), // Ensure date is formatted as ISO string
+      amount: Number(values.amount), // Ensure amount is a number
       propertyId: values.propertyId === "0" || !values.propertyId 
         ? null 
-        : parseInt(values.propertyId as string, 10) // Convert propertyId to number or null
+        : Number(values.propertyId) // Convert propertyId to number or null
     };
     createExpenseMutation.mutate(formattedValues as any);
   }

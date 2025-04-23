@@ -227,9 +227,9 @@ export default function PropertiesPage() {
                         <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
                       </div>
                     ) : (
-                      properties.map((property: any) => (
+                      properties.map((property) => (
                         <SelectItem key={property.id} value={property.flatNumber}>
-                          {property.flatNumber}
+                          {property.flatNumber} - {property.flatType} ({property.ownerName})
                         </SelectItem>
                       ))
                     )}
@@ -335,7 +335,7 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Current Tenant</FormLabel>
                             <FormControl>
-                              <Input readOnly={true} {...field} />
+                              <Input readOnly={true} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -367,7 +367,7 @@ export default function PropertiesPage() {
                             <Textarea
                               readOnly={true}
                               placeholder="No notes available"
-                              {...field}
+                              value={field.value || ""}
                             />
                           </FormControl>
                           <FormMessage />
@@ -401,9 +401,9 @@ export default function PropertiesPage() {
                         <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
                       </div>
                     ) : (
-                      properties.map((property: any) => (
+                      properties.map((property) => (
                         <SelectItem key={property.id} value={property.flatNumber}>
-                          {property.flatNumber}
+                          {property.flatNumber} - {property.flatType} ({property.ownerName})
                         </SelectItem>
                       ))
                     )}
@@ -462,9 +462,23 @@ export default function PropertiesPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Owner</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select owner" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {OWNERS.map((owner, index) => (
+                                  <SelectItem key={index} value={owner}>
+                                    {owner}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -498,8 +512,29 @@ export default function PropertiesPage() {
                         )}
                       />
                       
-                      {/* Removed isRented and currentTenant fields as they are determined from tenants data */}
-
+                      <FormField
+                        control={form.control}
+                        name="isRented"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>
+                                Currently Rented
+                              </FormLabel>
+                              <FormDescription>
+                                Is this property currently occupied by a tenant?
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      
                       <FormField
                         control={form.control}
                         name="floorArea"
@@ -523,18 +558,28 @@ export default function PropertiesPage() {
                           <FormLabel>Notes</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Add notes about the property"
-                              {...field}
+                              placeholder="Any additional notes about the property"
+                              value={field.value || ""}
+                              onChange={field.onChange}
                             />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
+                    
                     <div className="flex justify-end">
-                      <Button type="submit" className="w-full sm:w-auto">
-                        <Save className="w-4 h-4 mr-2" /> Update Property
+                      <Button 
+                        type="submit" 
+                        disabled={updatePropertyMutation.isPending}
+                        className="gap-1"
+                      >
+                        {updatePropertyMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        Save Changes
                       </Button>
                     </div>
                   </form>
@@ -549,16 +594,15 @@ export default function PropertiesPage() {
             <CardHeader>
               <CardTitle>Add New Property</CardTitle>
               <CardDescription>
-                Enter the details of the new property.
+                Enter details to add a new property to the system.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {properties && properties.length >= FLATS.length ? (
-                <div className="p-4 border border-orange-200 bg-orange-50 rounded-md mb-4">
-                  <h3 className="font-medium text-orange-800">All properties have already been added</h3>
-                  <p className="text-orange-700 mt-1">
-                    All flats in the building have already been added to the database. 
-                    To modify property details, please use the "Modify Property" tab.
+              {Array.isArray(properties) && properties.length >= FLATS.length ? (
+                <div className="p-4 bg-yellow-50 rounded-md text-yellow-800 mb-4">
+                  <p className="font-medium">
+                    All possible properties have already been added. 
+                    Please use the modify property tab to make changes.
                   </p>
                 </div>
               ) : null}
@@ -593,14 +637,15 @@ export default function PropertiesPage() {
                             <SelectContent>
                               {FLATS.map((flat, index) => {
                                 // Check if this flat already exists in properties
-                                const existingProperty = properties.find((p: any) => p.flatNumber === flat.flatNumber);
+                                const existingProperty = properties.find((p) => p.flatNumber === flat.flatNumber);
                                 return (
                                   <SelectItem 
                                     key={index} 
                                     value={flat.flatNumber}
                                     disabled={!!existingProperty}
                                   >
-                                    {flat.flatNumber} {existingProperty ? "(Already added)" : ""}
+                                    {flat.flatNumber} - {flat.flatType} ({flat.owner})
+                                    {existingProperty ? " (Already added)" : ""}
                                   </SelectItem>
                                 );
                               })}
@@ -618,62 +663,8 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Nestaway ID</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="e.g., N35410" />
+                            <Input {...field} placeholder="e.g., N35410" value={field.value || ""} />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="leaseStatus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lease Status</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select lease status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Leasable">Leasable</SelectItem>
-                              <SelectItem value="Non-Leasable">Non-Leasable</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="apartmentFloor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Floor</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select floor" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="1">1st Floor</SelectItem>
-                              <SelectItem value="2">2nd Floor</SelectItem>
-                              <SelectItem value="3">3rd Floor</SelectItem>
-                              <SelectItem value="4">4th Floor</SelectItem>
-                              <SelectItem value="5">5th Floor</SelectItem>
-                              <SelectItem value="6">6th Floor</SelectItem>
-                            </SelectContent>
-                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -687,7 +678,7 @@ export default function PropertiesPage() {
                           <FormLabel>Flat Type</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            value={field.value}
+                            defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -698,7 +689,6 @@ export default function PropertiesPage() {
                               <SelectItem value="1BHK">1 BHK</SelectItem>
                               <SelectItem value="2BHK">2 BHK</SelectItem>
                               <SelectItem value="3BHK">3 BHK</SelectItem>
-                              <SelectItem value="4BHK">4 BHK</SelectItem>
                               <SelectItem value="penthouse">Penthouse</SelectItem>
                             </SelectContent>
                           </Select>
@@ -723,8 +713,8 @@ export default function PropertiesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {OWNERS.map((owner) => (
-                                <SelectItem key={owner} value={owner}>
+                              {OWNERS.map((owner, index) => (
+                                <SelectItem key={index} value={owner}>
                                   {owner}
                                 </SelectItem>
                               ))}
@@ -742,7 +732,7 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Monthly Rent (₹)</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} placeholder="e.g., 15000" />
+                            <Input type="number" placeholder="e.g., 15000" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -756,7 +746,7 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Maintenance Fee (₹)</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} placeholder="e.g., 1000" />
+                            <Input type="number" placeholder="e.g., 1000" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -770,15 +760,42 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Water Cost (₹)</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} placeholder="e.g., 500" />
+                            <Input type="number" placeholder="e.g., 500" value={field.value ?? ""} onChange={field.onChange} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     
-                    {/* Removed isRented and currentTenant fields as they are determined from tenants data */}
-
+                    <FormField
+                      control={form.control}
+                      name="apartmentFloor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Floor</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select floor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">1st Floor</SelectItem>
+                              <SelectItem value="2">2nd Floor</SelectItem>
+                              <SelectItem value="3">3rd Floor</SelectItem>
+                              <SelectItem value="4">4th Floor</SelectItem>
+                              <SelectItem value="5">5th Floor</SelectItem>
+                              <SelectItem value="6">6th Floor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                     <FormField
                       control={form.control}
                       name="floorArea"
@@ -786,8 +803,33 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Floor Area (sq ft)</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} placeholder="e.g., 650" />
+                            <Input type="number" placeholder="e.g., 800" {...field} />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="leaseStatus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lease Status</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select lease status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Leasable">Leasable</SelectItem>
+                              <SelectItem value="Non-Leasable">Non-Leasable</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -802,18 +844,28 @@ export default function PropertiesPage() {
                         <FormLabel>Notes</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Add notes about the property"
-                            {...field}
+                            placeholder="Any additional notes about the property"
+                            value={field.value || ""}
+                            onChange={field.onChange}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
+                  
                   <div className="flex justify-end">
-                    <Button type="submit" className="w-full sm:w-auto">
-                      <Plus className="w-4 h-4 mr-2" /> Add Property
+                    <Button 
+                      type="submit" 
+                      disabled={createPropertyMutation.isPending}
+                      className="gap-1"
+                    >
+                      {createPropertyMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                      Add Property
                     </Button>
                   </div>
                 </form>
