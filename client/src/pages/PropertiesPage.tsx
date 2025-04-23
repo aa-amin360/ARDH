@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { insertPropertySchema } from "@shared/schema";
+import { FLATS, OWNERS, MAINTENANCE_FEES, getOwnerByFlatNumber, getFlatTypeByFlatNumber, getMaintenanceFeeByFlatNumber } from "@shared/constants";
 
 // Extended schema with validation
 const propertyFormSchema = insertPropertySchema.extend({
@@ -528,11 +529,36 @@ export default function PropertiesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Flat Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. 101" {...field} />
-                          </FormControl>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              
+                              // Auto-fill other fields based on selected flat
+                              const flatType = getFlatTypeByFlatNumber(value);
+                              const owner = getOwnerByFlatNumber(value);
+                              const maintenanceFee = getMaintenanceFeeByFlatNumber(value);
+                              
+                              if (flatType) form.setValue('flatType', flatType as any);
+                              if (owner) form.setValue('owner', owner);
+                              if (maintenanceFee) form.setValue('maintenanceFee', maintenanceFee);
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a flat number" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {FLATS.map((flat) => (
+                                <SelectItem key={flat.flatNumber} value={flat.flatNumber}>
+                                  {flat.flatNumber} - {flat.flatType}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormDescription>
-                            Enter the flat number (e.g. 101, 203, 504)
+                            Select from predefined flats in ARDH building
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -572,9 +598,26 @@ export default function PropertiesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Owner</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Owner name" {...field} />
-                          </FormControl>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select owner" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {OWNERS.map((owner) => (
+                                <SelectItem key={owner} value={owner}>
+                                  {owner}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Select from the building's 5 owners
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
