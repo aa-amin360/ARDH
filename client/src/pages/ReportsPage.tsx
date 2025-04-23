@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { CalendarIcon, FileDown, PieChart, BarChart3, ChevronDown } from "lucide-react";
@@ -80,7 +80,7 @@ export default function ReportsPage() {
   });
 
   // Group income by type for pie chart
-  const incomeByType = React.useMemo(() => {
+  const incomeByType = useMemo(() => {
     if (!filteredIncomes) return [];
     
     const typeGroups: Record<string, number> = {};
@@ -100,7 +100,7 @@ export default function ReportsPage() {
   }, [filteredIncomes]);
 
   // Group expenses by category for pie chart
-  const expensesByCategory = React.useMemo(() => {
+  const expensesByCategory = useMemo(() => {
     if (!filteredExpenses) return [];
     
     const categoryGroups: Record<string, number> = {};
