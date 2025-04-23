@@ -171,6 +171,7 @@ export const tenants = pgTable("tenants", {
   phone: text("phone").notNull(),
   email: text("email"),
   propertyId: integer("property_id").references(() => properties.id).notNull(),
+  flatNumber: text("flat_number").notNull(), // Added flat_number field to sync with property
   rentAmount: integer("rent_amount").notNull(),
   securityDeposit: integer("security_deposit").notNull(),
   leaseStartDate: date("lease_start_date").notNull(),
