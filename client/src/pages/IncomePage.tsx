@@ -358,7 +358,7 @@ export default function IncomePage() {
               </Button>
             </CardHeader>
             {/* Last income entered section */}
-            {incomes && incomes.length > 0 && (
+            {Array.isArray(incomes) && incomes.length > 0 && (
               <div className="mx-6 mb-4 p-4 bg-muted rounded-md">
                 <h3 className="text-sm font-medium mb-2">Last Income Entered:</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -390,7 +390,7 @@ export default function IncomePage() {
                 <p className="text-center text-red-500 my-8">
                   Error loading income records
                 </p>
-              ) : incomes && incomes.length > 0 ? (
+              ) : Array.isArray(incomes) && incomes.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
