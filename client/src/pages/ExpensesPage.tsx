@@ -1,5 +1,5 @@
-import React from "react";
-import { useForm } from "react-hook-form";
+import React, { useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
+import { Loader2, Plus, FileSpreadsheet, Upload, Image as ImageIcon, XCircle, AlertCircle } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -30,9 +31,14 @@ const expenseFormSchema = insertExpenseSchema.extend({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "Date must be in the format YYYY-MM-DD",
   }),
+  time: z.string().optional(),
   propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
   vendor: z.string().optional(),
   receipt: z.string().optional(), // Adding a receipt field which will be mapped to vendor in the final submission
+  tankerNumber: z.string().optional(),
+  liters: z.number().optional().or(z.string().regex(/^\d+$/).transform(Number).optional()),
+  personInCharge: z.string().optional(),
+  attachmentUrl: z.string().optional(),
   createdBy: z.number().optional() // This will be handled by the server
 });
 
@@ -42,6 +48,9 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("add");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Query to fetch expenses
   const {
@@ -52,9 +61,93 @@ export default function ExpensesPage() {
     queryKey: ["/api/expenses"],
   });
 
+  // Form
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      category: "electricity", // Set a default category
+      amount: 0,
+      date: new Date().toISOString().split("T")[0],
+      description: "",
+      receipt: "",
+      propertyId: "0", // Set default to common areas
+      vendor: "",
+      createdBy: 0, // Will be set on the server
+      time: new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}),
+      tankerNumber: "",
+      liters: 0,
+      personInCharge: "",
+      attachmentUrl: "",
+    },
+  });
+
+  // Watch for category changes to conditionally render fields
+  const selectedCategory = useWatch({
+    control: form.control,
+    name: "category"
+  });
+
+  // Watch for attachmentUrl to validate form
+  const attachmentUrl = useWatch({
+    control: form.control,
+    name: "attachmentUrl"
+  });
+
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Create image preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // In a real app, you would upload the file to a server and get a URL back
+      // For now, we'll simulate this with a fake URL
+      setIsUploading(true);
+      setTimeout(() => {
+        // In a real implementation, this would be the URL returned from the server
+        const fakeUploadedUrl = `https://example.com/uploads/${Date.now()}-${file.name}`;
+        form.setValue("attachmentUrl", fakeUploadedUrl);
+        setIsUploading(false);
+      }, 1500);
+    }
+  };
+
+  // Remove selected file
+  const removeFile = () => {
+    setSelectedFile(null);
+    setImagePreview(null);
+    form.setValue("attachmentUrl", "");
+  };
+
   // Mutation to add a new expense
   const createExpenseMutation = useMutation({
     mutationFn: async (values: ExpenseFormValues) => {
+      // Validate attachment for all expenses
+      if (!values.attachmentUrl) {
+        throw new Error("Please attach a receipt or image for this expense");
+      }
+      
+      // Additional validation for water_tank category
+      if (values.category === "water_tank") {
+        if (!values.tankerNumber) {
+          throw new Error("Tanker number is required for water tank expenses");
+        }
+        if (!values.liters) {
+          throw new Error("Liters discharged is required for water tank expenses");
+        }
+        if (!values.personInCharge) {
+          throw new Error("Person in charge is required for water tank expenses");
+        }
+        if (!values.time) {
+          throw new Error("Time is required for water tank expenses");
+        }
+      }
+      
       const res = await apiRequest("POST", "/api/expenses", values);
       return await res.json();
     },
@@ -72,7 +165,14 @@ export default function ExpensesPage() {
         propertyId: "0",
         vendor: "",
         createdBy: 0,
+        time: new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}),
+        tankerNumber: "",
+        liters: 0,
+        personInCharge: "",
+        attachmentUrl: "",
       });
+      setSelectedFile(null);
+      setImagePreview(null);
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
     onError: (error: any) => {
@@ -81,21 +181,6 @@ export default function ExpensesPage() {
         description: error.message,
         variant: "destructive",
       });
-    },
-  });
-
-  // Form
-  const form = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseFormSchema),
-    defaultValues: {
-      category: "electricity", // Set a default category
-      amount: 0,
-      date: new Date().toISOString().split("T")[0],
-      description: "",
-      receipt: "",
-      propertyId: "0", // Set default to common areas
-      vendor: "",
-      createdBy: 0, // Will be set on the server
     },
   });
 
@@ -164,14 +249,16 @@ export default function ExpensesPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="electricity">Electricity</SelectItem>
-                              <SelectItem value="water">Water</SelectItem>
-                              <SelectItem value="maintenance">Maintenance</SelectItem>
-                              <SelectItem value="repair">Repair</SelectItem>
-                              <SelectItem value="property_tax">Property Tax</SelectItem>
-                              <SelectItem value="insurance">Insurance</SelectItem>
-                              <SelectItem value="legal">Legal</SelectItem>
-                              <SelectItem value="management">Management</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="water_tank">Water Tanker</SelectItem>
+                              <SelectItem value="generator_fuel">Generator Fuel</SelectItem>
+                              <SelectItem value="cctv_maintenance">CCTV Maintenance</SelectItem>
+                              <SelectItem value="internet">Internet</SelectItem>
+                              <SelectItem value="elevator_maintenance">Elevator Maintenance</SelectItem>
+                              <SelectItem value="general_building_maintenance">Building Maintenance</SelectItem>
+                              <SelectItem value="donation">Donation</SelectItem>
+                              <SelectItem value="drainage_cleaning">Drainage Cleaning</SelectItem>
+                              <SelectItem value="guest_expense">Guest Expense</SelectItem>
+                              <SelectItem value="misc">Miscellaneous</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -276,6 +363,71 @@ export default function ExpensesPage() {
                     )}
                   />
 
+                  {/* Water tanker specific fields - only show when water_tank category is selected */}
+                  {selectedCategory === "water_tank" && (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4 p-4 border rounded-lg bg-slate-50">
+                      <FormField
+                        control={form.control}
+                        name="time"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Time</FormLabel>
+                            <FormControl>
+                              <Input type="time" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tankerNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tanker Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter tanker number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="liters"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Liters Discharged</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                placeholder="Enter liters discharged" 
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="personInCharge"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Person In Charge</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter name of person in charge" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="receipt"
@@ -292,6 +444,78 @@ export default function ExpensesPage() {
                       </FormItem>
                     )}
                   />
+
+                  {/* File attachment field */}
+                  <div className="space-y-2">
+                    <Label htmlFor="attachment">
+                      Attachment <span className="text-red-500">*</span>
+                    </Label>
+                    {!attachmentUrl && (
+                      <div className="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed rounded-lg border-gray-300 cursor-pointer hover:bg-gray-50">
+                        <input
+                          id="file-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+                        <label htmlFor="file-upload" className="cursor-pointer">
+                          <div className="flex flex-col items-center justify-center">
+                            <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                            <p className="text-sm text-gray-600">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              PNG, JPG, or JPEG (max. 10MB)
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    )}
+
+                    {isUploading && (
+                      <div className="flex items-center justify-center w-full p-4 border rounded-lg">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                        <p>Uploading file...</p>
+                      </div>
+                    )}
+
+                    {imagePreview && !isUploading && (
+                      <div className="relative border rounded-lg overflow-hidden">
+                        <div className="absolute top-2 right-2 z-10">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={removeFile}
+                            className="h-8 w-8 rounded-full"
+                          >
+                            <XCircle className="h-5 w-5" />
+                          </Button>
+                        </div>
+                        <div className="relative aspect-video bg-gray-100 flex items-center justify-center">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="max-h-[300px] max-w-full object-contain"
+                          />
+                        </div>
+                        <div className="p-2 bg-gray-50 text-sm">
+                          {selectedFile?.name}
+                        </div>
+                      </div>
+                    )}
+
+                    {!attachmentUrl && !isUploading && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Required</AlertTitle>
+                        <AlertDescription>
+                          An attachment is required for all expenses. Please upload an image.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
 
                   <div className="flex gap-2 justify-end">
                     <Button variant="outline" type="button" onClick={() => form.reset()}>

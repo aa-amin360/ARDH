@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
-import { CalendarIcon, FileDown, PieChart, BarChart3, ChevronDown } from "lucide-react";
+import { CalendarIcon, FileDown, PieChart, BarChart3, ChevronDown, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -156,6 +157,14 @@ export default function ReportsPage() {
 
   return (
     <div className="py-4">
+      <Alert className="mb-4">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Under Development</AlertTitle>
+        <AlertDescription>
+          The reports page is currently under development. Some features may not work as expected.
+        </AlertDescription>
+      </Alert>
+      
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Financial Reports</CardTitle>
