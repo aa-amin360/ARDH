@@ -11,6 +11,8 @@ import {
   InsertWaterTank,
   Tenant,
   InsertTenant,
+  Vendor,
+  InsertVendor,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary
@@ -62,6 +64,14 @@ export interface IStorage {
   updateTenant(id: number, tenant: Partial<InsertTenant>): Promise<Tenant | undefined>;
   deleteTenant(id: number): Promise<boolean>;
   
+  // Vendor management
+  getVendor(id: number): Promise<Vendor | undefined>;
+  getVendors(): Promise<Vendor[]>;
+  getVendorsByServiceType(serviceType: string): Promise<Vendor[]>;
+  createVendor(vendor: InsertVendor): Promise<Vendor>;
+  updateVendor(id: number, vendor: Partial<InsertVendor>): Promise<Vendor | undefined>;
+  deleteVendor(id: number): Promise<boolean>;
+  
   // Summary/Dashboard data
   getIncomeSummary(): Promise<IncomeSummary>;
   getExpenseSummary(): Promise<ExpenseSummary>;
@@ -79,6 +89,7 @@ export class MemStorage implements IStorage {
   private expenses: Map<number, Expense>;
   private waterTanks: Map<number, WaterTank>;
   private tenants: Map<number, Tenant>;
+  private vendors: Map<number, Vendor>;
   
   private userCounter: number;
   private propertyCounter: number;
@@ -86,6 +97,7 @@ export class MemStorage implements IStorage {
   private expenseCounter: number;
   private waterTankCounter: number;
   private tenantCounter: number;
+  private vendorCounter: number;
   
   sessionStore: session.Store;
 

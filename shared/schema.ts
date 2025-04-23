@@ -20,6 +20,19 @@ export const expenseCategoryEnum = pgEnum('expense_category', [
   'guest_expense',
   'misc'
 ]);
+export const vendorServiceTypeEnum = pgEnum('vendor_service_type', [
+  'Electrical',
+  'Plumbing',
+  'Paint_Job',
+  'Wood_work',
+  'Water',
+  'Other'
+]);
+export const vendorProvisionTypeEnum = pgEnum('vendor_provision_type', [
+  'service',
+  'product',
+  'both'
+]);
 
 // Users table
 export const users = pgTable("users", {
@@ -109,6 +122,23 @@ export const tenants = pgTable("tenants", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Vendors table for service providers
+export const vendors = pgTable("vendors", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  serviceType: vendorServiceTypeEnum("service_type").notNull(),
+  provisionType: vendorProvisionTypeEnum("provision_type").notNull().default('service'),
+  address: text("address"),
+  notes: text("notes"),
+  contactPerson: text("contact_person"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -142,6 +172,12 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
   updatedAt: true,
 });
 
+export const insertVendorSchema = createInsertSchema(vendors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Create extended schemas for login
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -161,6 +197,8 @@ export type WaterTank = typeof waterTanks.$inferSelect;
 export type InsertWaterTank = z.infer<typeof insertWaterTankSchema>;
 export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
+export type Vendor = typeof vendors.$inferSelect;
+export type InsertVendor = z.infer<typeof insertVendorSchema>;
 export type Login = z.infer<typeof loginSchema>;
 
 // Summary types for dashboard
