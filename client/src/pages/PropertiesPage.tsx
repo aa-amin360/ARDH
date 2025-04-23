@@ -580,7 +580,7 @@ export default function PropertiesPage() {
                             <SelectContent>
                               {FLATS.map((flat, index) => (
                                 <SelectItem key={index} value={flat.flatNumber}>
-                                  {flat.flatNumber} ({flat.flatType})
+                                  {flat.flatNumber}
                                 </SelectItem>
                               ))}
                             </SelectContent>
