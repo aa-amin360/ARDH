@@ -27,12 +27,10 @@ function AdminRoute({ path, component }: { path: string, component: React.Compon
   // Check if user is an admin and redirect if needed
   useEffect(() => {
     if (!isLoading && user && user.role !== 'admin' && location.startsWith(path)) {
-      // Redirect non-admin users to dashboard
-      setTimeout(() => {
-        navigate('/');
-      }, 100);
+      // Redirect non-admin users to dashboard using hard navigation
+      window.location.href = '/';
     }
-  }, [user, isLoading, path, location, navigate]);
+  }, [user, isLoading, path, location]);
   
   // If loading, show loading state
   if (isLoading) {

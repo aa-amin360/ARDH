@@ -79,15 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user) => {
+      // Update user data in cache
       queryClient.setQueryData(["/api/auth/me"], user);
+      
       toast({
         title: "Registration successful",
         description: `Welcome, ${user.name}!`,
       });
-      // Navigate to dashboard immediately after successful registration
-      setTimeout(() => {
-        navigate("/");
-      }, 100);
+      
+      // Force a hard navigation to the dashboard (more reliable than navigate)
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({

@@ -38,16 +38,13 @@ export default function AuthPage() {
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
 
   // If user is already logged in, redirect to home page
-  // We use a useEffect to avoid React Router error of updating during render
+  // Using window.location.href for a hard redirect to avoid React Router issues
   useEffect(() => {
     if (user && !isLoading) {
-      // Add a small delay to ensure all state updates have completed
-      const timer = setTimeout(() => {
-        navigate("/");
-      }, 100);
-      return () => clearTimeout(timer);
+      // Redirect to dashboard with a hard navigation
+      window.location.href = "/";
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading]);
 
   // Login form setup
   const loginForm = useForm<LoginFormValues>({

@@ -16,9 +16,10 @@ export function ProtectedRoute({ path, component: Component }: ProtectedRoutePro
   // Check if user is authenticated and redirect if needed
   useEffect(() => {
     if (!isLoading && !user && location.startsWith(path)) {
-      navigate("/auth");
+      // Use hard navigation to auth page for more reliable redirection
+      window.location.href = "/auth";
     }
-  }, [user, isLoading, path, location, navigate]);
+  }, [user, isLoading, path, location]);
 
   // Show loading state while checking authentication
   if (isLoading) {
