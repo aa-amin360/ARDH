@@ -5,7 +5,7 @@ import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Save, Eye } from "lucide-react";
+import { Loader2, Plus, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +36,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { insertPropertySchema, type Property } from "@shared/schema";
-import { FLATS, OWNERS, MAINTENANCE_FEES, getOwnerByFlatNumber, getFlatTypeByFlatNumber, getMaintenanceFeeByFlatNumber } from "@shared/constants";
+import { 
+  FLATS, 
+  OWNERS, 
+  MAINTENANCE_FEES, 
+  getOwnerByFlatNumber, 
+  getFlatTypeByFlatNumber, 
+  getMaintenanceFeeByFlatNumber,
+  getNestawayIdByFlatNumber 
+} from "@shared/constants";
 
 // Extended schema with validation
 const propertyFormSchema = insertPropertySchema.extend({
@@ -59,7 +67,12 @@ export default function PropertiesPage() {
   const [isReadOnly, setIsReadOnly] = useState(true);
   
   // Fetch properties
-  const { data: properties = [], isLoading, isError } = useQuery<Property[]>({
+  const { 
+    data: properties = [], 
+    isLoading, 
+    isError,
+    refetch
+  } = useQuery<Property[]>({
     queryKey: ["/api/properties"]
   });
 
@@ -76,6 +89,7 @@ export default function PropertiesPage() {
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      refetch(); // Explicitly refetch to ensure we have the latest data
       setActiveTab("view");
     },
     onError: (error: any) => {
@@ -99,6 +113,7 @@ export default function PropertiesPage() {
         description: "The property has been updated successfully."
       });
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      refetch(); // Explicitly refetch to ensure we have the latest data
       setActiveTab("view");
     },
     onError: (error: any) => {
@@ -226,12 +241,16 @@ export default function PropertiesPage() {
                       <div className="flex items-center justify-center p-2">
                         <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
                       </div>
-                    ) : (
-                      properties.map((property) => (
+                    ) : Array.isArray(properties) && properties.length > 0 ? (
+                      properties.map((property: Property) => (
                         <SelectItem key={property.id} value={property.flatNumber}>
-                          {property.flatNumber} - {property.flatType} ({property.ownerName})
+                          {property.flatNumber} {property.flatType && `- ${property.flatType}`} {property.ownerName && `(${property.ownerName})`}
                         </SelectItem>
                       ))
+                    ) : (
+                      <div className="p-2 text-center text-muted-foreground">
+                        No properties found. Add some properties first.
+                      </div>
                     )}
                   </SelectContent>
                 </Select>
@@ -335,7 +354,7 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Current Tenant</FormLabel>
                             <FormControl>
-                              <Input readOnly={true} value={field.value || ""} />
+                              <Input readOnly={true} value={field.value || "None"} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -400,12 +419,16 @@ export default function PropertiesPage() {
                       <div className="flex items-center justify-center p-2">
                         <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
                       </div>
-                    ) : (
-                      properties.map((property) => (
+                    ) : Array.isArray(properties) && properties.length > 0 ? (
+                      properties.map((property: Property) => (
                         <SelectItem key={property.id} value={property.flatNumber}>
-                          {property.flatNumber} - {property.flatType} ({property.ownerName})
+                          {property.flatNumber} {property.flatType && `- ${property.flatType}`} {property.ownerName && `(${property.ownerName})`}
                         </SelectItem>
                       ))
+                    ) : (
+                      <div className="p-2 text-center text-muted-foreground">
+                        No properties found. Add some properties first.
+                      </div>
                     )}
                   </SelectContent>
                 </Select>
@@ -437,7 +460,7 @@ export default function PropertiesPage() {
                             <FormLabel>Flat Type</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -464,7 +487,7 @@ export default function PropertiesPage() {
                             <FormLabel>Owner</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger>
@@ -598,15 +621,6 @@ export default function PropertiesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {Array.isArray(properties) && properties.length >= FLATS.length ? (
-                <div className="p-4 bg-yellow-50 rounded-md text-yellow-800 mb-4">
-                  <p className="font-medium">
-                    All possible properties have already been added. 
-                    Please use the modify property tab to make changes.
-                  </p>
-                </div>
-              ) : null}
-              
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -664,7 +678,7 @@ export default function PropertiesPage() {
                           <FormLabel>Flat Type</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -691,7 +705,7 @@ export default function PropertiesPage() {
                           <FormLabel>Owner</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -761,7 +775,7 @@ export default function PropertiesPage() {
                           <FormLabel>Floor</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -804,7 +818,7 @@ export default function PropertiesPage() {
                           <FormLabel>Lease Status</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>

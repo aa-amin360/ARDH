@@ -1,6 +1,7 @@
 import { db, pool } from './db';
-import { properties } from '@shared/schema';
+import { properties, apartmentFloorEnum } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { FLATS, getNestawayIdByFlatNumber } from '@shared/constants';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -58,9 +59,12 @@ except Exception as e:
         // Update existing property
         await db.update(properties)
           .set({
-            nestawayId: property['Nestaway-ID'] || null,
+            // Use Nestaway ID from constants if available
+            nestawayId: getNestawayIdByFlatNumber(flatNumber) || property['Nestaway-ID'] || null,
             leaseStatus: property['Lease Status'] || 'Leasable',
-            apartmentFloor: String(property['Apartment Floor'] || '1'),
+            // Convert to a valid enum value
+            apartmentFloor: (property['Apartment Floor'] ? 
+              String(property['Apartment Floor']).slice(0, 1) : '1') as any,
             flatType: property['Apartment Type'] || '2BHK',
             ownerName: property['Rent Income Beneficiary'] || 'Unknown',
             expectedRent: property['Rent Receivable'] || 0,
@@ -74,18 +78,21 @@ except Exception as e:
       } else {
         // Insert new property
         await db.insert(properties)
-          .values({
+          .values([{
             flatNumber,
-            nestawayId: property['Nestaway-ID'] || null,
+            // Use Nestaway ID from constants if available
+            nestawayId: getNestawayIdByFlatNumber(flatNumber) || property['Nestaway-ID'] || null,
             leaseStatus: property['Lease Status'] || 'Leasable',
-            apartmentFloor: String(property['Apartment Floor'] || '1'),
+            // Convert to a valid enum value
+            apartmentFloor: (property['Apartment Floor'] ? 
+              String(property['Apartment Floor']).slice(0, 1) : '1') as any,
             flatType: property['Apartment Type'] || '2BHK',
             ownerName: property['Rent Income Beneficiary'] || 'Unknown',
             expectedRent: property['Rent Receivable'] || 0,
             maintenanceFee: property['Maintenance Cost'] || 0,
             waterCost: property['Water Cost'] || 0,
             isRented: false,
-          })
+          }])
           .execute();
           
         console.log(`Added new property ${flatNumber}`);
