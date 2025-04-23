@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -66,23 +66,51 @@ export default function PropertiesPage() {
   const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("");
   const [isReadOnly, setIsReadOnly] = useState(true);
   
-  // Fetch properties
+  // Fetch properties - use explicit fetch to debug authentication issues
+  const [propertyData, setPropertyData] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
+  
+  const fetchProperties = async () => {
+    try {
+      setLoadingProperties(true);
+      const response = await fetch('/api/properties', {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Properties loaded:", data.length, data);
+      setPropertyData(data);
+    } catch (error) {
+      console.error("Error loading properties:", error);
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
+  
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchProperties();
+  }, []);
+  
+  // Also support the existing React Query interface for backwards compatibility
   const { 
-    data: properties = [], 
-    isLoading, 
+    data: properties = propertyData, 
+    isLoading = loadingProperties, 
     isError,
-    refetch
+    refetch = fetchProperties
   } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
     // Adding retry options and staleTime to improve data fetching reliability
     retry: 3,
     staleTime: 60000, // 1 minute
     refetchOnMount: true,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    enabled: false // Don't run automatically - we'll use our custom fetch
   });
-  
-  // Debug properties data
-  console.log("Properties data:", properties);
 
   // Create property mutation
   const createPropertyMutation = useMutation({
