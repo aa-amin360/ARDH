@@ -4,6 +4,7 @@ export type FlatInfo = {
   flatNumber: string;
   flatType: '1BHK' | '2BHK' | '3BHK' | 'penthouse';
   owner: string;
+  nestawayId?: string;
 };
 
 // Owners
@@ -26,31 +27,32 @@ export const MAINTENANCE_FEES = {
 // All flats in the building with their type and owner
 export const FLATS: FlatInfo[] = [
   // 1BHK flats (9 units)
-  { flatNumber: '203', flatType: '1BHK', owner: 'Mohammed Afzal' },
-  { flatNumber: '204', flatType: '1BHK', owner: 'Mohammed Afzal' },
-  { flatNumber: '303', flatType: '1BHK', owner: 'Ruksana Parveen' },
-  { flatNumber: '304', flatType: '1BHK', owner: 'Ruksana Parveen' },
-  { flatNumber: '402', flatType: '1BHK', owner: 'Mohammed Ashraf' },
-  { flatNumber: '403', flatType: '1BHK', owner: 'Mohammed Ashraf' },
-  { flatNumber: '404', flatType: '1BHK', owner: 'Mohammed Anas' },
-  { flatNumber: '503', flatType: '1BHK', owner: 'Mohammed Anas' },
-  { flatNumber: '504', flatType: '1BHK', owner: 'Mohammed Abdurrahman' },
+  { flatNumber: '203', flatType: '1BHK', owner: 'Mohammed Afzal', nestawayId: 'N35404' },
+  { flatNumber: '204', flatType: '1BHK', owner: 'Mohammed Afzal', nestawayId: 'N35405' },
+  { flatNumber: '303', flatType: '1BHK', owner: 'Ruksana Parveen', nestawayId: 'N35400' },
+  { flatNumber: '304', flatType: '1BHK', owner: 'Ruksana Parveen', nestawayId: 'N35403' },
+  { flatNumber: '402', flatType: '1BHK', owner: 'Mohammed Ashraf', nestawayId: 'N35407' },
+  { flatNumber: '403', flatType: '1BHK', owner: 'Mohammed Ashraf', nestawayId: 'N35445' },
+  { flatNumber: '404', flatType: '1BHK', owner: 'Mohammed Anas', nestawayId: 'N35401' },
+  { flatNumber: '503', flatType: '1BHK', owner: 'Mohammed Anas', nestawayId: 'N35402' },
+  { flatNumber: '504', flatType: '1BHK', owner: 'Mohammed Abdurrahman', nestawayId: 'N35468' },
   
   // 2BHK flats (9 units)
-  { flatNumber: '101', flatType: '2BHK', owner: 'Mohammed Afzal' },
-  { flatNumber: '102', flatType: '2BHK', owner: 'Mohammed Afzal' },
-  { flatNumber: '201', flatType: '2BHK', owner: 'Ruksana Parveen' },
-  { flatNumber: '202', flatType: '2BHK', owner: 'Ruksana Parveen' },
-  { flatNumber: '301', flatType: '2BHK', owner: 'Mohammed Ashraf' },
-  { flatNumber: '302', flatType: '2BHK', owner: 'Mohammed Ashraf' },
-  { flatNumber: '401', flatType: '2BHK', owner: 'Mohammed Anas' },
-  { flatNumber: '501', flatType: '2BHK', owner: 'Mohammed Anas' },
-  { flatNumber: '502', flatType: '2BHK', owner: 'Mohammed Abdurrahman' },
+  { flatNumber: '101', flatType: '2BHK', owner: 'Mohammed Afzal', nestawayId: 'N35410' },
+  { flatNumber: '102', flatType: '2BHK', owner: 'Mohammed Afzal', nestawayId: 'N35260' },
+  { flatNumber: '201', flatType: '2BHK', owner: 'Ruksana Parveen', nestawayId: 'N35259' },
+  { flatNumber: '202', flatType: '2BHK', owner: 'Ruksana Parveen', nestawayId: 'N35408' },
+  { flatNumber: '301', flatType: '2BHK', owner: 'Mohammed Ashraf', nestawayId: 'N35261' },
+  { flatNumber: '302', flatType: '2BHK', owner: 'Mohammed Ashraf', nestawayId: 'N35409' },
+  { flatNumber: '401', flatType: '2BHK', owner: 'Mohammed Anas', nestawayId: 'N35262' },
+  { flatNumber: '501', flatType: '2BHK', owner: 'Mohammed Anas', nestawayId: 'N35469' },
+  { flatNumber: '502', flatType: '2BHK', owner: 'Mohammed Abdurrahman', nestawayId: 'N35411' },
   
   // 3BHK flat (1 unit)
-  { flatNumber: '103', flatType: '3BHK', owner: 'Mohammed Abdurrahman' }
+  { flatNumber: '103', flatType: '3BHK', owner: 'Mohammed Abdurrahman', nestawayId: 'NA' },
   
-  // Note: One penthouse can be added when required
+  // Penthouse (non-leasable)
+  { flatNumber: '601', flatType: 'penthouse', owner: 'Mohammed Abdurrahman', nestawayId: 'NA' }
 ];
 
 // Helper function to get maintenance fee by flat number
@@ -70,4 +72,10 @@ export function getFlatTypeByFlatNumber(flatNumber: string): string | undefined 
 export function getOwnerByFlatNumber(flatNumber: string): string | undefined {
   const flat = FLATS.find(f => f.flatNumber === flatNumber);
   return flat?.owner;
+}
+
+// Helper function to get Nestaway ID by flat number
+export function getNestawayIdByFlatNumber(flatNumber: string): string | undefined {
+  const flat = FLATS.find(f => f.flatNumber === flatNumber);
+  return flat?.nestawayId;
 }

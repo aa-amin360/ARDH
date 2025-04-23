@@ -616,41 +616,27 @@ export default function PropertiesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Flat Number</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Auto-fill the related fields based on selected flat
-                              const flatInfo = FLATS.find(f => f.flatNumber === value);
-                              if (flatInfo) {
-                                form.setValue("flatType", flatInfo.flatType);
-                                form.setValue("ownerName", flatInfo.owner);
-                                form.setValue("maintenanceFee", getMaintenanceFeeByFlatNumber(value));
-                              }
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select flat number" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {FLATS.map((flat, index) => {
-                                // Check if this flat already exists in properties
-                                const existingProperty = properties.find((p) => p.flatNumber === flat.flatNumber);
-                                return (
-                                  <SelectItem 
-                                    key={index} 
-                                    value={flat.flatNumber}
-                                    disabled={!!existingProperty}
-                                  >
-                                    {flat.flatNumber} - {flat.flatType} ({flat.owner})
-                                    {existingProperty ? " (Already added)" : ""}
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              placeholder="Enter 3-digit flat number (e.g. 101)"
+                              onChange={(e) => {
+                                field.onChange(e);
+                                // Try to auto-fill the related fields based on entered flat number
+                                const flatNumber = e.target.value;
+                                const flatInfo = FLATS.find(f => f.flatNumber === flatNumber);
+                                if (flatInfo) {
+                                  form.setValue("flatType", flatInfo.flatType);
+                                  form.setValue("ownerName", flatInfo.owner);
+                                  form.setValue("nestawayId", flatInfo.nestawayId || "");
+                                  form.setValue("maintenanceFee", getMaintenanceFeeByFlatNumber(flatNumber));
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Enter a 3-digit flat number (e.g., 101, 204, 503)
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
