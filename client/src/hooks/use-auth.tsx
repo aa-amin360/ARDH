@@ -58,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
       });
-      // Navigate to dashboard after successful login
-      setTimeout(() => navigate("/"), 500);
+      // Navigate to dashboard immediately after successful login
+      navigate("/");
     },
     onError: (error: Error) => {
       toast({
@@ -81,8 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Registration successful",
         description: `Welcome, ${user.name}!`,
       });
-      // Navigate to dashboard after successful registration
-      setTimeout(() => navigate("/"), 500);
+      // Navigate to dashboard immediately after successful registration
+      navigate("/");
     },
     onError: (error: Error) => {
       toast({
@@ -103,8 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      // Navigate to login page after successful logout
-      setTimeout(() => navigate("/auth"), 500);
+      // Navigate to login page immediately after successful logout
+      navigate("/auth");
     },
     onError: (error: Error) => {
       toast({

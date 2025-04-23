@@ -37,9 +37,9 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
 
-  // If user is already logged in, redirect to home page
+  // If user is already logged in, redirect to home page immediately
   if (user && !isLoading) {
-    setTimeout(() => navigate("/"), 0);
+    navigate("/");
     return null;
   }
 
