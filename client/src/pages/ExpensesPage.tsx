@@ -30,6 +30,10 @@ const expenseFormSchema = insertExpenseSchema.extend({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "Date must be in the format YYYY-MM-DD",
   }),
+  propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
+  vendor: z.string().optional(),
+  receipt: z.string().optional(), // Adding a receipt field which will be mapped to vendor in the final submission
+  createdBy: z.number().optional() // This will be handled by the server
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -41,18 +45,11 @@ export default function ExpensesPage() {
 
   // Query to fetch expenses
   const {
-    data: expenses,
+    data: expenses = [],
     isLoading,
     isError,
   } = useQuery({
     queryKey: ["/api/expenses"],
-    onError: (error: any) => {
-      toast({
-        title: "Error fetching expenses",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   // Mutation to add a new expense
@@ -67,12 +64,14 @@ export default function ExpensesPage() {
         description: "The expense has been added successfully.",
       });
       form.reset({
-        category: "",
-        amount: "",
+        category: "electricity",
+        amount: 0,
         date: new Date().toISOString().split("T")[0],
         description: "",
         receipt: "",
-        propertyId: "",
+        propertyId: "0",
+        vendor: "",
+        createdBy: 0,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
@@ -89,17 +88,24 @@ export default function ExpensesPage() {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      category: "",
-      amount: "",
+      category: "electricity", // Set a default category
+      amount: 0,
       date: new Date().toISOString().split("T")[0],
       description: "",
       receipt: "",
-      propertyId: "",
+      propertyId: "0", // Set default to common areas
+      vendor: "",
+      createdBy: 0, // Will be set on the server
     },
   });
 
   function onSubmit(values: ExpenseFormValues) {
-    createExpenseMutation.mutate(values);
+    // Map receipt to vendor since we're using receipt field in the UI
+    const formattedValues = {
+      ...values,
+      vendor: values.receipt,
+    };
+    createExpenseMutation.mutate(formattedValues);
   }
 
   // Format date for display
@@ -222,7 +228,7 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Common Area / All Properties</SelectItem>
+                              <SelectItem value="0">Common Area / All Properties</SelectItem>
                               <SelectItem value="1">101 - 1BHK</SelectItem>
                               <SelectItem value="2">102 - 2BHK</SelectItem>
                               <SelectItem value="3">103 - 3BHK</SelectItem>

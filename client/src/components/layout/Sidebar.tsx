@@ -134,7 +134,7 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
                 .map((item) => (
                   <li key={item.href}>
                     <Link href={item.href}>
-                      <a
+                      <div
                         className={cn(
                           "flex items-center px-3 py-2 text-sm rounded-md hover:bg-gray-100",
                           {
@@ -145,7 +145,7 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
                       >
                         {item.icon}
                         <span className="ml-3">{item.label}</span>
-                      </a>
+                      </div>
                     </Link>
                   </li>
                 ))}
