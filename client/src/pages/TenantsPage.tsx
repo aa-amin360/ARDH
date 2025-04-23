@@ -99,6 +99,11 @@ export default function TenantsPage() {
     staleTime: 10000,
   });
 
+  // Sort properties by flat number in ascending order
+  const sortedProperties = [...properties].sort((a, b) => 
+    a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true })
+  );
+
   // Create tenant mutation
   const createTenantMutation = useMutation({
     mutationFn: async (values: TenantFormValues) => {
@@ -441,8 +446,8 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {/* Filter out non-leasable properties */}
-                          {properties
+                          {/* Filter out non-leasable properties and sort by flat number */}
+                          {sortedProperties
                             .filter(property => property.leaseStatus !== 'Non-Leasable')
                             .map((property) => {
                               // Find if this flat is in our predefined list
@@ -688,8 +693,8 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {/* Filter out non-leasable properties */}
-                          {properties
+                          {/* Filter out non-leasable properties and sort by flat number */}
+                          {sortedProperties
                             .filter(property => property.leaseStatus !== 'Non-Leasable')
                             .map((property) => {
                               // Find if this flat is in our predefined list

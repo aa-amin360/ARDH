@@ -1,18 +1,26 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Vendor, InsertVendor, insertVendorSchema } from "@shared/schema";
-import { apiRequest } from "../lib/queryClient";
-
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useToast } from "../hooks/use-toast";
+import { useAuth } from "../hooks/use-auth";
+import { apiRequest, queryClient } from "../lib/queryClient";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+} from "../components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -20,84 +28,90 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+} from "../components/ui/dialog";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "../components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import Layout from "../components/layout/Layout";
-import { useAuth } from "@/hooks/use-auth";
-import { PlusCircle, PencilLine, Trash2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "../components/ui/select";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import {
+  Loader2,
+  PlusCircle,
+  PencilLine,
+  Trash2,
+  Search,
+} from "lucide-react";
 
-const formSchema = insertVendorSchema.extend({
-  serviceType: z.string().min(1, "Service type is required"),
-  provisionType: z.string().min(1, "Provision type is required"),
+import { Vendor, vendorServiceTypeEnum, vendorProvisionTypeEnum } from "@shared/schema";
+
+// Define form validation schema
+const formSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters"),
+  phone: z.string().min(10, "Phone number must be at least 10 characters"),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  serviceType: z.enum(vendorServiceTypeEnum.enumValues),
+  provisionType: z.enum(vendorProvisionTypeEnum.enumValues),
+  contactPerson: z.string().optional().or(z.literal("")),
+  address: z.string().optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+  isActive: z.boolean(),
+  createdBy: z.number(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-function VendorsPage() {
+export default function VendorsPage() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState("add");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [activeTab, setActiveTab] = useState("all");
 
+  // Fetch vendors
   const { data: vendors = [], isLoading } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
-    queryFn: async () => {
-      const res = await fetch("/api/vendors");
-      if (!res.ok) throw new Error("Failed to fetch vendors");
-      return res.json();
-    },
   });
 
+  // Form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       phone: "",
       email: "",
-      serviceType: "",
-      provisionType: "service",
-      address: "",
+      serviceType: "plumbing", // Default service type
+      provisionType: "service", // Default provision type
       contactPerson: "",
+      address: "",
       notes: "",
+      isActive: true,
+      createdBy: user?.id || 0,
     },
   });
 
+  // Create vendor mutation
   const createVendorMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       const res = await apiRequest("POST", "/api/vendors", data);
@@ -121,6 +135,7 @@ function VendorsPage() {
     },
   });
 
+  // Update vendor mutation
   const updateVendorMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<FormValues> }) => {
       const res = await apiRequest("PUT", `/api/vendors/${id}`, data);
@@ -167,37 +182,29 @@ function VendorsPage() {
     },
   });
 
-  const handleAddSubmit = (data: FormValues) => {
-    // Add the current user ID to the data
-    const dataWithUser = {
+  // Handler for form submission
+  function onSubmit(data: FormValues) {
+    console.log("Form data:", data);
+    // Set createdBy field
+    const submitData = {
       ...data,
-      createdBy: user?.id || 1 // Use user ID if available or default to 1 (admin)
-    };
-    createVendorMutation.mutate(dataWithUser);
-  };
-
-  const handleEditSubmit = (data: FormValues) => {
-    if (!selectedVendor) return;
-    
-    // If the form data doesn't have createdBy, we keep the original
-    const dataWithUser = {
-      ...data,
-      // Only add createdBy if it's not already in the data
-      createdBy: data.createdBy || selectedVendor.createdBy || user?.id || 1
+      createdBy: user?.id || 1,
+      // Handle empty string fields as null for optional fields
+      email: data.email === "" ? null : data.email,
+      contactPerson: data.contactPerson === "" ? null : data.contactPerson,
+      address: data.address === "" ? null : data.address,
+      notes: data.notes === "" ? null : data.notes,
     };
     
-    updateVendorMutation.mutate({
-      id: selectedVendor.id,
-      data: dataWithUser,
-    });
-  };
+    if (selectedVendor && isEditDialogOpen) {
+      updateVendorMutation.mutate({ id: selectedVendor.id, data: submitData });
+    } else {
+      createVendorMutation.mutate(submitData);
+    }
+  }
 
-  const handleDeleteConfirm = () => {
-    if (!selectedVendor) return;
-    deleteVendorMutation.mutate(selectedVendor.id);
-  };
-
-  const openEditDialog = (vendor: Vendor) => {
+  // Open edit dialog and populate form
+  function openEditDialog(vendor: Vendor) {
     setSelectedVendor(vendor);
     form.reset({
       name: vendor.name,
@@ -205,170 +212,307 @@ function VendorsPage() {
       email: vendor.email || "",
       serviceType: vendor.serviceType,
       provisionType: vendor.provisionType,
-      address: vendor.address || "",
       contactPerson: vendor.contactPerson || "",
+      address: vendor.address || "",
       notes: vendor.notes || "",
+      isActive: vendor.isActive,
+      createdBy: vendor.createdBy,
     });
     setIsEditDialogOpen(true);
-  };
+  }
 
-  const openDeleteDialog = (vendor: Vendor) => {
+  // Open delete dialog
+  function openDeleteDialog(vendor: Vendor) {
     setSelectedVendor(vendor);
     setIsDeleteDialogOpen(true);
-  };
+  }
 
-  const filteredVendors = activeTab === "all" 
-    ? vendors 
-    : vendors.filter(vendor => vendor.serviceType === activeTab);
+  // Filter vendors based on search query
+  const filteredVendors = vendors.filter((vendor) => {
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      vendor.name.toLowerCase().includes(query) ||
+      vendor.serviceType.toLowerCase().includes(query) ||
+      vendor.phone.toLowerCase().includes(query) ||
+      (vendor.email?.toLowerCase() || "").includes(query)
+    );
+  });
+
+  // Get service type display name
+  function getServiceTypeName(type: string): string {
+    return type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  }
 
   return (
-    <Layout>
-      <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Vendors Management</h1>
-          <Button onClick={() => {
-            form.reset();
-            setIsAddDialogOpen(true);
-          }}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Vendor
-          </Button>
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Vendors Management</h1>
+          <p className="text-muted-foreground">
+            Manage service providers and suppliers.
+          </p>
         </div>
-
-        <Tabs defaultValue="all" className="mb-6" onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="Electrical">Electrical</TabsTrigger>
-            <TabsTrigger value="Plumbing">Plumbing</TabsTrigger>
-            <TabsTrigger value="Paint_Job">Paint Job</TabsTrigger>
-            <TabsTrigger value="Wood_work">Wood Work</TabsTrigger>
-            <TabsTrigger value="Water">Water</TabsTrigger>
-            <TabsTrigger value="Other">Other</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab}>
-            {isLoading ? (
-              <div className="text-center py-10">Loading vendors...</div>
-            ) : filteredVendors.length === 0 ? (
-              <div className="text-center py-10">
-                No vendors found in this category.
-              </div>
-            ) : (
-              <div className="overflow-auto rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Service Type</TableHead>
-                      <TableHead>Provision Type</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Contact Person</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredVendors.map((vendor) => (
-                      <TableRow key={vendor.id}>
-                        <TableCell className="font-medium">{vendor.name}</TableCell>
-                        <TableCell>{vendor.serviceType.replace('_', ' ')}</TableCell>
-                        <TableCell>{vendor.provisionType}</TableCell>
-                        <TableCell>{vendor.phone}</TableCell>
-                        <TableCell>{vendor.contactPerson || "N/A"}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${vendor.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>
-                            {vendor.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(vendor)}
-                          >
-                            <PencilLine className="h-4 w-4" />
-                          </Button>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDeleteDialog(vendor)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Vendor
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Vendors</CardTitle>
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search vendors..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="all">All Vendors</TabsTrigger>
+                <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                <TabsTrigger value="utilities">Utilities</TabsTrigger>
+                <TabsTrigger value="supplies">Supplies</TabsTrigger>
+              </TabsList>
+              <TabsContent value="all">
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : filteredVendors.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {searchQuery
+                      ? "No vendors found matching your search criteria."
+                      : "No vendors added yet. Click 'Add Vendor' to create one."}
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Service Type</TableHead>
+                          <TableHead>Contact</TableHead>
+                          <TableHead>Notes</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredVendors.map((vendor) => (
+                          <TableRow key={vendor.id}>
+                            <TableCell className="font-medium">{vendor.name}</TableCell>
+                            <TableCell>
+                              {getServiceTypeName(vendor.serviceType)}
+                              <div className="text-xs text-muted-foreground">
+                                {vendor.provisionType === "service" ? "Service Provider" : "Supplier"}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>{vendor.phone}</div>
+                              {vendor.email && (
+                                <div className="text-xs text-muted-foreground">{vendor.email}</div>
+                              )}
+                              {vendor.contactPerson && (
+                                <div className="text-xs">Contact: {vendor.contactPerson}</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {vendor.notes || "-"}
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={`inline-block px-2 py-1 rounded-full text-xs ${
+                                  vendor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {vendor.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(vendor)}
+                              >
+                                <PencilLine className="h-4 w-4" />
+                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openDeleteDialog(vendor)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+              
+              {/* Other tabs with filtered lists */}
+              {["maintenance", "utilities", "supplies"].map((category) => (
+                <TabsContent key={category} value={category}>
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Service Type</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Notes</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredVendors
+                            .filter((vendor) => {
+                              if (category === "maintenance") {
+                                return [
+                                  "plumbing",
+                                  "electrical",
+                                  "carpentry",
+                                  "painting",
+                                  "cleaning"
+                                ].includes(vendor.serviceType);
+                              } else if (category === "utilities") {
+                                return [
+                                  "electricity",
+                                  "water",
+                                  "internet",
+                                  "security"
+                                ].includes(vendor.serviceType);
+                              } else if (category === "supplies") {
+                                return vendor.provisionType === "product";
+                              }
+                              return false;
+                            })
+                            .map((vendor) => (
+                              <TableRow key={vendor.id}>
+                                <TableCell className="font-medium">{vendor.name}</TableCell>
+                                <TableCell>
+                                  {getServiceTypeName(vendor.serviceType)}
+                                  <div className="text-xs text-muted-foreground">
+                                    {vendor.provisionType === "service" ? "Service Provider" : "Supplier"}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div>{vendor.phone}</div>
+                                  {vendor.email && (
+                                    <div className="text-xs text-muted-foreground">{vendor.email}</div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="max-w-[200px] truncate">
+                                  {vendor.notes || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`inline-block px-2 py-1 rounded-full text-xs ${
+                                      vendor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {vendor.isActive ? "Active" : "Inactive"}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditDialog(vendor)}
+                                  >
+                                    <PencilLine className="h-4 w-4" />
+                                  </Button>
+                                  {isAdmin && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openDeleteDialog(vendor)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Add Vendor Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add New Vendor</DialogTitle>
             <DialogDescription>
-              Enter the details of the new vendor below.
+              Enter the vendor details below. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleAddSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name*</FormLabel>
+                      <FormLabel>Vendor Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Vendor name" {...field} />
+                        <Input placeholder="Enter vendor name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone*</FormLabel>
+                      <FormLabel>Phone Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="10-digit phone number" {...field} />
+                        <Input placeholder="Enter phone number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Email address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="serviceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Service Type*</FormLabel>
+                      <FormLabel>Service Type *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -379,25 +523,23 @@ function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Electrical">Electrical</SelectItem>
-                          <SelectItem value="Plumbing">Plumbing</SelectItem>
-                          <SelectItem value="Paint_Job">Paint Job</SelectItem>
-                          <SelectItem value="Wood_work">Wood work</SelectItem>
-                          <SelectItem value="Water">Water</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          {vendorServiceTypeEnum.enumValues.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {getServiceTypeName(type)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="provisionType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Provision Type*</FormLabel>
+                      <FormLabel>Provision Type *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
@@ -408,24 +550,41 @@ function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="service">Service</SelectItem>
-                          <SelectItem value="product">Product</SelectItem>
-                          <SelectItem value="both">Both</SelectItem>
+                          {vendorProvisionTypeEnum.enumValues.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type === "service" ? "Service Provider" : "Product Supplier"}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter email address" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="contactPerson"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
+                      <FormLabel>Contact Person (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Primary contact person" {...field} />
+                        <Input placeholder="Enter contact person name" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -438,9 +597,9 @@ function VendorsPage() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Vendor address" {...field} />
+                      <Input placeholder="Enter address" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -452,14 +611,34 @@ function VendorsPage() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Additional information about this vendor"
-                        {...field}
-                      />
+                      <Textarea placeholder="Add any additional notes" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Active</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Is this vendor currently active and available for work?
+                      </p>
+                    </div>
                   </FormItem>
                 )}
               />
@@ -472,11 +651,11 @@ function VendorsPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={createVendorMutation.isPending}
-                >
-                  {createVendorMutation.isPending ? "Saving..." : "Save Vendor"}
+                <Button type="submit" disabled={createVendorMutation.isPending}>
+                  {createVendorMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save
                 </Button>
               </DialogFooter>
             </form>
@@ -486,68 +665,54 @@ function VendorsPage() {
 
       {/* Edit Vendor Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Vendor</DialogTitle>
             <DialogDescription>
-              Update the vendor details below.
+              Update the vendor details below. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEditSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name*</FormLabel>
+                      <FormLabel>Vendor Name *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Vendor name" {...field} />
+                        <Input placeholder="Enter vendor name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone*</FormLabel>
+                      <FormLabel>Phone Number *</FormLabel>
                       <FormControl>
-                        <Input placeholder="10-digit phone number" {...field} />
+                        <Input placeholder="Enter phone number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Email address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="serviceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Service Type*</FormLabel>
+                      <FormLabel>Service Type *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -555,28 +720,26 @@ function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Electrical">Electrical</SelectItem>
-                          <SelectItem value="Plumbing">Plumbing</SelectItem>
-                          <SelectItem value="Paint_Job">Paint Job</SelectItem>
-                          <SelectItem value="Wood_work">Wood work</SelectItem>
-                          <SelectItem value="Water">Water</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          {vendorServiceTypeEnum.enumValues.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {getServiceTypeName(type)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="provisionType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Provision Type*</FormLabel>
+                      <FormLabel>Provision Type *</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -584,24 +747,41 @@ function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="service">Service</SelectItem>
-                          <SelectItem value="product">Product</SelectItem>
-                          <SelectItem value="both">Both</SelectItem>
+                          {vendorProvisionTypeEnum.enumValues.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type === "service" ? "Service Provider" : "Product Supplier"}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter email address" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="contactPerson"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contact Person</FormLabel>
+                      <FormLabel>Contact Person (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Primary contact person" {...field} />
+                        <Input placeholder="Enter contact person name" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -614,9 +794,9 @@ function VendorsPage() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Vendor address" {...field} />
+                      <Input placeholder="Enter address" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -628,14 +808,34 @@ function VendorsPage() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="Additional information about this vendor"
-                        {...field}
-                      />
+                      <Textarea placeholder="Add any additional notes" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Active</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Is this vendor currently active and available for work?
+                      </p>
+                    </div>
                   </FormItem>
                 )}
               />
@@ -648,11 +848,11 @@ function VendorsPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={updateVendorMutation.isPending}
-                >
-                  {updateVendorMutation.isPending ? "Updating..." : "Update Vendor"}
+                <Button type="submit" disabled={updateVendorMutation.isPending}>
+                  {updateVendorMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save
                 </Button>
               </DialogFooter>
             </form>
@@ -662,13 +862,22 @@ function VendorsPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogTitle>Delete Vendor</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete vendor "{selectedVendor?.name}"? This action cannot be undone.
+              Are you sure you want to delete this vendor? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          <div className="py-4">
+            {selectedVendor && (
+              <div className="space-y-2">
+                <p><span className="font-semibold">Name:</span> {selectedVendor.name}</p>
+                <p><span className="font-semibold">Service Type:</span> {getServiceTypeName(selectedVendor.serviceType)}</p>
+                <p><span className="font-semibold">Phone:</span> {selectedVendor.phone}</p>
+              </div>
+            )}
+          </div>
           <DialogFooter>
             <Button
               type="button"
@@ -680,16 +889,21 @@ function VendorsPage() {
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDeleteConfirm}
               disabled={deleteVendorMutation.isPending}
+              onClick={() => {
+                if (selectedVendor) {
+                  deleteVendorMutation.mutate(selectedVendor.id);
+                }
+              }}
             >
-              {deleteVendorMutation.isPending ? "Deleting..." : "Delete Vendor"}
+              {deleteVendorMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </div>
   );
 }
-
-export default VendorsPage;
