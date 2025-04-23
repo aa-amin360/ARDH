@@ -3,7 +3,11 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const errorMessage = res.status === 401
+      ? "You are not authorized to access this resource. Please log in."
+      : `${res.status}: ${text}`;
+    
+    throw new Error(errorMessage);
   }
 }
 

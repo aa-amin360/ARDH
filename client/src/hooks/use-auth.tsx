@@ -7,6 +7,7 @@ import {
 import { User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 // Define the shape of the user data returned from API
 interface UserResponse {
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   
   const {
     data: user,
@@ -56,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
       });
+      // Navigate to dashboard after successful login
+      setTimeout(() => navigate("/"), 500);
     },
     onError: (error: Error) => {
       toast({
@@ -77,6 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Registration successful",
         description: `Welcome, ${user.name}!`,
       });
+      // Navigate to dashboard after successful registration
+      setTimeout(() => navigate("/"), 500);
     },
     onError: (error: Error) => {
       toast({
@@ -97,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Logged out",
         description: "You have been successfully logged out",
       });
+      // Navigate to login page after successful logout
+      setTimeout(() => navigate("/auth"), 500);
     },
     onError: (error: Error) => {
       toast({

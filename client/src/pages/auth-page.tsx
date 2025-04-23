@@ -39,7 +39,7 @@ export default function AuthPage() {
 
   // If user is already logged in, redirect to home page
   if (user && !isLoading) {
-    navigate("/");
+    setTimeout(() => navigate("/"), 0);
     return null;
   }
 
