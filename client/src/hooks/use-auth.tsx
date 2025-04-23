@@ -8,14 +8,23 @@ import { User as SelectUser, InsertUser } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+// Define the shape of the user data returned from API
+interface UserResponse {
+  id: number;
+  username: string;
+  name: string;
+  role: "admin" | "data_entry";
+  email?: string | null;
+}
+
 type AuthContextType = {
-  user: SelectUser | null;
+  user: UserResponse | null;
   isLoading: boolean;
   error: Error | null;
   isAdmin: boolean;
-  loginMutation: UseMutationResult<Omit<SelectUser, "password">, Error, LoginData>;
+  loginMutation: UseMutationResult<UserResponse, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<Omit<SelectUser, "password">, Error, InsertUser>;
+  registerMutation: UseMutationResult<UserResponse, Error, InsertUser>;
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
@@ -29,14 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery({
+  } = useQuery<UserResponse | null, Error>({
     queryKey: ["/api/auth/me"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const isAdmin = user?.role === "admin";
 
-  const loginMutation = useMutation({
+  const loginMutation = useMutation<UserResponse, Error, LoginData>({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/auth/login", credentials);
       return await res.json();
@@ -57,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const registerMutation = useMutation({
+  const registerMutation = useMutation<UserResponse, Error, InsertUser>({
     mutationFn: async (credentials: InsertUser) => {
       const res = await apiRequest("POST", "/api/auth/register", credentials);
       return await res.json();
@@ -78,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const logoutMutation = useMutation({
+  const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
       await apiRequest("POST", "/api/auth/logout");
     },
@@ -104,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         isLoading,
         error,
-        isAdmin,
+        isAdmin: !!isAdmin,
         loginMutation,
         logoutMutation,
         registerMutation,
