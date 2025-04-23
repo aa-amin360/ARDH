@@ -663,6 +663,15 @@ export default function TenantsPage() {
                               </SelectItem>
                             );
                           })}
+                          
+                          {/* Then add any flats from our constants that aren't in properties */}
+                          {FLATS.filter(flat => 
+                            !properties.some(p => p.flatNumber === flat.flatNumber)
+                          ).map((flat, idx) => (
+                            <SelectItem key={`flat-${idx}`} value={`flat-${flat.flatNumber}`} disabled>
+                              {flat.flatNumber} ({flat.flatType}) - Add property first
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

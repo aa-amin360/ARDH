@@ -466,13 +466,34 @@ export default function ExpensesPage() {
                     name="receipt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Receipt/Invoice Number</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Optional receipt or invoice number"
-                            {...field}
-                          />
-                        </FormControl>
+                        <FormLabel>Vendor</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select vendor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">-- Select Vendor --</SelectItem>
+                            {vendorsLoading ? (
+                              <SelectItem value="" disabled>Loading vendors...</SelectItem>
+                            ) : filteredVendors && filteredVendors.length > 0 ? (
+                              filteredVendors.map((vendor: any) => (
+                                <SelectItem key={vendor.id} value={vendor.name}>
+                                  {vendor.name} ({vendor.serviceType})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>No vendors available for this category</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Select the vendor for this expense
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
