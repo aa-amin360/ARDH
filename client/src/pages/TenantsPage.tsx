@@ -1,28 +1,61 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { z } from "zod";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-
-// Components
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
-import { CalendarIcon, Loader2, PlusCircle, Search, Edit, Trash2 } from "lucide-react";
-import { DatePicker } from "@/components/ui/date-picker";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useToast } from "../hooks/use-toast";
+import { useAuth } from "../hooks/use-auth";
+import { queryClient, apiRequest } from "../lib/queryClient";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { DatePicker } from "../components/ui/date-picker";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Badge } from "../components/ui/badge";
+import { 
+  PlusCircle, 
+  Search, 
+  Edit, 
+  Trash2, 
+  Loader2 
+} from "lucide-react";
 
 import { Tenant, InsertTenant, Property } from "@shared/schema";
 
@@ -137,7 +170,7 @@ export default function TenantsPage() {
         name: z.string().min(3, "Name must be at least 3 characters"),
         phone: z.string().min(10, "Contact number must be at least 10 characters"),
         email: z.string().email("Please enter a valid email address"),
-        propertyId: z.number(),
+        propertyId: z.number().min(1, "Please select a property"),
         leaseStartDate: z.date(),
         leaseEndDate: z.date(),
         rentAmount: z.number().min(1, "Rent amount must be greater than 0"),
@@ -167,14 +200,16 @@ export default function TenantsPage() {
     if (selectedTenant && isEditDialogOpen) {
       form.reset({
         name: selectedTenant.name,
-        contactNumber: selectedTenant.contactNumber,
+        phone: selectedTenant.phone,
         email: selectedTenant.email || "",
         propertyId: selectedTenant.propertyId,
         leaseStartDate: new Date(selectedTenant.leaseStartDate),
         leaseEndDate: new Date(selectedTenant.leaseEndDate),
-        monthlyRent: selectedTenant.monthlyRent,
+        rentAmount: selectedTenant.rentAmount,
+        securityDeposit: selectedTenant.securityDeposit,
         status: selectedTenant.status,
         notes: selectedTenant.notes || "",
+        createdBy: selectedTenant.createdBy,
       });
     }
   }, [selectedTenant, isEditDialogOpen, form]);
@@ -184,17 +219,19 @@ export default function TenantsPage() {
     if (isAddDialogOpen) {
       form.reset({
         name: "",
-        contactNumber: "",
+        phone: "",
         email: "",
         propertyId: 0,
         leaseStartDate: new Date(),
         leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-        monthlyRent: 0,
+        rentAmount: 0,
+        securityDeposit: 0,
         status: "active",
         notes: "",
+        createdBy: user?.id || 1,
       });
     }
-  }, [isAddDialogOpen, form]);
+  }, [isAddDialogOpen, form, user]);
 
   // Handle form submission
   function onSubmit(values: TenantFormValues) {
@@ -213,7 +250,7 @@ export default function TenantsPage() {
     return (
       tenant.name.toLowerCase().includes(query) ||
       tenant.email?.toLowerCase().includes(query) ||
-      tenant.contactNumber.toLowerCase().includes(query) ||
+      tenant.phone.toLowerCase().includes(query) ||
       getPropertyFlatNumber(tenant.propertyId)?.toLowerCase().includes(query)
     );
   });
@@ -299,7 +336,7 @@ export default function TenantsPage() {
                       <TableCell className="font-medium">{tenant.name}</TableCell>
                       <TableCell>{getPropertyFlatNumber(tenant.propertyId)}</TableCell>
                       <TableCell>
-                        <div>{tenant.contactNumber}</div>
+                        <div>{tenant.phone}</div>
                         <div className="text-sm text-muted-foreground">{tenant.email}</div>
                       </TableCell>
                       <TableCell>
@@ -308,7 +345,7 @@ export default function TenantsPage() {
                           to {format(new Date(tenant.leaseEndDate), "dd MMM yyyy")}
                         </div>
                       </TableCell>
-                      <TableCell>₹{tenant.monthlyRent.toLocaleString()}</TableCell>
+                      <TableCell>₹{tenant.rentAmount.toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(tenant.status)}>
                           {tenant.status.replace("_", " ")}
@@ -378,7 +415,7 @@ export default function TenantsPage() {
                       <FormLabel>Property</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(Number(value))}
-                        value={field.value?.toString()}
+                        value={field.value ? field.value.toString() : ""}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -402,7 +439,7 @@ export default function TenantsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="contactNumber"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Contact Number</FormLabel>
@@ -466,7 +503,7 @@ export default function TenantsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="monthlyRent"
+                  name="rentAmount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Monthly Rent (₹)</FormLabel>
@@ -484,30 +521,49 @@ export default function TenantsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="securityDeposit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="notice_period">Notice Period</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Security Deposit (₹)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="notice_period">Notice Period</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -576,7 +632,7 @@ export default function TenantsPage() {
                       <FormLabel>Property</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(Number(value))}
-                        value={field.value?.toString()}
+                        value={field.value ? field.value.toString() : ""}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -600,7 +656,7 @@ export default function TenantsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="contactNumber"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Contact Number</FormLabel>
@@ -664,7 +720,7 @@ export default function TenantsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="monthlyRent"
+                  name="rentAmount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Monthly Rent (₹)</FormLabel>
@@ -682,30 +738,49 @@ export default function TenantsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="securityDeposit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="notice_period">Notice Period</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Security Deposit (₹)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="notice_period">Notice Period</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -742,17 +817,24 @@ export default function TenantsPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the tenant {selectedTenant?.name}. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this tenant? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
               onClick={() => {
                 if (selectedTenant) {
                   deleteTenantMutation.mutate(selectedTenant.id);
@@ -764,10 +846,10 @@ export default function TenantsPage() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
