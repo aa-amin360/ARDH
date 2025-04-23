@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet, Upload, Image as ImageIcon, XCircle, AlertCircle } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ExpensesBulkUpload from "@/components/bulk-upload/ExpensesBulkUpload";
 import {
   Table,
   TableBody,
@@ -215,8 +216,9 @@ export default function ExpensesPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="add">Add Expense</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           <TabsTrigger value="view">View Expenses</TabsTrigger>
         </TabsList>
 
@@ -538,6 +540,10 @@ export default function ExpensesPage() {
               </Form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="mt-4">
+          <ExpensesBulkUpload />
         </TabsContent>
 
         <TabsContent value="view" className="mt-4">
