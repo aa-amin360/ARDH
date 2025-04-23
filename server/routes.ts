@@ -8,7 +8,8 @@ import {
   insertPropertySchema,
   insertIncomeSchema,
   insertExpenseSchema,
-  insertWaterTankSchema
+  insertWaterTankSchema,
+  insertTenantSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -423,6 +424,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.json(transactions);
       }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Tenant routes
+  app.get('/api/tenants', isAuthenticated, async (req, res, next) => {
+    try {
+      const tenants = await storage.getTenants();
+      res.json(tenants);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/tenants/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const tenant = await storage.getTenant(id);
+      
+      if (!tenant) {
+        return res.status(404).json({ message: 'Tenant not found' });
+      }
+      
+      res.json(tenant);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/properties/:propertyId/tenants', isAuthenticated, async (req, res, next) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const tenants = await storage.getTenantsByProperty(propertyId);
+      res.json(tenants);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/tenants', isAuthenticated, async (req, res, next) => {
+    try {
+      const tenantData = insertTenantSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id
+      });
+      
+      const newTenant = await storage.createTenant(tenantData);
+      res.status(201).json(newTenant);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.put('/api/tenants/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const tenantData = insertTenantSchema.partial().parse(req.body);
+      
+      const updatedTenant = await storage.updateTenant(id, tenantData);
+      
+      if (!updatedTenant) {
+        return res.status(404).json({ message: 'Tenant not found' });
+      }
+      
+      res.json(updatedTenant);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.delete('/api/tenants/:id', isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTenant(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Tenant not found' });
+      }
+      
+      res.json({ message: 'Tenant deleted successfully' });
     } catch (error) {
       next(error);
     }

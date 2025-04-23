@@ -427,6 +427,97 @@ export class MemStorage implements IStorage {
     return this.waterTanks.delete(id);
   }
   
+  // Tenant management
+  async getTenant(id: number): Promise<Tenant | undefined> {
+    return this.tenants.get(id);
+  }
+  
+  async getTenants(): Promise<Tenant[]> {
+    return Array.from(this.tenants.values());
+  }
+  
+  async getTenantsByProperty(propertyId: number): Promise<Tenant[]> {
+    return Array.from(this.tenants.values()).filter(
+      tenant => tenant.propertyId === propertyId
+    );
+  }
+  
+  async createTenant(insertTenant: InsertTenant): Promise<Tenant> {
+    const id = this.tenantCounter++;
+    const now = new Date();
+    const tenant: Tenant = { 
+      ...insertTenant, 
+      id, 
+      createdAt: now,
+      updatedAt: now 
+    };
+    this.tenants.set(id, tenant);
+    
+    // Update the property's isRented status and currentTenant name
+    const property = this.properties.get(tenant.propertyId);
+    if (property) {
+      this.updateProperty(property.id, {
+        isRented: true,
+        currentTenant: tenant.name
+      });
+    }
+    
+    return tenant;
+  }
+  
+  async updateTenant(id: number, updates: Partial<InsertTenant>): Promise<Tenant | undefined> {
+    const tenant = this.tenants.get(id);
+    if (!tenant) return undefined;
+    
+    const updatedTenant = { 
+      ...tenant, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.tenants.set(id, updatedTenant);
+    
+    // If tenant status is changed to inactive, update property status
+    if (updates.status === 'inactive' && tenant.status !== 'inactive') {
+      const property = this.properties.get(tenant.propertyId);
+      if (property) {
+        this.updateProperty(property.id, {
+          isRented: false,
+          currentTenant: undefined
+        });
+      }
+    }
+    
+    // If tenant name is updated, update property currentTenant
+    if (updates.name && tenant.status === 'active') {
+      const property = this.properties.get(tenant.propertyId);
+      if (property) {
+        this.updateProperty(property.id, {
+          currentTenant: updates.name
+        });
+      }
+    }
+    
+    return updatedTenant;
+  }
+  
+  async deleteTenant(id: number): Promise<boolean> {
+    const tenant = this.tenants.get(id);
+    if (tenant) {
+      // Update property status if tenant was active
+      if (tenant.status === 'active') {
+        const property = this.properties.get(tenant.propertyId);
+        if (property) {
+          this.updateProperty(property.id, {
+            isRented: false,
+            currentTenant: undefined
+          });
+        }
+      }
+    }
+    
+    return this.tenants.delete(id);
+  }
+  
   // Dashboard data
   async getIncomeSummary(): Promise<IncomeSummary> {
     const incomes = Array.from(this.incomes.values());
