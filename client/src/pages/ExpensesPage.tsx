@@ -452,8 +452,8 @@ export default function ExpensesPage() {
                               
                               {loadingProperties ? (
                                 <SelectItem value="_loading" disabled>Loading properties...</SelectItem>
-                              ) : properties && properties.length > 0 ? (
-                                properties.map((property: any) => (
+                              ) : Array.isArray(properties) && properties.length > 0 ? (
+                                properties.map((property) => (
                                   <SelectItem key={property.id} value={property.id.toString()}>
                                     {property.flatNumber}
                                   </SelectItem>
@@ -573,8 +573,8 @@ export default function ExpensesPage() {
                             <SelectItem value="_none">-- Select Vendor --</SelectItem>
                             {vendorsLoading ? (
                               <SelectItem value="_loading" disabled>Loading vendors...</SelectItem>
-                            ) : filteredVendors && filteredVendors.length > 0 ? (
-                              filteredVendors.map((vendor: any) => (
+                            ) : Array.isArray(filteredVendors) && filteredVendors.length > 0 ? (
+                              filteredVendors.map((vendor) => (
                                 <SelectItem key={vendor.id} value={vendor.name}>
                                   {vendor.name} ({vendor.serviceType})
                                 </SelectItem>
@@ -714,7 +714,7 @@ export default function ExpensesPage() {
                 <p className="text-center text-red-500 my-8">
                   Error loading expenses
                 </p>
-              ) : expenses && expenses.length > 0 ? (
+              ) : Array.isArray(expenses) && expenses.length > 0 ? (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>

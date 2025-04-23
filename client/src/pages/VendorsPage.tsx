@@ -101,7 +101,7 @@ export default function VendorsPage() {
       name: "",
       phone: "",
       email: "",
-      serviceType: "plumbing", // Default service type
+      serviceType: "Plumbing", // Default service type
       provisionType: "service", // Default provision type
       contactPerson: "",
       address: "",
@@ -390,18 +390,17 @@ export default function VendorsPage() {
                             .filter((vendor) => {
                               if (category === "maintenance") {
                                 return [
-                                  "plumbing",
-                                  "electrical",
-                                  "carpentry",
-                                  "painting",
-                                  "cleaning"
+                                  "Plumbing",
+                                  "Electrical",
+                                  "Wood_work",
+                                  "Paint_Job",
+                                  "Other"
                                 ].includes(vendor.serviceType);
                               } else if (category === "utilities") {
                                 return [
-                                  "electricity",
-                                  "water",
-                                  "internet",
-                                  "security"
+                                  "Electrical",
+                                  "Water",
+                                  "Other"
                                 ].includes(vendor.serviceType);
                               } else if (category === "supplies") {
                                 return vendor.provisionType === "product";
