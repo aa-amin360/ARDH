@@ -119,6 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Support both PUT and PATCH for property updates
   app.put('/api/properties/:id', isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
@@ -132,6 +133,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedProperty);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.patch('/api/properties/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const propertyData = insertPropertySchema.partial().parse(req.body);
+      
+      console.log(`Updating property ${id} with data:`, propertyData);
+      
+      const updatedProperty = await storage.updateProperty(id, propertyData);
+      
+      if (!updatedProperty) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+      
+      res.json(updatedProperty);
+    } catch (error) {
+      console.error('Error updating property:', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }

@@ -76,8 +76,13 @@ export default function PropertiesPage() {
     queryKey: ["/api/properties"],
     // Adding retry options and staleTime to improve data fetching reliability
     retry: 3,
-    staleTime: 60000 // 1 minute
+    staleTime: 60000, // 1 minute
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
+  
+  // Debug properties data
+  console.log("Properties data:", properties);
 
   // Create property mutation
   const createPropertyMutation = useMutation({
