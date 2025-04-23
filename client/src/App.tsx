@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/DashboardPage";
 import PropertiesPage from "@/pages/PropertiesPage";
+import TenantsPage from "@/pages/TenantsPage";
 import IncomePage from "@/pages/IncomePage";
 import ExpensesPage from "@/pages/ExpensesPage";
 import ReportsPage from "@/pages/ReportsPage";
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
       <ProtectedRoute path="/properties" component={PropertiesPage} />
+      <ProtectedRoute path="/tenants" component={TenantsPage} />
       {/* Income page is admin-only */}
       <AdminRoute path="/income" component={IncomePage} />
       <ProtectedRoute path="/expenses" component={ExpensesPage} />

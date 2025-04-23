@@ -43,6 +43,12 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
       isVisible: true,
     },
     {
+      label: "Tenants",
+      href: "/tenants",
+      icon: <Users className="w-5 h-5" />,
+      isVisible: true,
+    },
+    {
       label: "Income",
       href: "/income",
       icon: <Receipt className="w-5 h-5" />,
