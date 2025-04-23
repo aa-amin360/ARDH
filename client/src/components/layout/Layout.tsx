@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "../hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import MobileNavBar from "./MobileNavBar";
