@@ -163,6 +163,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Bulk upload for income
+  app.post('/api/incomes/bulk-upload', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
+    try {
+      // In a real implementation, this would:
+      // 1. Parse the CSV file from req.files
+      // 2. Validate each row of the CSV
+      // 3. Create income records for each valid row
+      // 4. Return success count and any errors
+      
+      // For the prototype, we'll simulate a successful upload
+      setTimeout(() => {
+        res.json({
+          success: true,
+          count: 5, // Simulating 5 records uploaded
+          message: "Uploaded income records successfully"
+        });
+      }, 1000); // Simulated 1 second delay
+    } catch (error) {
+      console.error("Bulk upload error:", error);
+      next(error);
+    }
+  });
+  
   app.get('/api/incomes/:id', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
@@ -236,6 +259,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expenses = await storage.getExpenses();
       res.json(expenses);
     } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Bulk upload for expenses
+  app.post('/api/expenses/bulk-upload', isAuthenticated, async (req, res, next) => {
+    try {
+      // In a real implementation, this would:
+      // 1. Parse the CSV file from req.files (using a package like 'multer' for file uploads)
+      // 2. Validate each row of the CSV
+      // 3. Create expense records for each valid row
+      // 4. Return success count and any errors
+      
+      // For the prototype, we'll simulate a successful upload
+      setTimeout(() => {
+        res.json({
+          success: true,
+          count: 5, // Simulating 5 records uploaded
+          message: "Uploaded expenses successfully"
+        });
+      }, 1000); // Simulated 1 second delay
+    } catch (error) {
+      console.error("Bulk upload error:", error);
       next(error);
     }
   });

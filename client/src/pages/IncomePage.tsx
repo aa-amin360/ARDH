@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
 import { insertIncomeSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import IncomeBulkUpload from "@/components/bulk-upload/IncomeBulkUpload";
 import {
   Table,
   TableBody,
@@ -146,8 +147,9 @@ export default function IncomePage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="add">Add Income</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           <TabsTrigger value="view">View Income</TabsTrigger>
         </TabsList>
 
@@ -325,6 +327,10 @@ export default function IncomePage() {
               </Form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="mt-4">
+          <IncomeBulkUpload />
         </TabsContent>
 
         <TabsContent value="view" className="mt-4">
