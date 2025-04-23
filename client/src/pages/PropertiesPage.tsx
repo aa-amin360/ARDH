@@ -559,9 +559,32 @@ export default function PropertiesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Flat Number</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., 101" />
-                          </FormControl>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Auto-fill the related fields based on selected flat
+                              const flatInfo = FLATS.find(f => f.flatNumber === value);
+                              if (flatInfo) {
+                                form.setValue("flatType", flatInfo.flatType);
+                                form.setValue("ownerName", flatInfo.owner);
+                                form.setValue("maintenanceFee", getMaintenanceFeeByFlatNumber(value));
+                              }
+                            }}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select flat number" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {FLATS.map((flat, index) => (
+                                <SelectItem key={index} value={flat.flatNumber}>
+                                  {flat.flatNumber} ({flat.flatType})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

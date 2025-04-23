@@ -63,7 +63,8 @@ function Router() {
     <Switch>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/properties" component={PropertiesPage} />
+      {/* Properties page is admin-only */}
+      <AdminRoute path="/properties" component={PropertiesPage} />
       <ProtectedRoute path="/tenants" component={TenantsPage} />
       {/* Income page is admin-only */}
       <AdminRoute path="/income" component={IncomePage} />

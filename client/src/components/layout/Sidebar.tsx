@@ -41,7 +41,7 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
       label: "Properties",
       href: "/properties",
       icon: <Building2 className="w-5 h-5" />,
-      isVisible: true,
+      isVisible: isAdmin,
     },
     {
       label: "Tenants",
