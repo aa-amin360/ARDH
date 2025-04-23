@@ -108,6 +108,7 @@ export class MemStorage implements IStorage {
     this.expenses = new Map();
     this.waterTanks = new Map();
     this.tenants = new Map();
+    this.vendors = new Map();
     
     this.userCounter = 1;
     this.propertyCounter = 1;
@@ -115,6 +116,7 @@ export class MemStorage implements IStorage {
     this.expenseCounter = 1;
     this.waterTankCounter = 1;
     this.tenantCounter = 1;
+    this.vendorCounter = 1;
     
     // Create an in-memory session store
     const MemoryStore = require('memorystore')(session);
@@ -284,6 +286,69 @@ export class MemStorage implements IStorage {
         cost,
         createdBy: 1 // Admin user
       });
+    });
+    
+    // Create sample vendors
+    const vendors = [
+      {
+        name: "Electrical Solutions",
+        phone: "9876543210",
+        email: "electrical@example.com",
+        serviceType: "Electrical",
+        provisionType: "service",
+        address: "123 Main St, Bangalore",
+        contactPerson: "Raj Kumar",
+        notes: "Preferred electrician for the building",
+        createdBy: 1
+      },
+      {
+        name: "Plumbing Experts",
+        phone: "9876543211",
+        email: "plumbing@example.com",
+        serviceType: "Plumbing",
+        provisionType: "service",
+        address: "456 Park Ave, Bangalore",
+        contactPerson: "Suresh Singh",
+        notes: "Available 24/7 for emergencies",
+        createdBy: 1
+      },
+      {
+        name: "Paint Masters",
+        phone: "9876543212",
+        email: "paint@example.com",
+        serviceType: "Paint_Job",
+        provisionType: "both",
+        address: "789 Lake View, Bangalore",
+        contactPerson: "Vishal Patel",
+        notes: "Premium quality paint services",
+        createdBy: 1
+      },
+      {
+        name: "Carpentry Works",
+        phone: "9876543213",
+        email: "wood@example.com",
+        serviceType: "Wood_work",
+        provisionType: "both",
+        address: "321 Wood St, Bangalore",
+        contactPerson: "Prakash Joshi",
+        notes: "Custom furniture and repairs",
+        createdBy: 1
+      },
+      {
+        name: "City Water Supply",
+        phone: "9876543214",
+        email: "water@example.com",
+        serviceType: "Water",
+        provisionType: "product",
+        address: "567 Tank Road, Bangalore",
+        contactPerson: "Mahesh Kumar",
+        notes: "Reliable water tanker service",
+        createdBy: 1
+      }
+    ];
+    
+    vendors.forEach(vendor => {
+      this.createVendor(vendor);
     });
   }
 
@@ -528,6 +593,52 @@ export class MemStorage implements IStorage {
     }
     
     return this.tenants.delete(id);
+  }
+  
+  // Vendor management
+  async getVendor(id: number): Promise<Vendor | undefined> {
+    return this.vendors.get(id);
+  }
+  
+  async getVendors(): Promise<Vendor[]> {
+    return Array.from(this.vendors.values());
+  }
+  
+  async getVendorsByServiceType(serviceType: string): Promise<Vendor[]> {
+    return Array.from(this.vendors.values()).filter(
+      vendor => vendor.serviceType === serviceType
+    );
+  }
+  
+  async createVendor(insertVendor: InsertVendor): Promise<Vendor> {
+    const id = this.vendorCounter++;
+    const now = new Date();
+    const vendor: Vendor = { 
+      ...insertVendor, 
+      id, 
+      createdAt: now,
+      updatedAt: now,
+      isActive: true 
+    };
+    this.vendors.set(id, vendor);
+    return vendor;
+  }
+  
+  async updateVendor(id: number, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    const vendor = this.vendors.get(id);
+    if (!vendor) return undefined;
+    
+    const updatedVendor = { 
+      ...vendor, 
+      ...updates,
+      updatedAt: new Date() 
+    };
+    this.vendors.set(id, updatedVendor);
+    return updatedVendor;
+  }
+  
+  async deleteVendor(id: number): Promise<boolean> {
+    return this.vendors.delete(id);
   }
   
   // Dashboard data
