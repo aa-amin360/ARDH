@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
+import runMigration from "./migrate";
 
 const app = express();
 app.use(express.json());
@@ -39,6 +40,9 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    // Skip database migration as tables already exist
+    console.log('Starting database seeding...');
+    
     // Run the seed script to populate the database
     await seedDatabase();
     
