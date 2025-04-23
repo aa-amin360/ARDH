@@ -550,6 +550,16 @@ export default function PropertiesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {properties && properties.length >= FLATS.length ? (
+                <div className="p-4 border border-orange-200 bg-orange-50 rounded-md mb-4">
+                  <h3 className="font-medium text-orange-800">All properties have already been added</h3>
+                  <p className="text-orange-700 mt-1">
+                    All flats in the building have already been added to the database. 
+                    To modify property details, please use the "Modify Property" tab.
+                  </p>
+                </div>
+              ) : null}
+              
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -578,11 +588,19 @@ export default function PropertiesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {FLATS.map((flat, index) => (
-                                <SelectItem key={index} value={flat.flatNumber}>
-                                  {flat.flatNumber}
-                                </SelectItem>
-                              ))}
+                              {FLATS.map((flat, index) => {
+                                // Check if this flat already exists in properties
+                                const existingProperty = properties.find((p: any) => p.flatNumber === flat.flatNumber);
+                                return (
+                                  <SelectItem 
+                                    key={index} 
+                                    value={flat.flatNumber}
+                                    disabled={!!existingProperty}
+                                  >
+                                    {flat.flatNumber} {existingProperty ? "(Already added)" : ""}
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           <FormMessage />

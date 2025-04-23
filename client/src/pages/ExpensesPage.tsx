@@ -89,7 +89,7 @@ export default function ExpensesPage() {
       amount: 0,
       date: new Date().toISOString().split("T")[0],
       description: "",
-      receipt: "",
+      receipt: "_none", // Set default to none
       propertyId: "0", // Set default to common areas
       vendor: "",
       createdBy: 0, // Will be set on the server
@@ -192,7 +192,7 @@ export default function ExpensesPage() {
         amount: 0,
         date: new Date().toISOString().split("T")[0],
         description: "",
-        receipt: "",
+        receipt: "_none",
         propertyId: "0",
         vendor: "",
         createdBy: 0,
@@ -358,25 +358,18 @@ export default function ExpensesPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">Common Area / All Properties</SelectItem>
-                              <SelectItem value="1">101</SelectItem>
-                              <SelectItem value="2">102</SelectItem>
-                              <SelectItem value="3">103</SelectItem>
-                              <SelectItem value="4">201</SelectItem>
-                              <SelectItem value="5">202</SelectItem>
-                              <SelectItem value="6">203</SelectItem>
-                              <SelectItem value="7">204</SelectItem>
-                              <SelectItem value="8">301</SelectItem>
-                              <SelectItem value="9">302</SelectItem>
-                              <SelectItem value="10">303</SelectItem>
-                              <SelectItem value="11">304</SelectItem>
-                              <SelectItem value="12">401</SelectItem>
-                              <SelectItem value="13">402</SelectItem>
-                              <SelectItem value="14">403</SelectItem>
-                              <SelectItem value="15">404</SelectItem>
-                              <SelectItem value="16">501</SelectItem>
-                              <SelectItem value="17">502</SelectItem>
-                              <SelectItem value="18">503</SelectItem>
-                              <SelectItem value="19">504</SelectItem>
+                              
+                              {loadingProperties ? (
+                                <SelectItem value="_loading" disabled>Loading properties...</SelectItem>
+                              ) : properties && properties.length > 0 ? (
+                                properties.map((property: any) => (
+                                  <SelectItem key={property.id} value={property.id.toString()}>
+                                    {property.flatNumber}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="_none" disabled>No properties available</SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormDescription>
