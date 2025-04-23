@@ -6,6 +6,7 @@ import {
   CreditCard,
   Building2,
   Users,
+  Hammer,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -42,6 +43,12 @@ export default function MobileNavBar() {
       name: "Expenses",
       href: "/expenses",
       icon: <CreditCard className="h-6 w-6" />,
+      isVisible: true,
+    },
+    {
+      name: "Vendors",
+      href: "/vendors",
+      icon: <Hammer className="h-6 w-6" />,
       isVisible: true,
     },
   ];
