@@ -5,7 +5,7 @@ import { z } from "zod";
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['admin', 'data_entry']);
 export const flatTypeEnum = pgEnum('flat_type', ['1BHK', '2BHK', '3BHK', '4BHK', 'penthouse']);
-export const incomeTypeEnum = pgEnum('income_type', ['rent', 'maintenance', 'tax_return', 'other']);
+export const incomeTypeEnum = pgEnum('income_type', ['rent', 'maintenance', 'tax_return', 'rental_advance', 'other']);
 export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'inactive', 'notice_period']);
 export const leaseStatusEnum = pgEnum('lease_status', ['Leasable', 'Non-Leasable']);
 export const apartmentFloorEnum = pgEnum('apartment_floor', ['1', '2', '3', '4', '5', '6']);
@@ -25,7 +25,7 @@ export const expenseSubcategoryEnum = pgEnum('expense_subcategory', [
   // Utility
   'Electrical Bill',
   'Sweet Water Bill',
-  'WifI Bill',
+  'WiFi Bill',
   'Trash Collection',
   'Generator Diesel',
   'General Building Maintenance',
@@ -36,7 +36,7 @@ export const expenseSubcategoryEnum = pgEnum('expense_subcategory', [
   // Operational
   'Watchman Salary',
   'Manager Salary',
-  'Charity', 
+  'Other',
   
   // General Maintenance Works
   'Elevator Maintenance',
@@ -46,22 +46,29 @@ export const expenseSubcategoryEnum = pgEnum('expense_subcategory', [
   'Carpenter works',
   'Painting works',
   'Gardening works',
+  'Other',
   
   // Government
   'Income Tax',
+  'Other',
   
   // Capital Expense for Facilities
   'Infrastructure',
-  'Bore Work',
+  'Bore Work', 
   'Major Electrical Facility',
+  'Other',
   
   // Charity
+  'Mosque',
+  'Madarsa',
   'Mosque Donation',
   'Madarsa Donation',
   'Other misc Donation',
+  'Other',
   
   // Guest Related
-  'Guest Hospitality Exp / Meal'
+  'Guest Hospitality Exp / Meal',
+  'Other'
 ]);
 export const vendorServiceTypeEnum = pgEnum('vendor_service_type', [
   'Electrical',

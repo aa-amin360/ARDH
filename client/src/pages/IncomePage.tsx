@@ -191,6 +191,7 @@ export default function IncomePage() {
                               <SelectItem value="rent">Rent</SelectItem>
                               <SelectItem value="maintenance">Maintenance Fee</SelectItem>
                               <SelectItem value="tax_return">Tax Return</SelectItem>
+                              <SelectItem value="rental_advance">Rental Advance</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>

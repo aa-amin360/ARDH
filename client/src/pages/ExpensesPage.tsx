@@ -331,30 +331,67 @@ export default function ExpensesPage() {
                               {form.getValues("category") === "Utility" && (
                                 <>
                                   <SelectItem value="Electrical Bill">Electrical Bill</SelectItem>
-                                  <SelectItem value="Water Tanker">Water Tanker</SelectItem>
-                                  <SelectItem value="Generator Diesel">Generator Diesel</SelectItem>
+                                  <SelectItem value="Sweet Water Bill">Sweet Water Bill</SelectItem>
                                   <SelectItem value="WiFi Bill">WiFi Bill</SelectItem>
-                                  <SelectItem value="General Building Maintenance">General Building Maintenance</SelectItem>
+                                  <SelectItem value="Trash Collection">Trash Collection</SelectItem>
+                                  <SelectItem value="Generator Diesel">Generator Diesel</SelectItem>
+                                  <SelectItem value="Water Tanker">Water Tanker</SelectItem>
+                                  <SelectItem value="Cleaning works">Cleaning works</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </>
+                              )}
+                              
+                              {form.getValues("category") === "Operational" && (
+                                <>
+                                  <SelectItem value="Watchman Salary">Watchman Salary</SelectItem>
+                                  <SelectItem value="Manager Salary">Manager Salary</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
                                 </>
                               )}
                               
                               {form.getValues("category") === "General Maintenance Works" && (
                                 <>
-                                  <SelectItem value="CCTV Maintenance">CCTV Maintenance</SelectItem>
                                   <SelectItem value="Elevator Maintenance">Elevator Maintenance</SelectItem>
-                                  <SelectItem value="Cleaning works">Cleaning works</SelectItem>
+                                  <SelectItem value="CCTV Maintenance">CCTV Maintenance</SelectItem>
+                                  <SelectItem value="Electrical works">Electrical works</SelectItem>
+                                  <SelectItem value="Plumbing works">Plumbing works</SelectItem>
+                                  <SelectItem value="Carpenter works">Carpenter works</SelectItem>
+                                  <SelectItem value="Painting works">Painting works</SelectItem>
+                                  <SelectItem value="Gardening works">Gardening works</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </>
+                              )}
+                              
+                              {form.getValues("category") === "Government" && (
+                                <>
+                                  <SelectItem value="Income Tax">Income Tax</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </>
+                              )}
+                              
+                              {form.getValues("category") === "Capital Expense for Facilities" && (
+                                <>
+                                  <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                                  <SelectItem value="Bore Work">Bore Work</SelectItem>
+                                  <SelectItem value="Major Electrical Facility">Major Electrical Facility</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
                                 </>
                               )}
                               
                               {form.getValues("category") === "Charity" && (
-                                <SelectItem value="Other misc Donation">Other misc Donation</SelectItem>
+                                <>
+                                  <SelectItem value="Mosque">Mosque</SelectItem>
+                                  <SelectItem value="Madarsa">Madarsa</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </>
                               )}
                               
                               {form.getValues("category") === "Guest Related" && (
-                                <SelectItem value="Guest Hospitality Exp / Meal">Guest Hospitality Exp / Meal</SelectItem>
+                                <>
+                                  <SelectItem value="Guest Hospitality Exp / Meal">Guest Hospitality Exp / Meal</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </>
                               )}
-                              
-                              <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
