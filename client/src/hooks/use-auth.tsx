@@ -59,7 +59,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${user.name}!`,
       });
       // Navigate to dashboard immediately after successful login
-      navigate("/");
+      setTimeout(() => {
+        navigate("/");
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -82,7 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome, ${user.name}!`,
       });
       // Navigate to dashboard immediately after successful registration
-      navigate("/");
+      setTimeout(() => {
+        navigate("/");
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -98,13 +102,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
+      // First invalidate the session
       queryClient.setQueryData(["/api/auth/me"], null);
+      
+      // Show logout success toast
       toast({
         title: "Logged out",
         description: "You have been successfully logged out",
       });
-      // Navigate to login page immediately after successful logout
-      navigate("/auth");
+      
+      // Ensure redirect happens after React updates
+      setTimeout(() => {
+        navigate("/auth");
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
