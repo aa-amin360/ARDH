@@ -9,6 +9,10 @@ import {
   InsertExpense,
   WaterTank,
   InsertWaterTank,
+  Vendor,
+  InsertVendor,
+  Tenant,
+  InsertTenant,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
@@ -16,7 +20,9 @@ import {
   properties,
   incomes,
   expenses,
-  waterTanks
+  waterTanks,
+  vendors,
+  tenants
 } from "@shared/schema";
 import { eq, desc, sql, count } from "drizzle-orm";
 import { db, pool } from "./db";

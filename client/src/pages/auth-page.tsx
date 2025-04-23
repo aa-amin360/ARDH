@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,11 +37,13 @@ export default function AuthPage() {
   const [, navigate] = useLocation();
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
 
-  // If user is already logged in, redirect to home page immediately
-  if (user && !isLoading) {
-    navigate("/");
-    return null;
-  }
+  // If user is already logged in, redirect to home page
+  // We use a useEffect to avoid React Router error of updating during render
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
 
   // Login form setup
   const loginForm = useForm<LoginFormValues>({
