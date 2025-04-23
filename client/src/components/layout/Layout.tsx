@@ -1,6 +1,6 @@
 import { useState, ReactNode } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "../hooks/use-auth";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import MobileNavBar from "./MobileNavBar";
@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [location] = useLocation();
   const { user, isLoading } = useAuth();
 
@@ -29,35 +29,28 @@ export default function Layout({ children }: LayoutProps) {
     return path.charAt(0).toUpperCase() + path.slice(1);
   };
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar for desktop */}
-      <Sidebar />
-      
-      {/* Mobile menu overlay */}
-      {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75"
-          onClick={toggleMobileMenu}
-        ></div>
-      )}
-      
-      {/* Mobile sidebar */}
+      {/* Sidebar */}
       <div 
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform ease-in-out duration-300 md:hidden ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white transform transition-all ease-in-out duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-64"
         }`}
       >
-        <Sidebar />
+        <Sidebar isSidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       </div>
       
-      {/* Main content */}
-      <div className="flex flex-col flex-1 w-0 overflow-hidden">
-        <Header onMobileMenuToggle={toggleMobileMenu} />
+      {/* Main content - push content to the right when sidebar is open */}
+      <div 
+        className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${
+          sidebarOpen ? "md:ml-64" : "ml-0"
+        }`}
+      >
+        <Header onMobileMenuToggle={toggleSidebar} />
         
         <main className="flex-1 relative overflow-y-auto focus:outline-none pb-16 md:pb-0">
           <div className="py-6">
