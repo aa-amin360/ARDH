@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet, Upload, Image as ImageIcon, XCircle, AlertCircle } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { FLATS } from "@shared/constants";
 import ExpensesBulkUpload from "@/components/bulk-upload/ExpensesBulkUpload";
 import {
   Table,
@@ -70,6 +71,14 @@ export default function ExpensesPage() {
     isLoading: vendorsLoading,
   } = useQuery({
     queryKey: ["/api/vendors"],
+  });
+  
+  // Query to fetch properties
+  const {
+    data: properties = [],
+    isLoading: loadingProperties,
+  } = useQuery({
+    queryKey: ["/api/properties"],
   });
 
   // Form
@@ -477,9 +486,9 @@ export default function ExpensesPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">-- Select Vendor --</SelectItem>
+                            <SelectItem value="_none">-- Select Vendor --</SelectItem>
                             {vendorsLoading ? (
-                              <SelectItem value="" disabled>Loading vendors...</SelectItem>
+                              <SelectItem value="_loading" disabled>Loading vendors...</SelectItem>
                             ) : filteredVendors && filteredVendors.length > 0 ? (
                               filteredVendors.map((vendor: any) => (
                                 <SelectItem key={vendor.id} value={vendor.name}>
@@ -487,7 +496,7 @@ export default function ExpensesPage() {
                                 </SelectItem>
                               ))
                             ) : (
-                              <SelectItem value="" disabled>No vendors available for this category</SelectItem>
+                              <SelectItem value="_no_vendors" disabled>No vendors available for this category</SelectItem>
                             )}
                           </SelectContent>
                         </Select>
