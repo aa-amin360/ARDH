@@ -9,6 +9,8 @@ import {
   InsertExpense,
   WaterTank,
   InsertWaterTank,
+  Tenant,
+  InsertTenant,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary
@@ -52,6 +54,14 @@ export interface IStorage {
   updateWaterTank(id: number, waterTank: Partial<InsertWaterTank>): Promise<WaterTank | undefined>;
   deleteWaterTank(id: number): Promise<boolean>;
   
+  // Tenant management
+  getTenant(id: number): Promise<Tenant | undefined>;
+  getTenants(): Promise<Tenant[]>;
+  getTenantsByProperty(propertyId: number): Promise<Tenant[]>;
+  createTenant(tenant: InsertTenant): Promise<Tenant>;
+  updateTenant(id: number, tenant: Partial<InsertTenant>): Promise<Tenant | undefined>;
+  deleteTenant(id: number): Promise<boolean>;
+  
   // Summary/Dashboard data
   getIncomeSummary(): Promise<IncomeSummary>;
   getExpenseSummary(): Promise<ExpenseSummary>;
@@ -68,12 +78,14 @@ export class MemStorage implements IStorage {
   private incomes: Map<number, Income>;
   private expenses: Map<number, Expense>;
   private waterTanks: Map<number, WaterTank>;
+  private tenants: Map<number, Tenant>;
   
   private userCounter: number;
   private propertyCounter: number;
   private incomeCounter: number;
   private expenseCounter: number;
   private waterTankCounter: number;
+  private tenantCounter: number;
   
   sessionStore: session.Store;
 
@@ -83,12 +95,14 @@ export class MemStorage implements IStorage {
     this.incomes = new Map();
     this.expenses = new Map();
     this.waterTanks = new Map();
+    this.tenants = new Map();
     
     this.userCounter = 1;
     this.propertyCounter = 1;
     this.incomeCounter = 1;
     this.expenseCounter = 1;
     this.waterTankCounter = 1;
+    this.tenantCounter = 1;
     
     // Create an in-memory session store
     const MemoryStore = require('memorystore')(session);

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, real, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, real, pgEnum, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -6,6 +6,7 @@ import { z } from "zod";
 export const userRoleEnum = pgEnum('user_role', ['admin', 'data_entry']);
 export const flatTypeEnum = pgEnum('flat_type', ['1BHK', '2BHK', '3BHK', 'penthouse']);
 export const incomeTypeEnum = pgEnum('income_type', ['rent', 'maintenance', 'tax_return', 'other']);
+export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'inactive', 'notice_period']);
 export const expenseCategoryEnum = pgEnum('expense_category', [
   'electricity',
   'generator_fuel',
@@ -85,6 +86,29 @@ export const waterTanks = pgTable("water_tanks", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Tenants table for managing tenant information
+export const tenants = pgTable("tenants", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  propertyId: integer("property_id").references(() => properties.id).notNull(),
+  rentAmount: integer("rent_amount").notNull(),
+  securityDeposit: integer("security_deposit").notNull(),
+  leaseStartDate: date("lease_start_date").notNull(),
+  leaseEndDate: date("lease_end_date").notNull(),
+  status: tenantStatusEnum("status").notNull().default('active'),
+  noticePeriodEndDate: date("notice_period_end_date"),
+  aadharNumber: text("aadhar_number"),
+  panNumber: text("pan_number"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  notes: text("notes"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -112,6 +136,12 @@ export const insertWaterTankSchema = createInsertSchema(waterTanks).omit({
   createdAt: true,
 });
 
+export const insertTenantSchema = createInsertSchema(tenants).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Create extended schemas for login
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -129,6 +159,8 @@ export type Expense = typeof expenses.$inferSelect;
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type WaterTank = typeof waterTanks.$inferSelect;
 export type InsertWaterTank = z.infer<typeof insertWaterTankSchema>;
+export type Tenant = typeof tenants.$inferSelect;
+export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Login = z.infer<typeof loginSchema>;
 
 // Summary types for dashboard
