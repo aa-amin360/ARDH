@@ -28,19 +28,20 @@ import {
 
 // Extended schema with validation
 const expenseFormSchema = insertExpenseSchema.extend({
-  amount: z.number().positive().or(z.string().regex(/^\d+(\.\d{1,2})?$/).transform(Number)),
+  amount: z.coerce.number().positive(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "Date must be in the format YYYY-MM-DD",
-  }),
+  }).transform(val => new Date(val)),
   time: z.string().optional(),
   propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
   vendor: z.string().optional(),
   receipt: z.string().optional(), // Adding a receipt field which will be mapped to vendor in the final submission
   tankerNumber: z.string().optional(),
-  liters: z.number().optional().or(z.string().regex(/^\d+$/).transform(Number).optional()),
+  liters: z.coerce.number().optional(),
   personInCharge: z.string().optional(),
   attachmentUrl: z.string().optional(),
   createdBy: z.number().optional() // This will be handled by the server
+  // Ensure the data is properly transformed before sending to the server
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -80,7 +81,7 @@ export default function ExpensesPage() {
       personInCharge: "",
       attachmentUrl: "",
     },
-  });
+  } as any);
 
   // Watch for category changes to conditionally render fields
   const selectedCategory = useWatch({
@@ -187,11 +188,21 @@ export default function ExpensesPage() {
 
   function onSubmit(values: ExpenseFormValues) {
     // Map receipt to vendor since we're using receipt field in the UI
+    // Convert date to ISO string for API submission
     const formattedValues = {
       ...values,
       vendor: values.receipt,
+      date: values.date instanceof Date 
+        ? values.date.toISOString() 
+        : new Date(values.date as any).toISOString(), // Ensure date is formatted as ISO string
+      amount: typeof values.amount === 'string' 
+        ? parseFloat(values.amount) 
+        : values.amount, // Ensure amount is a number
+      propertyId: values.propertyId === "0" || !values.propertyId 
+        ? null 
+        : parseInt(values.propertyId as string, 10) // Convert propertyId to number or null
     };
-    createExpenseMutation.mutate(formattedValues);
+    createExpenseMutation.mutate(formattedValues as any);
   }
 
   // Format date for display
@@ -318,25 +329,25 @@ export default function ExpensesPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">Common Area / All Properties</SelectItem>
-                              <SelectItem value="1">101 - 1BHK</SelectItem>
-                              <SelectItem value="2">102 - 2BHK</SelectItem>
-                              <SelectItem value="3">103 - 3BHK</SelectItem>
-                              <SelectItem value="4">201 - 1BHK</SelectItem>
-                              <SelectItem value="5">202 - 2BHK</SelectItem>
-                              <SelectItem value="6">203 - 2BHK</SelectItem>
-                              <SelectItem value="7">204 - 1BHK</SelectItem>
-                              <SelectItem value="8">301 - 1BHK</SelectItem>
-                              <SelectItem value="9">302 - 2BHK</SelectItem>
-                              <SelectItem value="10">303 - 2BHK</SelectItem>
-                              <SelectItem value="11">304 - 1BHK</SelectItem>
-                              <SelectItem value="12">401 - 1BHK</SelectItem>
-                              <SelectItem value="13">402 - 1BHK</SelectItem>
-                              <SelectItem value="14">403 - 1BHK</SelectItem>
-                              <SelectItem value="15">404 - 1BHK</SelectItem>
-                              <SelectItem value="16">501 - 1BHK</SelectItem>
-                              <SelectItem value="17">502 - 2BHK</SelectItem>
-                              <SelectItem value="18">503 - 2BHK</SelectItem>
-                              <SelectItem value="19">504 - Penthouse</SelectItem>
+                              <SelectItem value="1">101</SelectItem>
+                              <SelectItem value="2">102</SelectItem>
+                              <SelectItem value="3">103</SelectItem>
+                              <SelectItem value="4">201</SelectItem>
+                              <SelectItem value="5">202</SelectItem>
+                              <SelectItem value="6">203</SelectItem>
+                              <SelectItem value="7">204</SelectItem>
+                              <SelectItem value="8">301</SelectItem>
+                              <SelectItem value="9">302</SelectItem>
+                              <SelectItem value="10">303</SelectItem>
+                              <SelectItem value="11">304</SelectItem>
+                              <SelectItem value="12">401</SelectItem>
+                              <SelectItem value="13">402</SelectItem>
+                              <SelectItem value="14">403</SelectItem>
+                              <SelectItem value="15">404</SelectItem>
+                              <SelectItem value="16">501</SelectItem>
+                              <SelectItem value="17">502</SelectItem>
+                              <SelectItem value="18">503</SelectItem>
+                              <SelectItem value="19">504</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormDescription>

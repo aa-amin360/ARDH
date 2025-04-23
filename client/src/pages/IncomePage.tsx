@@ -27,10 +27,11 @@ import {
 
 // Extended schema with validation
 const incomeFormSchema = insertIncomeSchema.extend({
-  amount: z.number().positive().or(z.string().regex(/^\d+(\.\d{1,2})?$/).transform(Number)),
+  amount: z.coerce.number().positive(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
     message: "Date must be in the format YYYY-MM-DD",
-  }),
+  }).transform(val => new Date(val)),
+  propertyId: z.coerce.number().optional(),
 });
 
 type IncomeFormValues = z.infer<typeof incomeFormSchema>;
@@ -93,18 +94,24 @@ export default function IncomePage() {
       propertyId: "0", // Set default to common areas
       createdBy: 0, // Will be set on the server
     },
-  });
+  } as any);
 
   function onSubmit(values: IncomeFormValues) {
     // Process the values for submission
-    const propertyId = values.propertyId ? parseInt(values.propertyId) : 0;
+    const propertyId = values.propertyId ? parseInt(values.propertyId as string) : 0;
     
     const formattedValues = {
       ...values,
       receivedFrom: values.receivedFrom || "Unknown",
       propertyId: propertyId === 0 ? null : propertyId,
+      date: values.date instanceof Date 
+        ? values.date.toISOString() 
+        : new Date(values.date as any).toISOString(), // Ensure date is formatted as ISO string
+      amount: typeof values.amount === 'string' 
+        ? parseFloat(values.amount) 
+        : values.amount, // Ensure amount is a number
     };
-    createIncomeMutation.mutate(formattedValues);
+    createIncomeMutation.mutate(formattedValues as any);
   }
 
   // Format date for display
@@ -242,25 +249,25 @@ export default function IncomePage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">Common / All Properties</SelectItem>
-                              <SelectItem value="1">101 - 1BHK</SelectItem>
-                              <SelectItem value="2">102 - 2BHK</SelectItem>
-                              <SelectItem value="3">103 - 3BHK</SelectItem>
-                              <SelectItem value="4">201 - 1BHK</SelectItem>
-                              <SelectItem value="5">202 - 2BHK</SelectItem>
-                              <SelectItem value="6">203 - 2BHK</SelectItem>
-                              <SelectItem value="7">204 - 1BHK</SelectItem>
-                              <SelectItem value="8">301 - 1BHK</SelectItem>
-                              <SelectItem value="9">302 - 2BHK</SelectItem>
-                              <SelectItem value="10">303 - 2BHK</SelectItem>
-                              <SelectItem value="11">304 - 1BHK</SelectItem>
-                              <SelectItem value="12">401 - 1BHK</SelectItem>
-                              <SelectItem value="13">402 - 1BHK</SelectItem>
-                              <SelectItem value="14">403 - 1BHK</SelectItem>
-                              <SelectItem value="15">404 - 1BHK</SelectItem>
-                              <SelectItem value="16">501 - 1BHK</SelectItem>
-                              <SelectItem value="17">502 - 2BHK</SelectItem>
-                              <SelectItem value="18">503 - 2BHK</SelectItem>
-                              <SelectItem value="19">504 - Penthouse</SelectItem>
+                              <SelectItem value="1">101</SelectItem>
+                              <SelectItem value="2">102</SelectItem>
+                              <SelectItem value="3">103</SelectItem>
+                              <SelectItem value="4">201</SelectItem>
+                              <SelectItem value="5">202</SelectItem>
+                              <SelectItem value="6">203</SelectItem>
+                              <SelectItem value="7">204</SelectItem>
+                              <SelectItem value="8">301</SelectItem>
+                              <SelectItem value="9">302</SelectItem>
+                              <SelectItem value="10">303</SelectItem>
+                              <SelectItem value="11">304</SelectItem>
+                              <SelectItem value="12">401</SelectItem>
+                              <SelectItem value="13">402</SelectItem>
+                              <SelectItem value="14">403</SelectItem>
+                              <SelectItem value="15">404</SelectItem>
+                              <SelectItem value="16">501</SelectItem>
+                              <SelectItem value="17">502</SelectItem>
+                              <SelectItem value="18">503</SelectItem>
+                              <SelectItem value="19">504</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormDescription>
