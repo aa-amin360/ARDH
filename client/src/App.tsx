@@ -15,6 +15,7 @@ import IncomePage from "@/pages/IncomePage";
 import ExpensesPage from "@/pages/ExpensesPage";
 import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import VendorsPage from "@/pages/VendorsPage";
 
 // Admin-only route component
 function AdminRoute({ path, component }: { path: string, component: React.ComponentType<any> }) {
@@ -44,6 +45,7 @@ function Router() {
       {/* Income page is admin-only */}
       <AdminRoute path="/income" component={IncomePage} />
       <ProtectedRoute path="/expenses" component={ExpensesPage} />
+      <ProtectedRoute path="/vendors" component={VendorsPage} />
       <AdminRoute path="/reports" component={ReportsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <Route component={NotFound} />

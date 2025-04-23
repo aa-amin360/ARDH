@@ -563,6 +563,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vendor routes
+  app.get('/api/vendors', isAuthenticated, async (req, res, next) => {
+    try {
+      const vendors = await storage.getVendors();
+      res.json(vendors);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/vendors/by-service/:serviceType', isAuthenticated, async (req, res, next) => {
+    try {
+      const serviceType = req.params.serviceType;
+      const vendors = await storage.getVendorsByServiceType(serviceType);
+      res.json(vendors);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/vendors/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const vendor = await storage.getVendor(id);
+      
+      if (!vendor) {
+        return res.status(404).json({ message: 'Vendor not found' });
+      }
+      
+      res.json(vendor);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/vendors', isAuthenticated, async (req, res, next) => {
+    try {
+      const vendorData = insertVendorSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id
+      });
+      
+      const newVendor = await storage.createVendor(vendorData);
+      res.status(201).json(newVendor);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.put('/api/vendors/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const vendorData = insertVendorSchema.partial().parse(req.body);
+      
+      const updatedVendor = await storage.updateVendor(id, vendorData);
+      
+      if (!updatedVendor) {
+        return res.status(404).json({ message: 'Vendor not found' });
+      }
+      
+      res.json(updatedVendor);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.delete('/api/vendors/:id', isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteVendor(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Vendor not found' });
+      }
+      
+      res.json({ message: 'Vendor deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

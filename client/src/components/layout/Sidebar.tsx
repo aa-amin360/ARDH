@@ -11,6 +11,7 @@ import {
   LogOut,
   Users,
   X,
+  Hammer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -58,6 +59,12 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
       label: "Expenses",
       href: "/expenses",
       icon: <CreditCard className="w-5 h-5" />,
+      isVisible: true,
+    },
+    {
+      label: "Vendors",
+      href: "/vendors",
+      icon: <Hammer className="w-5 h-5" />,
       isVisible: true,
     },
     {
