@@ -610,13 +610,81 @@ export default function PropertiesPage() {
                     
                     <FormField
                       control={form.control}
+                      name="nestawayId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nestaway ID</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., N35410" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="leaseStatus"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lease Status</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select lease status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Leasable">Leasable</SelectItem>
+                              <SelectItem value="Non-Leasable">Non-Leasable</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="apartmentFloor"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Floor</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select floor" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">1st Floor</SelectItem>
+                              <SelectItem value="2">2nd Floor</SelectItem>
+                              <SelectItem value="3">3rd Floor</SelectItem>
+                              <SelectItem value="4">4th Floor</SelectItem>
+                              <SelectItem value="5">5th Floor</SelectItem>
+                              <SelectItem value="6">6th Floor</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
                       name="flatType"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Flat Type</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -627,6 +695,7 @@ export default function PropertiesPage() {
                               <SelectItem value="1BHK">1 BHK</SelectItem>
                               <SelectItem value="2BHK">2 BHK</SelectItem>
                               <SelectItem value="3BHK">3 BHK</SelectItem>
+                              <SelectItem value="4BHK">4 BHK</SelectItem>
                               <SelectItem value="penthouse">Penthouse</SelectItem>
                             </SelectContent>
                           </Select>
@@ -685,6 +754,20 @@ export default function PropertiesPage() {
                           <FormLabel>Maintenance Fee (₹)</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} placeholder="e.g., 1000" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="waterCost"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Water Cost (₹)</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} placeholder="e.g., 500" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

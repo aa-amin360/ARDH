@@ -281,7 +281,11 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Category</FormLabel>
                           <Select
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Reset subcategory when category changes
+                              form.setValue("subcategory", "");
+                            }}
                             defaultValue={field.value}
                           >
                             <FormControl>
@@ -290,17 +294,13 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="electricity">Electricity</SelectItem>
-                              <SelectItem value="water_tank">Water Tanker</SelectItem>
-                              <SelectItem value="generator_fuel">Generator Fuel</SelectItem>
-                              <SelectItem value="cctv_maintenance">CCTV Maintenance</SelectItem>
-                              <SelectItem value="internet">Internet</SelectItem>
-                              <SelectItem value="elevator_maintenance">Elevator Maintenance</SelectItem>
-                              <SelectItem value="general_building_maintenance">Building Maintenance</SelectItem>
-                              <SelectItem value="donation">Donation</SelectItem>
-                              <SelectItem value="drainage_cleaning">Drainage Cleaning</SelectItem>
-                              <SelectItem value="guest_expense">Guest Expense</SelectItem>
-                              <SelectItem value="misc">Miscellaneous</SelectItem>
+                              <SelectItem value="Utility">Utility</SelectItem>
+                              <SelectItem value="Operational">Operational</SelectItem>
+                              <SelectItem value="General Maintenance Works">General Maintenance Works</SelectItem>
+                              <SelectItem value="Government">Government</SelectItem>
+                              <SelectItem value="Capital Expense for Facilities">Capital Expense for Facilities</SelectItem>
+                              <SelectItem value="Charity">Charity</SelectItem>
+                              <SelectItem value="Guest Related">Guest Related</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

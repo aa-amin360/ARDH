@@ -120,17 +120,19 @@ export async function seedDummyData() {
       }
     }
     
-    // Add expense records
-    const expenseCategories = [
-      'electricity', 
-      'water', 
-      'maintenance', 
-      'repair', 
-      'property_tax', 
-      'insurance', 
-      'legal', 
-      'management',
-      'water_tank'
+    // Add expense records with new category and subcategory structure
+    const expenseOptions = [
+      { category: 'Utility', subcategory: 'Electrical Bill' },
+      { category: 'Utility', subcategory: 'Water Tanker' },
+      { category: 'Utility', subcategory: 'Generator Diesel' },
+      { category: 'Utility', subcategory: 'WiFi Bill' },
+      { category: 'Utility', subcategory: 'General Building Maintenance' },
+      { category: 'General Maintenance Works', subcategory: 'CCTV Maintenance' },
+      { category: 'General Maintenance Works', subcategory: 'Elevator Maintenance' },
+      { category: 'General Maintenance Works', subcategory: 'Cleaning works' },
+      { category: 'Government', subcategory: 'Other' },
+      { category: 'Charity', subcategory: 'Other misc Donation' },
+      { category: 'Guest Related', subcategory: 'Guest Hospitality Exp / Meal' }
     ];
     
     for (let i = 0; i < monthsToAdd; i++) {
@@ -145,7 +147,8 @@ export async function seedDummyData() {
       
       // Add standard monthly expenses
       await db.insert(expenses).values({
-        category: 'electricity',
+        category: 'Utility',
+        subcategory: 'Electrical Bill',
         amount: 12000 + Math.floor(Math.random() * 3000),
         date: new Date(formattedDate),
         description: 'Common area electricity bill',
@@ -156,7 +159,8 @@ export async function seedDummyData() {
       });
       
       await db.insert(expenses).values({
-        category: 'water_tank',
+        category: 'Utility',
+        subcategory: 'Water Tanker',
         amount: 8000 + Math.floor(Math.random() * 2000),
         date: new Date(formattedDate),
         description: 'Building water charges',
@@ -167,7 +171,8 @@ export async function seedDummyData() {
       });
       
       await db.insert(expenses).values({
-        category: 'water_tank',
+        category: 'General Maintenance Works',
+        subcategory: 'Cleaning works',
         amount: 2500 + Math.floor(Math.random() * 800),
         date: new Date(formattedDate),
         description: 'Water tank cleaning and maintenance',
@@ -182,7 +187,8 @@ export async function seedDummyData() {
         const randomProperty = properties[Math.floor(Math.random() * properties.length)];
         
         await db.insert(expenses).values({
-          category: 'general_building_maintenance',
+          category: 'General Maintenance Works',
+          subcategory: 'Other',
           amount: 5000 + Math.floor(Math.random() * 15000),
           date: new Date(formattedDate),
           description: `Plumbing repair for ${randomProperty.flatNumber}`,
@@ -196,7 +202,8 @@ export async function seedDummyData() {
       // Add quarterly maintenance
       if (i % 3 === 0) {
         await db.insert(expenses).values({
-          category: 'general_building_maintenance',
+          category: 'Utility',
+          subcategory: 'General Building Maintenance',
           amount: 30000 + Math.floor(Math.random() * 10000),
           date: new Date(formattedDate),
           description: 'Quarterly building maintenance',
@@ -210,7 +217,8 @@ export async function seedDummyData() {
       // Add annual expenses
       if (i === 0) {
         await db.insert(expenses).values({
-          category: 'misc',
+          category: 'Government',
+          subcategory: 'Other',
           amount: 120000,
           date: new Date(formattedDate),
           description: 'Annual property tax',
@@ -221,7 +229,8 @@ export async function seedDummyData() {
         });
         
         await db.insert(expenses).values({
-          category: 'misc',
+          category: 'Operational',
+          subcategory: 'Other',
           amount: 75000,
           date: new Date(formattedDate),
           description: 'Building insurance premium',

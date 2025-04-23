@@ -101,12 +101,19 @@ export async function seedDatabase() {
         // Assign owner in rotation (to distribute flats among owners)
         const ownerName = ownerNames[index % ownerNames.length];
         
+        // Extract floor from flat number (first digit)
+        const floor = flatNumber.charAt(0);
+        
         return {
           flatNumber,
+          nestawayId: null,
+          leaseStatus: 'Leasable',
+          apartmentFloor: floor as '1' | '2' | '3' | '4' | '5' | '6', // Cast to enum type
           flatType,
           ownerName,
           expectedRent,
           maintenanceFee,
+          waterCost: flatType === '1BHK' ? 500 : 800, // Water costs from requirements
           isRented: true, // Default to being rented
           currentTenant: `Tenant for ${flatNumber}`,
           floorArea: null,

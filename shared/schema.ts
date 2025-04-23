@@ -4,21 +4,64 @@ import { z } from "zod";
 
 // Enums
 export const userRoleEnum = pgEnum('user_role', ['admin', 'data_entry']);
-export const flatTypeEnum = pgEnum('flat_type', ['1BHK', '2BHK', '3BHK', 'penthouse']);
+export const flatTypeEnum = pgEnum('flat_type', ['1BHK', '2BHK', '3BHK', '4BHK', 'penthouse']);
 export const incomeTypeEnum = pgEnum('income_type', ['rent', 'maintenance', 'tax_return', 'other']);
 export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'inactive', 'notice_period']);
+export const leaseStatusEnum = pgEnum('lease_status', ['Leasable', 'Non-Leasable']);
+export const apartmentFloorEnum = pgEnum('apartment_floor', ['1', '2', '3', '4', '5', '6']);
+
+// New expense category and subcategory enums based on Excel sheet
 export const expenseCategoryEnum = pgEnum('expense_category', [
-  'electricity',
-  'generator_fuel',
-  'cctv_maintenance',
-  'internet',
-  'elevator_maintenance',
-  'general_building_maintenance',
-  'water_tank',
-  'donation',
-  'drainage_cleaning',
-  'guest_expense',
-  'misc'
+  'Utility',
+  'Operational',
+  'General Maintenance Works',
+  'Government',
+  'Capital Expense for Facilities',
+  'Charity',
+  'Guest Related'
+]);
+
+export const expenseSubcategoryEnum = pgEnum('expense_subcategory', [
+  // Utility
+  'Electrical Bill',
+  'Sweet Water Bill',
+  'WifI Bill',
+  'Trash Collection',
+  'Generator Diesel',
+  'General Building Maintenance',
+  'Water Tanker',
+  'Cleaning works',
+  'Other',
+  
+  // Operational
+  'Watchman Salary',
+  'Manager Salary',
+  'Charity', 
+  
+  // General Maintenance Works
+  'Elevator Maintenance',
+  'CCTV Maintenance',
+  'Electrical works',
+  'Plumbing works',
+  'Carpenter works',
+  'Painting works',
+  'Gardening works',
+  
+  // Government
+  'Income Tax',
+  
+  // Capital Expense for Facilities
+  'Infrastructure',
+  'Bore Work',
+  'Major Electrical Facility',
+  
+  // Charity
+  'Mosque Donation',
+  'Madarsa Donation',
+  'Other misc Donation',
+  
+  // Guest Related
+  'Guest Hospitality Exp / Meal'
 ]);
 export const vendorServiceTypeEnum = pgEnum('vendor_service_type', [
   'Electrical',
@@ -49,10 +92,14 @@ export const users = pgTable("users", {
 export const properties = pgTable("properties", {
   id: serial("id").primaryKey(),
   flatNumber: text("flat_number").notNull().unique(),
+  nestawayId: text("nestaway_id"),
+  leaseStatus: leaseStatusEnum("lease_status").notNull().default('Leasable'),
+  apartmentFloor: apartmentFloorEnum("apartment_floor").notNull(),
   flatType: flatTypeEnum("flat_type").notNull(),
   ownerName: text("owner_name").notNull(),
   expectedRent: integer("expected_rent").notNull(),
   maintenanceFee: integer("maintenance_fee").notNull(),
+  waterCost: integer("water_cost"),
   isRented: boolean("is_rented").default(false).notNull(),
   currentTenant: text("current_tenant"),
   floorArea: real("floor_area"),
@@ -80,10 +127,21 @@ export const expenses = pgTable("expenses", {
   date: timestamp("date").notNull(),
   amount: integer("amount").notNull(),
   category: expenseCategoryEnum("category").notNull(),
+  subcategory: expenseSubcategoryEnum("subcategory").notNull(),
   description: text("description").notNull(),
   vendor: text("vendor"),
   propertyId: integer("property_id").references(() => properties.id),
   createdBy: integer("created_by").references(() => users.id).notNull(),
+  
+  // Special fields for water tanker expenses
+  tankerNumber: text("tanker_number"),
+  liters: integer("liters"),
+  personInCharge: text("person_in_charge"),
+  time: text("time"),
+  
+  // Attachment URL for receipt/documentation
+  attachmentUrl: text("attachment_url"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
