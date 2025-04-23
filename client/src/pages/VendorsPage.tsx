@@ -68,7 +68,7 @@ type FormValues = z.infer<typeof formSchema>;
 function VendorsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -168,14 +168,27 @@ function VendorsPage() {
   });
 
   const handleAddSubmit = (data: FormValues) => {
-    createVendorMutation.mutate(data);
+    // Add the current user ID to the data
+    const dataWithUser = {
+      ...data,
+      createdBy: user?.id || 1 // Use user ID if available or default to 1 (admin)
+    };
+    createVendorMutation.mutate(dataWithUser);
   };
 
   const handleEditSubmit = (data: FormValues) => {
     if (!selectedVendor) return;
+    
+    // If the form data doesn't have createdBy, we keep the original
+    const dataWithUser = {
+      ...data,
+      // Only add createdBy if it's not already in the data
+      createdBy: data.createdBy || selectedVendor.createdBy || user?.id || 1
+    };
+    
     updateVendorMutation.mutate({
       id: selectedVendor.id,
-      data,
+      data: dataWithUser,
     });
   };
 
