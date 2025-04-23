@@ -30,7 +30,7 @@ const incomeFormSchema = insertIncomeSchema.extend({
   amount: z.coerce.number().positive(),
   date: z.string().refine(val => !isNaN(Date.parse(val)), {
     message: "Please enter a valid date",
-  }).transform(val => new Date(val)),
+  }),
   propertyId: z.coerce.number().optional(),
 });
 
@@ -38,7 +38,7 @@ type IncomeFormValues = z.infer<typeof incomeFormSchema>;
 
 export default function IncomePage() {
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("add");
 
@@ -104,9 +104,11 @@ export default function IncomePage() {
       ...values,
       receivedFrom: values.receivedFrom || "Unknown",
       propertyId: propertyId === 0 ? null : propertyId,
-      date: new Date(values.date).toISOString(), // Ensure date is formatted as ISO string
+      date: values.date, // Keep as string - server expects string
       amount: Number(values.amount), // Ensure amount is a number
+      createdBy: user?.id || 1 // Add user ID if available
     };
+    console.log("Submitting income with values:", formattedValues);
     createIncomeMutation.mutate(formattedValues as any);
   }
 
@@ -225,7 +227,7 @@ export default function IncomePage() {
                             <Input 
                               type="date" 
                               {...field}
-                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                              value={field.value}
                             />
                           </FormControl>
                           <FormMessage />
