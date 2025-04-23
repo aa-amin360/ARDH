@@ -216,14 +216,20 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
   updatedAt: true,
 });
 
-export const insertIncomeSchema = createInsertSchema(incomes).omit({
+export const insertIncomeSchema = createInsertSchema(incomes, {
+  date: z.coerce.date(),
+}).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertExpenseSchema = createInsertSchema(expenses).omit({
+export const insertExpenseSchema = createInsertSchema(expenses, {
+  date: z.coerce.date(),
+}).omit({
   id: true,
   createdAt: true,
+}).partial({ 
+  attachmentUrl: true // Make attachmentUrl optional
 });
 
 export const insertWaterTankSchema = createInsertSchema(waterTanks).omit({
