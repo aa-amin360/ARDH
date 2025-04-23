@@ -1,119 +1,85 @@
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Tenant, insertTenantSchema, Property } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { z } from "zod";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
-// UI imports
+// Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { 
-  Trash2, 
-  Edit, 
-  Plus, 
-  CalendarIcon, 
-  Loader2,
-  UserPlus,
-  Users 
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { CalendarIcon, Loader2, PlusCircle, Search, Edit, Trash2 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 
-// Define form validation schema
-const tenantFormSchema = insertTenantSchema.extend({
-  moveInDate: z.coerce.date(),
-  moveOutDate: z.coerce.date().optional().nullable(),
-});
+import { Tenant, InsertTenant, Property } from "@shared/schema";
 
-type TenantFormValues = z.infer<typeof tenantFormSchema>;
+type TenantFormValues = {
+  name: string;
+  phone: string;
+  email: string;
+  propertyId: number;
+  leaseStartDate: Date;
+  leaseEndDate: Date;
+  rentAmount: number;
+  securityDeposit: number;
+  status: "active" | "inactive" | "notice_period";
+  notes?: string;
+  createdBy: number;
+};
 
 export default function TenantsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch tenants
-  const {
-    data: tenants,
-    isLoading: isLoadingTenants,
-    error: tenantsError,
-  } = useQuery<Tenant[]>({
+  const { data: tenants = [], isLoading: loadingTenants } = useQuery<Tenant[]>({
     queryKey: ["/api/tenants"],
+    staleTime: 10000,
   });
 
-  // Fetch properties for selection in form
-  const {
-    data: properties,
-    isLoading: isLoadingProperties,
-  } = useQuery<Property[]>({
+  // Fetch properties for the dropdown
+  const { data: properties = [], isLoading: loadingProperties } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
+    staleTime: 10000,
   });
 
   // Create tenant mutation
   const createTenantMutation = useMutation({
     mutationFn: async (values: TenantFormValues) => {
       const res = await apiRequest("POST", "/api/tenants", values);
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Tenant created successfully",
+        description: "Tenant added successfully.",
       });
-      setIsCreateDialogOpen(false);
+      setIsAddDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      form.reset();
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to add tenant: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -121,24 +87,22 @@ export default function TenantsPage() {
 
   // Update tenant mutation
   const updateTenantMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number, values: Partial<TenantFormValues> }) => {
-      const res = await apiRequest("PUT", `/api/tenants/${id}`, values);
-      return await res.json();
+    mutationFn: async ({ id, values }: { id: number; values: TenantFormValues }) => {
+      const res = await apiRequest("PATCH", `/api/tenants/${id}`, values);
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Tenant updated successfully",
+        description: "Tenant updated successfully.",
       });
       setIsEditDialogOpen(false);
-      setSelectedTenant(null);
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to update tenant: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -147,551 +111,274 @@ export default function TenantsPage() {
   // Delete tenant mutation
   const deleteTenantMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("DELETE", `/api/tenants/${id}`);
-      return await res.json();
+      await apiRequest("DELETE", `/api/tenants/${id}`);
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Tenant deleted successfully",
+        description: "Tenant deleted successfully.",
       });
+      setIsDeleteDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message,
+        description: `Failed to delete tenant: ${error.message}`,
         variant: "destructive",
       });
     },
   });
 
-  // Create form setup
-  const createForm = useForm<TenantFormValues>({
-    resolver: zodResolver(tenantFormSchema),
+  // Define form for add/edit tenant
+  const form = useForm<TenantFormValues>({
+    resolver: zodResolver(
+      z.object({
+        name: z.string().min(3, "Name must be at least 3 characters"),
+        phone: z.string().min(10, "Contact number must be at least 10 characters"),
+        email: z.string().email("Please enter a valid email address"),
+        propertyId: z.number(),
+        leaseStartDate: z.date(),
+        leaseEndDate: z.date(),
+        rentAmount: z.number().min(1, "Rent amount must be greater than 0"),
+        securityDeposit: z.number().min(0, "Security deposit must be 0 or greater"),
+        status: z.enum(["active", "inactive", "notice_period"]),
+        notes: z.string().optional(),
+        createdBy: z.number(),
+      })
+    ),
     defaultValues: {
       name: "",
-      contact: "",
+      phone: "",
       email: "",
-      status: "active",
-      moveInDate: new Date(),
-      moveOutDate: null,
-      propertyId: undefined,
+      propertyId: 0,
+      leaseStartDate: new Date(),
+      leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
       rentAmount: 0,
+      securityDeposit: 0,
+      status: "active",
       notes: "",
+      createdBy: user?.id || 1,
     },
   });
 
-  // Edit form setup
-  const editForm = useForm<TenantFormValues>({
-    resolver: zodResolver(tenantFormSchema),
-    defaultValues: {
-      name: "",
-      contact: "",
-      email: "",
-      status: "active",
-      moveInDate: new Date(),
-      moveOutDate: null,
-      propertyId: undefined,
-      rentAmount: 0,
-      notes: "",
-    },
-  });
+  // When a tenant is selected for editing
+  useEffect(() => {
+    if (selectedTenant && isEditDialogOpen) {
+      form.reset({
+        name: selectedTenant.name,
+        contactNumber: selectedTenant.contactNumber,
+        email: selectedTenant.email || "",
+        propertyId: selectedTenant.propertyId,
+        leaseStartDate: new Date(selectedTenant.leaseStartDate),
+        leaseEndDate: new Date(selectedTenant.leaseEndDate),
+        monthlyRent: selectedTenant.monthlyRent,
+        status: selectedTenant.status,
+        notes: selectedTenant.notes || "",
+      });
+    }
+  }, [selectedTenant, isEditDialogOpen, form]);
 
-  // Form submit handlers
-  function onCreateSubmit(values: TenantFormValues) {
-    createTenantMutation.mutate({
-      ...values,
-      createdBy: user?.id as number,
-    });
-  }
+  // Reset form when add dialog is opened
+  useEffect(() => {
+    if (isAddDialogOpen) {
+      form.reset({
+        name: "",
+        contactNumber: "",
+        email: "",
+        propertyId: 0,
+        leaseStartDate: new Date(),
+        leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        monthlyRent: 0,
+        status: "active",
+        notes: "",
+      });
+    }
+  }, [isAddDialogOpen, form]);
 
-  function onEditSubmit(values: TenantFormValues) {
-    if (!selectedTenant) return;
-    updateTenantMutation.mutate({
-      id: selectedTenant.id,
-      values,
-    });
-  }
-
-  // Handle edit button click
-  function handleEditClick(tenant: Tenant) {
-    setSelectedTenant(tenant);
-    editForm.reset({
-      name: tenant.name,
-      contact: tenant.contact || "",
-      email: tenant.email || "",
-      status: tenant.status,
-      moveInDate: new Date(tenant.moveInDate),
-      moveOutDate: tenant.moveOutDate ? new Date(tenant.moveOutDate) : null,
-      propertyId: tenant.propertyId,
-      rentAmount: tenant.rentAmount,
-      notes: tenant.notes || "",
-    });
-    setIsEditDialogOpen(true);
-  }
-
-  // Handle delete button click
-  function handleDeleteClick(tenant: Tenant) {
-    if (confirm(`Are you sure you want to delete tenant "${tenant.name}"?`)) {
-      deleteTenantMutation.mutate(tenant.id);
+  // Handle form submission
+  function onSubmit(values: TenantFormValues) {
+    if (selectedTenant && isEditDialogOpen) {
+      updateTenantMutation.mutate({ id: selectedTenant.id, values });
+    } else {
+      createTenantMutation.mutate(values);
     }
   }
 
-  // Get property name by ID
-  function getPropertyName(propertyId: number) {
-    const property = properties?.find(p => p.id === propertyId);
-    return property ? `${property.flatNumber} (${property.flatType})` : "Unknown";
+  // Filter tenants based on search query
+  const filteredTenants = tenants.filter((tenant) => {
+    if (!searchQuery) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      tenant.name.toLowerCase().includes(query) ||
+      tenant.email?.toLowerCase().includes(query) ||
+      tenant.contactNumber.toLowerCase().includes(query) ||
+      getPropertyFlatNumber(tenant.propertyId)?.toLowerCase().includes(query)
+    );
+  });
+
+  // Helper function to get property flat number
+  function getPropertyFlatNumber(propertyId: number): string {
+    const property = properties.find((p) => p.id === propertyId);
+    return property ? property.flatNumber : "Unknown";
   }
 
-  // Get status badge color
-  function getStatusBadge(status: string) {
+  // Status badge color
+  function getStatusColor(status: string): string {
     switch (status) {
-      case 'active':
-        return <Badge className="bg-green-500">Active</Badge>;
-      case 'inactive':
-        return <Badge className="bg-red-500">Inactive</Badge>;
-      case 'notice_period':
-        return <Badge className="bg-yellow-500">Notice Period</Badge>;
+      case "active":
+        return "bg-green-500";
+      case "notice_period":
+        return "bg-amber-500";
+      case "inactive":
+        return "bg-red-500";
       default:
-        return <Badge>{status}</Badge>;
+        return "bg-gray-500";
     }
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Tenants</h1>
-          <p className="text-muted-foreground">Manage property tenants and occupancy</p>
+          <h1 className="text-3xl font-bold tracking-tight">Tenants Management</h1>
+          <p className="text-muted-foreground">
+            Manage tenant information, lease details, and status.
+          </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Add Tenant
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add New Tenant</DialogTitle>
-            </DialogHeader>
-            <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tenant Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="contact"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+91 9876543210" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                          <Input placeholder="tenant@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="propertyId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Property</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          defaultValue={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select property" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {properties?.map((property) => (
-                              <SelectItem 
-                                key={property.id} 
-                                value={property.id.toString()}
-                                disabled={property.isRented}
-                              >
-                                {`${property.flatNumber} (${property.flatType})`}
-                                {property.isRented && " - Occupied"}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="rentAmount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Rent (₹)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="25000" 
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Status</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="notice_period">Notice Period</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={createForm.control}
-                    name="moveInDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Move-in Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={`w-full pl-3 text-left font-normal ${
-                                  !field.value ? "text-muted-foreground" : ""
-                                }`}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={createForm.control}
-                    name="moveOutDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Move-out Date (optional)</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={`w-full pl-3 text-left font-normal ${
-                                  !field.value ? "text-muted-foreground" : ""
-                                }`}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value || undefined}
-                              onSelect={field.onChange}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={createForm.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Additional information about the tenant"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createTenantMutation.isPending}
-                  >
-                    {createTenantMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Tenant"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Tenant
+        </Button>
       </div>
 
       <Card>
-        <CardHeader className="bg-muted">
-          <CardTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5" />
-            Tenant Directory
-          </CardTitle>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Tenants</CardTitle>
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tenants..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
-          {isLoadingTenants ? (
+        <CardContent>
+          {loadingTenants ? (
             <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <span className="ml-2">Loading tenants...</span>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : tenantsError ? (
-            <div className="p-4 text-center text-red-500">
-              Error loading tenants. Please try again.
+          ) : filteredTenants.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchQuery
+                ? "No tenants found matching your search criteria."
+                : "No tenants found. Click 'Add Tenant' to create one."}
             </div>
-          ) : tenants && tenants.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Property</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Move-in Date</TableHead>
-                  <TableHead>Monthly Rent (₹)</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tenants.map((tenant) => (
-                  <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>{getPropertyName(tenant.propertyId)}</TableCell>
-                    <TableCell>{tenant.contact || 'N/A'}</TableCell>
-                    <TableCell>{getStatusBadge(tenant.status)}</TableCell>
-                    <TableCell>{format(new Date(tenant.moveInDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>₹{tenant.rentAmount.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditClick(tenant)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteClick(tenant)}
-                        disabled={deleteTenantMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           ) : (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground mb-4">No tenants found.</p>
-              <Button 
-                onClick={() => setIsCreateDialogOpen(true)}
-                variant="outline"
-                className="gap-2"
-              >
-                <UserPlus className="h-4 w-4" />
-                Add Your First Tenant
-              </Button>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Lease Period</TableHead>
+                    <TableHead>Rent</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTenants.map((tenant) => (
+                    <TableRow key={tenant.id}>
+                      <TableCell className="font-medium">{tenant.name}</TableCell>
+                      <TableCell>{getPropertyFlatNumber(tenant.propertyId)}</TableCell>
+                      <TableCell>
+                        <div>{tenant.contactNumber}</div>
+                        <div className="text-sm text-muted-foreground">{tenant.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{format(new Date(tenant.leaseStartDate), "dd MMM yyyy")}</div>
+                        <div className="text-sm text-muted-foreground">
+                          to {format(new Date(tenant.leaseEndDate), "dd MMM yyyy")}
+                        </div>
+                      </TableCell>
+                      <TableCell>₹{tenant.monthlyRent.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(tenant.status)}>
+                          {tenant.status.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedTenant(tenant);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedTenant(tenant);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Edit Tenant Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-lg">
+      {/* Add Tenant Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Tenant</DialogTitle>
+            <DialogTitle>Add New Tenant</DialogTitle>
+            <DialogDescription>
+              Enter the tenant details below. Click save when you're done.
+            </DialogDescription>
           </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={editForm.control}
+                  control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tenant Name</FormLabel>
+                      <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder="Tenant name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
-                  control={editForm.control}
-                  name="contact"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contact Number</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email Address</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="notice_period">Notice Period</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="rentAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Monthly Rent (₹)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
+                  control={form.control}
                   name="propertyId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Property</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        defaultValue={field.value?.toString()}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        value={field.value?.toString()}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -699,14 +386,9 @@ export default function TenantsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {properties?.map((property) => (
-                            <SelectItem 
-                              key={property.id} 
-                              value={property.id.toString()}
-                              disabled={property.isRented && property.id !== selectedTenant?.propertyId}
-                            >
-                              {`${property.flatNumber} (${property.flatType})`}
-                              {property.isRented && property.id !== selectedTenant?.propertyId && " - Occupied"}
+                          {properties.map((property) => (
+                            <SelectItem key={property.id} value={property.id.toString()}>
+                              {property.flatNumber} ({property.flatType})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -716,124 +398,376 @@ export default function TenantsPage() {
                   )}
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={editForm.control}
-                  name="moveInDate"
+                  control={form.control}
+                  name="contactNumber"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Move-in Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={`w-full pl-3 text-left font-normal ${
-                                !field.value ? "text-muted-foreground" : ""
-                              }`}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <FormItem>
+                      <FormLabel>Contact Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Contact number" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
-                  control={editForm.control}
-                  name="moveOutDate"
+                  control={form.control}
+                  name="email"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Move-out Date (optional)</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={`w-full pl-3 text-left font-normal ${
-                                !field.value ? "text-muted-foreground" : ""
-                              }`}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value || undefined}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Email address" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="leaseStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lease Start Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value}
+                          setDate={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="leaseEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lease End Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value}
+                          setDate={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="monthlyRent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monthly Rent (₹)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="notice_period">Notice Period</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
-                control={editForm.control}
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea placeholder="Additional notes about the tenant" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsEditDialogOpen(false);
-                    setSelectedTenant(null);
-                  }}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
-                  disabled={updateTenantMutation.isPending}
-                >
-                  {updateTenantMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Tenant"
+                <Button type="submit" disabled={createTenantMutation.isPending}>
+                  {createTenantMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
+                  Save Tenant
                 </Button>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Tenant Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Tenant</DialogTitle>
+            <DialogDescription>
+              Update the tenant details below. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Tenant name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="propertyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        value={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select property" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {properties.map((property) => (
+                            <SelectItem key={property.id} value={property.id.toString()}>
+                              {property.flatNumber} ({property.flatType})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contactNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contact Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Contact number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="Email address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="leaseStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lease Start Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value}
+                          setDate={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="leaseEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lease End Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value}
+                          setDate={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="monthlyRent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monthly Rent (₹)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="notice_period">Notice Period</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Additional notes about the tenant" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateTenantMutation.isPending}>
+                  {updateTenantMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Update Tenant
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the tenant {selectedTenant?.name}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedTenant) {
+                  deleteTenantMutation.mutate(selectedTenant.id);
+                }
+              }}
+              disabled={deleteTenantMutation.isPending}
+            >
+              {deleteTenantMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
