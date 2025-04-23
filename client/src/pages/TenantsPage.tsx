@@ -65,6 +65,7 @@ type TenantFormValues = {
   phone: string;
   email: string;
   propertyId: number;
+  flatNumber: string; // Added flat_number field
   leaseStartDate: Date;
   leaseEndDate: Date;
   rentAmount: number;
@@ -172,6 +173,7 @@ export default function TenantsPage() {
         phone: z.string().min(10, "Contact number must be at least 10 characters"),
         email: z.string().email("Please enter a valid email address"),
         propertyId: z.number().min(1, "Please select a property"),
+        flatNumber: z.string().min(1, "Flat number is required"),
         leaseStartDate: z.date(),
         leaseEndDate: z.date(),
         rentAmount: z.number().min(1, "Rent amount must be greater than 0"),
@@ -186,6 +188,7 @@ export default function TenantsPage() {
       phone: "",
       email: "",
       propertyId: 0,
+      flatNumber: "", // Added default for flatNumber
       leaseStartDate: new Date(),
       leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
       rentAmount: 0,
@@ -204,6 +207,7 @@ export default function TenantsPage() {
         phone: selectedTenant.phone,
         email: selectedTenant.email || "",
         propertyId: selectedTenant.propertyId,
+        flatNumber: selectedTenant.flatNumber || "", // Get flatNumber from tenant record
         leaseStartDate: new Date(selectedTenant.leaseStartDate),
         leaseEndDate: new Date(selectedTenant.leaseEndDate),
         rentAmount: selectedTenant.rentAmount,
@@ -223,6 +227,7 @@ export default function TenantsPage() {
         phone: "",
         email: "",
         propertyId: 0,
+        flatNumber: "", // Added flatNumber
         leaseStartDate: new Date(),
         leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
         rentAmount: 0,
