@@ -13,6 +13,7 @@ import {
   ExpenseSummary,
   PropertySummary
 } from "@shared/schema";
+import session from "express-session";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -56,6 +57,9 @@ export interface IStorage {
   getExpenseSummary(): Promise<ExpenseSummary>;
   getPropertySummary(): Promise<PropertySummary>;
   getRecentTransactions(limit: number): Promise<(Income | Expense)[]>;
+  
+  // Session store for authentication
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -70,6 +74,8 @@ export class MemStorage implements IStorage {
   private incomeCounter: number;
   private expenseCounter: number;
   private waterTankCounter: number;
+  
+  sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
@@ -83,6 +89,12 @@ export class MemStorage implements IStorage {
     this.incomeCounter = 1;
     this.expenseCounter = 1;
     this.waterTankCounter = 1;
+    
+    // Create an in-memory session store
+    const MemoryStore = require('memorystore')(session);
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
     
     this.seedData();
   }
@@ -524,4 +536,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from "./DatabaseStorage";
+
+// Use DatabaseStorage instead of MemStorage for persistence
+export const storage = new DatabaseStorage();
