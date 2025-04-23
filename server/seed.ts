@@ -2,6 +2,7 @@ import { db } from './db';
 import { users, properties, flatTypeEnum } from '@shared/schema';
 import { scrypt, randomBytes } from 'crypto';
 import { promisify } from 'util';
+import { eq } from 'drizzle-orm';
 
 const scryptAsync = promisify(scrypt);
 
@@ -45,7 +46,7 @@ export async function seedDatabase() {
     console.log('Starting database seeding...');
     
     // 1. Create admin and data entry users
-    const adminExists = await db.select().from(users).where(eb => eb.eq(users.username, 'admin')).limit(1);
+    const adminExists = await db.select().from(users).where(eq(users.username, 'admin')).limit(1);
     
     if (adminExists.length === 0) {
       console.log('Creating admin user...');
@@ -59,7 +60,7 @@ export async function seedDatabase() {
       });
     }
     
-    const dataEntryExists = await db.select().from(users).where(eb => eb.eq(users.username, 'dataentry')).limit(1);
+    const dataEntryExists = await db.select().from(users).where(eq(users.username, 'dataentry')).limit(1);
     
     if (dataEntryExists.length === 0) {
       console.log('Creating data entry user...');
@@ -101,12 +102,12 @@ export async function seedDatabase() {
         
         return {
           flatNumber,
-          flatType: flatType as any,
+          flatType,
           ownerName,
           expectedRent,
           maintenanceFee,
-          isRented: Math.random() > 0.3, // 70% chance of being rented
-          currentTenant: null,
+          isRented: true, // Default to being rented
+          currentTenant: `Tenant for ${flatNumber}`,
           floorArea: null,
           notes: null,
           createdAt: new Date(),

@@ -31,6 +31,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(403).json({ message: 'Forbidden. Admin access required.' });
   };
   
+  // Middleware to restrict data entry users from accessing income routes
+  const adminOnlyForIncome = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated() && req.user) {
+      const userRole = (req.user as any).role;
+      // If user is data_entry and trying to access income routes, block them
+      if (userRole === 'data_entry' && req.path.includes('/income')) {
+        return res.status(403).json({ message: 'Data entry users cannot access income information.' });
+      }
+    }
+    return next();
+  };
+  
   // User routes (admin only)
   app.get('/api/users', isAdmin, async (req, res, next) => {
     try {
@@ -141,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Income routes
-  app.get('/api/incomes', isAuthenticated, async (req, res, next) => {
+  app.get('/api/incomes', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
       const incomes = await storage.getIncomes();
       res.json(incomes);
@@ -150,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/incomes/:id', isAuthenticated, async (req, res, next) => {
+  app.get('/api/incomes/:id', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
       const income = await storage.getIncome(id);
@@ -165,7 +177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/incomes', isAuthenticated, async (req, res, next) => {
+  app.post('/api/incomes', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
       const incomeData = insertIncomeSchema.parse({
         ...req.body,
