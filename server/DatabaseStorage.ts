@@ -378,4 +378,84 @@ export class DatabaseStorage implements IStorage {
     
     return combined;
   }
+  
+  // Vendor methods
+  async getVendor(id: number): Promise<Vendor | undefined> {
+    const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id));
+    return vendor;
+  }
+  
+  async getVendors(): Promise<Vendor[]> {
+    return await db.select().from(vendors);
+  }
+  
+  async getVendorsByServiceType(serviceType: string): Promise<Vendor[]> {
+    return await db.select().from(vendors).where(eq(vendors.serviceType, serviceType as any));
+  }
+  
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    const now = new Date();
+    const [newVendor] = await db.insert(vendors).values({
+      ...vendor,
+      createdAt: now,
+      updatedAt: now
+    }).returning();
+    return newVendor;
+  }
+  
+  async updateVendor(id: number, updates: Partial<InsertVendor>): Promise<Vendor | undefined> {
+    const [updatedVendor] = await db.update(vendors)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(vendors.id, id))
+      .returning();
+    return updatedVendor;
+  }
+  
+  async deleteVendor(id: number): Promise<boolean> {
+    await db.delete(vendors).where(eq(vendors.id, id));
+    return true;
+  }
+  
+  // Tenant methods
+  async getTenant(id: number): Promise<Tenant | undefined> {
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
+    return tenant;
+  }
+  
+  async getTenants(): Promise<Tenant[]> {
+    return await db.select().from(tenants);
+  }
+  
+  async getTenantsByProperty(propertyId: number): Promise<Tenant[]> {
+    return await db.select().from(tenants).where(eq(tenants.propertyId, propertyId));
+  }
+  
+  async createTenant(tenant: InsertTenant): Promise<Tenant> {
+    const now = new Date();
+    const [newTenant] = await db.insert(tenants).values({
+      ...tenant,
+      createdAt: now,
+      updatedAt: now
+    }).returning();
+    return newTenant;
+  }
+  
+  async updateTenant(id: number, updates: Partial<InsertTenant>): Promise<Tenant | undefined> {
+    const [updatedTenant] = await db.update(tenants)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(tenants.id, id))
+      .returning();
+    return updatedTenant;
+  }
+  
+  async deleteTenant(id: number): Promise<boolean> {
+    await db.delete(tenants).where(eq(tenants.id, id));
+    return true;
+  }
 }
