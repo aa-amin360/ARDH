@@ -40,8 +40,12 @@ import { FLATS, OWNERS, MAINTENANCE_FEES, getOwnerByFlatNumber, getFlatTypeByFla
 // Extended schema with validation
 const propertyFormSchema = insertPropertySchema.extend({
   flatNumber: z.string().min(3, "Flat number is required"),
-  owner: z.string().min(2, "Owner name is required"),
+  ownerName: z.string().min(2, "Owner name is required"),
   flatType: z.enum(["1BHK", "2BHK", "3BHK", "penthouse"]),
+  expectedRent: z.coerce.number().min(0, "Expected rent must be a positive number"),
+  maintenanceFee: z.coerce.number().min(0, "Maintenance fee must be a positive number"),
+  isRented: z.boolean().default(false),
+  floorArea: z.coerce.number().optional(),
   createdBy: z.number().optional()
 });
 
@@ -110,30 +114,46 @@ export default function PropertiesPage() {
     resolver: zodResolver(propertyFormSchema),
     defaultValues: {
       flatNumber: "",
-      owner: "",
+      ownerName: "",
       flatType: "1BHK",
-      monthlyRent: 0,
+      expectedRent: 0,
       maintenanceFee: 0,
-      createdBy: 0,
-      isOccupied: false,
-      notes: ""
+      isRented: false,
+      currentTenant: "",
+      floorArea: 0,
+      notes: "",
+      createdBy: 0
     }
-  });
+  } as any);
 
   // Handle form submission
   function onSubmit(values: PropertyFormValues) {
     const selectedProperty = getSelectedProperty();
     
+    // Format the values for API submission
+    const formattedValues = {
+      ...values,
+      isRented: !!values.isRented, // Ensure boolean
+      expectedRent: typeof values.expectedRent === 'string' 
+        ? parseFloat(values.expectedRent) 
+        : values.expectedRent, // Ensure number
+      maintenanceFee: typeof values.maintenanceFee === 'string' 
+        ? parseFloat(values.maintenanceFee) 
+        : values.maintenanceFee, // Ensure number
+      floorArea: values.floorArea 
+        ? (typeof values.floorArea === 'string' 
+            ? parseFloat(values.floorArea) 
+            : values.floorArea) 
+        : null // Handle optional floor area
+    };
+    
     if (activeTab === "modify" && selectedProperty) {
       updatePropertyMutation.mutate({ 
         id: selectedProperty.id, 
-        values: {
-          ...values,
-          isOccupied: !!values.isOccupied // Ensure boolean
-        }
+        values: formattedValues as any
       });
     } else if (activeTab === "add") {
-      createPropertyMutation.mutate(values);
+      createPropertyMutation.mutate(formattedValues as any);
     }
   }
 
@@ -159,12 +179,14 @@ export default function PropertiesPage() {
       form.reset({
         flatNumber: property.flatNumber,
         flatType: property.flatType,
-        owner: property.owner,
-        monthlyRent: property.monthlyRent,
+        ownerName: property.ownerName,
+        expectedRent: property.expectedRent,
         maintenanceFee: property.maintenanceFee,
-        isOccupied: property.isOccupied,
+        isRented: property.isRented,
+        currentTenant: property.currentTenant || "",
+        floorArea: property.floorArea || 0,
         notes: property.notes || ""
-      });
+      } as any);
     }
   };
 
