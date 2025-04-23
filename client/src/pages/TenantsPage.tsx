@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 
 import { Tenant, InsertTenant, Property } from "@shared/schema";
+import { FLATS } from "@shared/constants";
 
 type TenantFormValues = {
   name: string;
