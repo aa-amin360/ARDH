@@ -32,7 +32,7 @@ const expenseFormSchema = insertExpenseSchema.extend({
   amount: z.coerce.number().positive(),
   date: z.string().refine(val => !isNaN(Date.parse(val)), {
     message: "Please enter a valid date",
-  }),
+  }).transform(val => new Date(val)),
   subcategory: z.string().min(1, "Subcategory is required"),
   time: z.string().optional(),
   propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
@@ -70,7 +70,7 @@ export default function ExpensesPage() {
   const {
     data: vendors = [] as any[],
     isLoading: vendorsLoading,
-  } = useQuery({
+  } = useQuery<any[]>({
     queryKey: ["/api/vendors"],
   });
   
@@ -421,7 +421,11 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Date</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input 
+                              type="date" 
+                              {...field}
+                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

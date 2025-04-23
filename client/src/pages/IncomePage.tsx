@@ -30,7 +30,7 @@ const incomeFormSchema = insertIncomeSchema.extend({
   amount: z.coerce.number().positive(),
   date: z.string().refine(val => !isNaN(Date.parse(val)), {
     message: "Please enter a valid date",
-  }),
+  }).transform(val => new Date(val)),
   propertyId: z.coerce.number().optional(),
 });
 
@@ -222,7 +222,11 @@ export default function IncomePage() {
                         <FormItem>
                           <FormLabel>Date</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input 
+                              type="date" 
+                              {...field}
+                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
