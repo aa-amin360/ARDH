@@ -495,40 +495,7 @@ export default function PropertiesPage() {
                         )}
                       />
                       
-                      <FormField
-                        control={form.control}
-                        name="isRented"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Occupied</FormLabel>
-                              <FormDescription>
-                                Is the property currently rented?
-                              </FormDescription>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="currentTenant"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Current Tenant</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      {/* Removed isRented and currentTenant fields as they are determined from tenants data */}
 
                       <FormField
                         control={form.control}
@@ -683,40 +650,7 @@ export default function PropertiesPage() {
                       )}
                     />
                     
-                    <FormField
-                      control={form.control}
-                      name="isRented"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                          <div className="space-y-0.5">
-                            <FormLabel>Occupied</FormLabel>
-                            <FormDescription>
-                              Is the property currently rented?
-                            </FormDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="currentTenant"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Tenant</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., John Doe" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Removed isRented and currentTenant fields as they are determined from tenants data */}
 
                     <FormField
                       control={form.control}

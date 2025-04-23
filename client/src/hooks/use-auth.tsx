@@ -53,15 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (user) => {
+      // Update user data in cache
       queryClient.setQueryData(["/api/auth/me"], user);
+      
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
       });
-      // Navigate to dashboard immediately after successful login
-      setTimeout(() => {
-        navigate("/");
-      }, 100);
+      
+      // Force a hard navigation to the dashboard (more reliable than navigate)
+      window.location.href = "/";
     },
     onError: (error: Error) => {
       toast({
@@ -102,8 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
-      // First invalidate the session
+      // First remove the user data from cache
       queryClient.setQueryData(["/api/auth/me"], null);
+      
+      // Invalidate all queries to refresh any data
+      queryClient.invalidateQueries();
       
       // Show logout success toast
       toast({
@@ -111,10 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been successfully logged out",
       });
       
-      // Ensure redirect happens after React updates
-      setTimeout(() => {
-        navigate("/auth");
-      }, 100);
+      // Force a hard navigation to auth page (this is more reliable than just using navigate)
+      window.location.href = "/auth";
     },
     onError: (error: Error) => {
       toast({
