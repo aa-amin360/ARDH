@@ -194,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.put('/api/incomes/:id', isAuthenticated, async (req, res, next) => {
+  app.put('/api/incomes/:id', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
       const incomeData = insertIncomeSchema.partial().parse(req.body);
@@ -384,7 +384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Dashboard data routes
-  app.get('/api/dashboard/income-summary', isAuthenticated, async (req, res, next) => {
+  app.get('/api/dashboard/income-summary', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
       const incomeSummary = await storage.getIncomeSummary();
       res.json(incomeSummary);
@@ -415,7 +415,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const transactions = await storage.getRecentTransactions(limit);
-      res.json(transactions);
+      
+      // If user is data_entry, filter out income transactions
+      if (req.user && (req.user as any).role === 'data_entry') {
+        const expensesOnly = transactions.filter(t => 'category' in t); // Only expenses have 'category' field
+        res.json(expensesOnly);
+      } else {
+        res.json(transactions);
+      }
     } catch (error) {
       next(error);
     }

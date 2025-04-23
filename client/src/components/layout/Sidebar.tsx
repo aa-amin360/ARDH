@@ -1,110 +1,121 @@
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import {
   Home,
-  DollarSign,
-  CreditCard,
   Building2,
+  PiggyBank, 
+  Banknote,
   FileText,
   Settings,
+  User
 } from "lucide-react";
 
 export default function Sidebar() {
+  const { user, isAdmin, logoutMutation } = useAuth();
   const [location] = useLocation();
-  const { user, logout } = useAuth();
-
-  const navItems = [
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+  
+  // Navigation items
+  const navigationItems = [
     {
       name: "Dashboard",
-      href: "/dashboard",
-      icon: <Home className="w-6 h-6 mr-3" />,
-    },
-    {
-      name: "Income",
-      href: "/income",
-      icon: <DollarSign className="w-6 h-6 mr-3" />,
-    },
-    {
-      name: "Expenses",
-      href: "/expenses",
-      icon: <CreditCard className="w-6 h-6 mr-3" />,
+      href: "/",
+      icon: Home,
+      current: location === "/",
+      showFor: "all",
     },
     {
       name: "Properties",
       href: "/properties",
-      icon: <Building2 className="w-6 h-6 mr-3" />,
+      icon: Building2,
+      current: location === "/properties",
+      showFor: "all",
+    },
+    {
+      name: "Income",
+      href: "/income",
+      icon: PiggyBank,
+      current: location === "/income",
+      showFor: "admin",
+    },
+    {
+      name: "Expenses",
+      href: "/expenses",
+      icon: Banknote,
+      current: location === "/expenses",
+      showFor: "all",
     },
     {
       name: "Reports",
       href: "/reports",
-      icon: <FileText className="w-6 h-6 mr-3" />,
+      icon: FileText,
+      current: location === "/reports",
+      showFor: "admin",
     },
     {
       name: "Settings",
       href: "/settings",
-      icon: <Settings className="w-6 h-6 mr-3" />,
+      icon: Settings,
+      current: location === "/settings",
+      showFor: "all",
     },
   ];
-
+  
+  // Filter navigation items based on user role
+  const filteredNavItems = navigationItems.filter(item => 
+    item.showFor === "all" || (isAdmin && item.showFor === "admin")
+  );
+  
   return (
-    <div className="hidden md:flex md:flex-shrink-0">
-      <div className="flex flex-col w-64 bg-white border-r border-gray-200">
-        <div className="flex items-center h-16 px-4 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-gray-700">Real Estate Manager</h1>
-        </div>
-        
-        <div className="flex flex-col flex-grow px-4 pt-5 pb-4 overflow-y-auto">
-          <div className="flex-grow flex flex-col">
-            <nav className="flex-1 space-y-1">
-              {navItems.map((item) => (
-                <Link key={item.href} href={item.href}>
-                  <a
-                    className={cn(
-                      "flex items-center px-2 py-2 text-sm font-medium rounded-md group",
-                      location === item.href
-                        ? "bg-gray-100 text-primary-600"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  >
-                    {item.icon}
-                    {item.name}
-                  </a>
-                </Link>
-              ))}
-            </nav>
+    <div className="hidden md:flex flex-col h-screen w-64 bg-white border-r border-gray-200">
+      {/* Logo area */}
+      <div className="py-6 px-4">
+        <h1 className="text-xl font-bold text-primary">ARDH Management</h1>
+        <p className="text-sm text-gray-500">AR's Dream Heights</p>
+      </div>
+      
+      {/* Navigation */}
+      <div className="flex-1 px-2 py-4 space-y-1">
+        {filteredNavItems.map((item) => (
+          <Link
+            key={item.name}
+            href={item.href}
+            className={cn(
+              "flex items-center px-4 py-3 text-sm font-medium rounded-md",
+              item.current
+                ? "bg-primary text-white"
+                : "text-gray-600 hover:bg-gray-100"
+            )}
+          >
+            <item.icon className="mr-3 h-5 w-5" />
+            {item.name}
+          </Link>
+        ))}
+      </div>
+      
+      {/* User info */}
+      <div className="border-t border-gray-200 p-4">
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <User className="h-8 w-8 text-gray-400" />
           </div>
-          
-          {user && (
-            <div className="pt-5 mt-5 border-t border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium text-sm">
-                      {user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700">{user.name}</p>
-                  <p className="text-xs font-medium text-gray-500">
-                    {user.role === "admin" ? "Administrator" : "Data Entry User"}
-                  </p>
-                </div>
-                <button 
-                  onClick={() => logout()}
-                  className="ml-auto text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="ml-3">
+            <p className="text-sm font-medium text-gray-700">{user?.name}</p>
+            <p className="text-xs text-gray-500">
+              {isAdmin ? 'Administrator' : 'Data Entry'}
+            </p>
+          </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="mt-3 w-full px-4 py-2 text-sm text-center text-red-600 bg-red-50 hover:bg-red-100 rounded-md"
+        >
+          Logout
+        </button>
       </div>
     </div>
   );
