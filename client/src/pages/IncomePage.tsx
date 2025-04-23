@@ -42,18 +42,11 @@ export default function IncomePage() {
 
   // Query to fetch incomes
   const {
-    data: incomes,
+    data: incomes = [],
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["/api/incomes"],
-    onError: (error: any) => {
-      toast({
-        title: "Error fetching income records",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    queryKey: ["/api/incomes"]
   });
 
   // Mutation to add a new income
@@ -68,12 +61,13 @@ export default function IncomePage() {
         description: "The income has been added successfully.",
       });
       form.reset({
-        type: "",
-        amount: "",
+        type: "rent",
+        amount: 0,
         date: new Date().toISOString().split("T")[0],
         description: "",
-        reference: "",
-        propertyId: "",
+        receivedFrom: "",
+        propertyId: "0",
+        createdBy: 0
       });
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
     },
@@ -90,17 +84,26 @@ export default function IncomePage() {
   const form = useForm<IncomeFormValues>({
     resolver: zodResolver(incomeFormSchema),
     defaultValues: {
-      type: "",
-      amount: "",
+      type: "rent", // Default to rent
+      amount: 0,
       date: new Date().toISOString().split("T")[0],
       description: "",
-      reference: "",
-      propertyId: "",
+      receivedFrom: "",
+      propertyId: "0", // Set default to common areas
+      createdBy: 0, // Will be set on the server
     },
   });
 
   function onSubmit(values: IncomeFormValues) {
-    createIncomeMutation.mutate(values);
+    // Process the values for submission
+    const propertyId = values.propertyId ? parseInt(values.propertyId) : 0;
+    
+    const formattedValues = {
+      ...values,
+      receivedFrom: values.receivedFrom || "Unknown",
+      propertyId: propertyId === 0 ? null : propertyId,
+    };
+    createIncomeMutation.mutate(formattedValues);
   }
 
   // Format date for display
@@ -236,7 +239,7 @@ export default function IncomePage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Common / All Properties</SelectItem>
+                              <SelectItem value="0">Common / All Properties</SelectItem>
                               <SelectItem value="1">101 - 1BHK</SelectItem>
                               <SelectItem value="2">102 - 2BHK</SelectItem>
                               <SelectItem value="3">103 - 3BHK</SelectItem>
@@ -286,13 +289,13 @@ export default function IncomePage() {
 
                   <FormField
                     control={form.control}
-                    name="reference"
+                    name="receivedFrom"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reference/Receipt Number</FormLabel>
+                        <FormLabel>Received From</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Optional reference or receipt number"
+                            placeholder="Who the income was received from"
                             {...field}
                           />
                         </FormControl>
