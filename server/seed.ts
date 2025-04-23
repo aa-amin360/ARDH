@@ -3,6 +3,7 @@ import { users, properties, flatTypeEnum } from '@shared/schema';
 import { scrypt, randomBytes } from 'crypto';
 import { promisify } from 'util';
 import { eq } from 'drizzle-orm';
+import { seedDummyData } from './dummy-data';
 
 const scryptAsync = promisify(scrypt);
 
@@ -120,6 +121,10 @@ export async function seedDatabase() {
         await db.insert(properties).values(property);
       }
     }
+    
+    // 3. Seed dummy income and expense data
+    console.log('Seeding dummy data...');
+    await seedDummyData();
     
     console.log('Database seeding complete!');
   } catch (error) {

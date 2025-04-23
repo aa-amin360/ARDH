@@ -1,348 +1,382 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Plus, PlusCircle } from "lucide-react";
-
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
+import { insertExpenseSchema } from "@shared/schema";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-import ExpensesTable from "@/components/tables/ExpensesTable";
-import ExpenseForm from "@/components/forms/ExpenseForm";
-import WaterTankForm from "@/components/forms/WaterTankForm";
+// Extended schema with validation
+const expenseFormSchema = insertExpenseSchema.extend({
+  amount: z.number().positive().or(z.string().regex(/^\d+(\.\d{1,2})?$/).transform(Number)),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "Date must be in the format YYYY-MM-DD",
+  }),
+});
+
+type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 export default function ExpensesPage() {
   const { toast } = useToast();
-  
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedExpense, setSelectedExpense] = useState<any>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  
-  const [isWaterTankDialogOpen, setIsWaterTankDialogOpen] = useState(false);
-  const [selectedWaterTank, setSelectedWaterTank] = useState<any>(null);
-  const [isWaterTankEditDialogOpen, setIsWaterTankEditDialogOpen] = useState(false);
-  const [isWaterTankDeleteDialogOpen, setIsWaterTankDeleteDialogOpen] = useState(false);
-  const [waterTankDeleteId, setWaterTankDeleteId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = React.useState("add");
 
-  // Fetch expenses
-  const { data: expenses, isLoading, isError } = useQuery({
+  // Query to fetch expenses
+  const {
+    data: expenses,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["/api/expenses"],
+    onError: (error: any) => {
+      toast({
+        title: "Error fetching expenses",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
-  // Fetch water tanks
-  const { data: waterTanks, isLoading: waterTanksLoading } = useQuery({
-    queryKey: ["/api/water-tanks"],
-  });
-
-  // Delete expense mutation
-  const deleteExpenseMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/expenses/${id}`, {});
-      return response.json();
+  // Mutation to add a new expense
+  const createExpenseMutation = useMutation({
+    mutationFn: async (values: ExpenseFormValues) => {
+      const res = await apiRequest("POST", "/api/expenses", values);
+      return await res.json();
     },
     onSuccess: () => {
       toast({
-        title: "Expense deleted",
-        description: "The expense record has been successfully deleted.",
+        title: "Expense added",
+        description: "The expense has been added successfully.",
+      });
+      form.reset({
+        category: "",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+        receipt: "",
+        propertyId: "",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/expense-summary"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/recent-transactions"] });
-      setIsDeleteDialogOpen(false);
-      setDeleteId(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete expense",
+        title: "Error adding expense",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  // Delete water tank mutation
-  const deleteWaterTankMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/water-tanks/${id}`, {});
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Water tank record deleted",
-        description: "The water tank record has been successfully deleted.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/water-tanks"] });
-      setIsWaterTankDeleteDialogOpen(false);
-      setWaterTankDeleteId(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete water tank record",
-        variant: "destructive",
-      });
+  // Form
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      category: "",
+      amount: "",
+      date: new Date().toISOString().split("T")[0],
+      description: "",
+      receipt: "",
+      propertyId: "",
     },
   });
 
-  // Handle edit expense
-  const handleEditExpense = (expense: any) => {
-    setSelectedExpense(expense);
-    setIsEditDialogOpen(true);
-  };
-
-  // Handle delete expense
-  const handleDeleteExpense = (id: number) => {
-    setDeleteId(id);
-    setIsDeleteDialogOpen(true);
-  };
-
-  // Handle edit water tank
-  const handleEditWaterTank = (waterTank: any) => {
-    setSelectedWaterTank(waterTank);
-    setIsWaterTankEditDialogOpen(true);
-  };
-
-  // Handle delete water tank
-  const handleDeleteWaterTank = (id: number) => {
-    setWaterTankDeleteId(id);
-    setIsWaterTankDeleteDialogOpen(true);
-  };
-
-  // Confirm delete expense
-  const confirmDeleteExpense = () => {
-    if (deleteId) {
-      deleteExpenseMutation.mutate(deleteId);
-    }
-  };
-
-  // Confirm delete water tank
-  const confirmDeleteWaterTank = () => {
-    if (waterTankDeleteId) {
-      deleteWaterTankMutation.mutate(waterTankDeleteId);
-    }
-  };
-
-  // Format water tank data for table
-  const formatWaterTankForTable = (waterTanks: any[]) => {
-    return waterTanks?.map(tank => ({
-      ...tank,
-      category: "water_tank",
-      description: `Water tank delivery - ${tank.liters} liters`,
-      vendor: tank.tankerNumber
-    })) || [];
-  };
-
-  if (isError) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
-        Error loading expense data. Please try refreshing the page.
-      </div>
-    );
+  function onSubmit(values: ExpenseFormValues) {
+    createExpenseMutation.mutate(values);
   }
 
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return `₹${amount.toLocaleString("en-IN")}`;
+  };
+
   return (
-    <div className="py-4">
-      <Tabs defaultValue="expenses">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="expenses">General Expenses</TabsTrigger>
-            <TabsTrigger value="water-tanks">Water Tank Records</TabsTrigger>
-          </TabsList>
-          
-          <div>
-            <TabsContent value="expenses" className="mt-0">
-              <Button onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Expense
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Expenses Management</h1>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="add">Add Expense</TabsTrigger>
+          <TabsTrigger value="view">View Expenses</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="add" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Expense</CardTitle>
+              <CardDescription>
+                Enter the details of the expense you want to add.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="electricity">Electricity</SelectItem>
+                              <SelectItem value="water">Water</SelectItem>
+                              <SelectItem value="maintenance">Maintenance</SelectItem>
+                              <SelectItem value="repair">Repair</SelectItem>
+                              <SelectItem value="property_tax">Property Tax</SelectItem>
+                              <SelectItem value="insurance">Insurance</SelectItem>
+                              <SelectItem value="legal">Legal</SelectItem>
+                              <SelectItem value="management">Management</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount (₹)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Enter amount"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="propertyId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Property</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select property (optional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">Common Area / All Properties</SelectItem>
+                              <SelectItem value="1">101 - 1BHK</SelectItem>
+                              <SelectItem value="2">102 - 2BHK</SelectItem>
+                              <SelectItem value="3">103 - 3BHK</SelectItem>
+                              <SelectItem value="4">201 - 1BHK</SelectItem>
+                              <SelectItem value="5">202 - 2BHK</SelectItem>
+                              <SelectItem value="6">203 - 2BHK</SelectItem>
+                              <SelectItem value="7">204 - 1BHK</SelectItem>
+                              <SelectItem value="8">301 - 1BHK</SelectItem>
+                              <SelectItem value="9">302 - 2BHK</SelectItem>
+                              <SelectItem value="10">303 - 2BHK</SelectItem>
+                              <SelectItem value="11">304 - 1BHK</SelectItem>
+                              <SelectItem value="12">401 - 1BHK</SelectItem>
+                              <SelectItem value="13">402 - 1BHK</SelectItem>
+                              <SelectItem value="14">403 - 1BHK</SelectItem>
+                              <SelectItem value="15">404 - 1BHK</SelectItem>
+                              <SelectItem value="16">501 - 1BHK</SelectItem>
+                              <SelectItem value="17">502 - 2BHK</SelectItem>
+                              <SelectItem value="18">503 - 2BHK</SelectItem>
+                              <SelectItem value="19">504 - Penthouse</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Leave blank if expense applies to all properties
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter expense description"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="receipt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Receipt/Invoice Number</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Optional receipt or invoice number"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" type="button" onClick={() => form.reset()}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createExpenseMutation.isPending}
+                      className="gap-1"
+                    >
+                      {createExpenseMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
+                      Add Expense
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="view" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Expense Records</CardTitle>
+                <CardDescription>
+                  View all expense records.
+                </CardDescription>
+              </div>
+              <Button variant="outline" className="gap-1">
+                <FileSpreadsheet className="h-4 w-4" />
+                Export
               </Button>
-            </TabsContent>
-            
-            <TabsContent value="water-tanks" className="mt-0">
-              <Button onClick={() => setIsWaterTankDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Water Tank Record
-              </Button>
-            </TabsContent>
-          </div>
-        </div>
-        
-        <Card>
-          <CardHeader>
-            <TabsContent value="expenses">
-              <CardTitle>Expense Management</CardTitle>
-            </TabsContent>
-            <TabsContent value="water-tanks">
-              <CardTitle>Water Tank Records</CardTitle>
-            </TabsContent>
-          </CardHeader>
-          <CardContent>
-            <TabsContent value="expenses" className="mt-0">
+            </CardHeader>
+            <CardContent>
               {isLoading ? (
-                <div className="text-center py-10">Loading expense data...</div>
+                <div className="flex justify-center my-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : isError ? (
+                <p className="text-center text-red-500 my-8">
+                  Error loading expenses
+                </p>
+              ) : expenses && expenses.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Property</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="whitespace-nowrap">
+                            {formatDate(expense.date)}
+                          </TableCell>
+                          <TableCell className="capitalize">
+                            {expense.category.replace("_", " ")}
+                          </TableCell>
+                          <TableCell>{expense.description}</TableCell>
+                          <TableCell>
+                            {expense.propertyId
+                              ? `#${expense.propertyId}`
+                              : "Common"}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(expense.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
-                <ExpensesTable
-                  data={expenses || []}
-                  onEdit={handleEditExpense}
-                  onDelete={handleDeleteExpense}
-                />
+                <div className="text-center py-8 text-gray-500">
+                  No expense records found.
+                </div>
               )}
-            </TabsContent>
-            
-            <TabsContent value="water-tanks" className="mt-0">
-              {waterTanksLoading ? (
-                <div className="text-center py-10">Loading water tank records...</div>
-              ) : (
-                <ExpensesTable
-                  data={formatWaterTankForTable(waterTanks || [])}
-                  onEdit={handleEditWaterTank}
-                  onDelete={handleDeleteWaterTank}
-                />
-              )}
-            </TabsContent>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
-
-      {/* Add Expense Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Expense</DialogTitle>
-            <DialogDescription>
-              Create a new expense record in the system
-            </DialogDescription>
-          </DialogHeader>
-          <ExpenseForm
-            onSuccess={() => setIsAddDialogOpen(false)}
-            onCancel={() => setIsAddDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Expense Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Expense</DialogTitle>
-            <DialogDescription>
-              Update the expense record details
-            </DialogDescription>
-          </DialogHeader>
-          {selectedExpense && (
-            <ExpenseForm
-              expenseId={selectedExpense.id}
-              onSuccess={() => setIsEditDialogOpen(false)}
-              onCancel={() => setIsEditDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Expense Confirmation Dialog */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              expense record from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeleteExpense}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Add Water Tank Dialog */}
-      <Dialog open={isWaterTankDialogOpen} onOpenChange={setIsWaterTankDialogOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Water Tank Record</DialogTitle>
-            <DialogDescription>
-              Record a new water tank delivery
-            </DialogDescription>
-          </DialogHeader>
-          <WaterTankForm
-            onSuccess={() => setIsWaterTankDialogOpen(false)}
-            onCancel={() => setIsWaterTankDialogOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Water Tank Dialog */}
-      <Dialog open={isWaterTankEditDialogOpen} onOpenChange={setIsWaterTankEditDialogOpen}>
-        <DialogContent className="sm:max-w-md md:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Water Tank Record</DialogTitle>
-            <DialogDescription>
-              Update the water tank delivery details
-            </DialogDescription>
-          </DialogHeader>
-          {selectedWaterTank && (
-            <WaterTankForm
-              waterTankId={selectedWaterTank.id}
-              waterTankData={selectedWaterTank}
-              onSuccess={() => setIsWaterTankEditDialogOpen(false)}
-              onCancel={() => setIsWaterTankEditDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Water Tank Confirmation Dialog */}
-      <AlertDialog
-        open={isWaterTankDeleteDialogOpen}
-        onOpenChange={setIsWaterTankDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              water tank delivery record from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeleteWaterTank}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
