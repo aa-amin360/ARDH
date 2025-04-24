@@ -83,6 +83,7 @@ type TenantFormValues = {
   securityDeposit: number;
   status: "active" | "inactive" | "notice_period";
   notes?: string;
+  attachmentUrl?: string; // Added document attachment field
   createdBy: number;
 };
 
@@ -250,6 +251,7 @@ export default function TenantsPage() {
         securityDeposit: z.number().min(0),
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
+        attachmentUrl: z.string().optional(),
         createdBy: z.number(),
       }),
     ),
@@ -267,6 +269,7 @@ export default function TenantsPage() {
       securityDeposit: 0,
       status: "active",
       notes: "",
+      attachmentUrl: "",
       createdBy: 0,
     },
   });
@@ -287,6 +290,7 @@ export default function TenantsPage() {
         securityDeposit: z.number().min(0),
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
+        attachmentUrl: z.string().optional(),
         createdBy: z.number(),
       }),
     ),
@@ -305,6 +309,7 @@ export default function TenantsPage() {
       securityDeposit: 0,
       status: "active",
       notes: "",
+      attachmentUrl: "",
       createdBy: 0,
     },
   });
@@ -325,6 +330,7 @@ export default function TenantsPage() {
         securityDeposit: selectedTenant.securityDeposit || 0,
         status: selectedTenant.status as any,
         notes: selectedTenant.notes || "",
+        attachmentUrl: selectedTenant.attachmentUrl || "",
         createdBy: selectedTenant.createdBy || user?.id || 0,
       });
     }
