@@ -51,7 +51,13 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Loader2, PlusCircle, Edit, Trash2, Search } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Loader2, PlusCircle, Edit, Trash2, Search, Upload } from "lucide-react";
 
 import { Tenant, InsertTenant, Property } from "@shared/schema";
 import { FLATS } from "@shared/constants";
