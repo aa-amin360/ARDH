@@ -330,10 +330,6 @@ export default function TenantsPage() {
             Manage tenant information, lease details, and status.
           </p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Tenant
-        </Button>
       </div>
 
       <Card>
@@ -373,7 +369,54 @@ export default function TenantsPage() {
                 </div>
               ) : (
                 <div>
-                  {/* Recent Tenants table */}
+                  {/* Last Entered Records */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-2">
+                      Last Entered Records
+                    </h3>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Property</TableHead>
+                            <TableHead>Rent</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created At</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredTenants.slice(0, 5).map((tenant: any) => (
+                            <TableRow key={`recent-${tenant.id}`}>
+                              <TableCell className="font-medium">
+                                {tenant.name}
+                              </TableCell>
+                              <TableCell>
+                                {tenant.flatNumber ||
+                                  getPropertyFlatNumber(tenant.propertyId)}
+                              </TableCell>
+                              <TableCell>
+                                ₹{tenant.rentAmount.toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={getStatusColor(tenant.status)}>
+                                  {tenant.status.replace("_", " ")}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {format(
+                                  new Date(tenant.createdAt || new Date()),
+                                  "dd MMM yyyy"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  {/* All Tenants table */}
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-2">
                       All Tenants

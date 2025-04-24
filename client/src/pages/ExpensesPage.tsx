@@ -577,7 +577,7 @@ export default function ExpensesPage() {
                   {/* Last 5 expense entries section */}
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-2">
-                      Recent Expense Entries
+                      Last Entered Records
                     </h3>
                     <div className="overflow-x-auto rounded-md border">
                       <Table>
