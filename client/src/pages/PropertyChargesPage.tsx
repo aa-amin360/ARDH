@@ -247,7 +247,7 @@ export default function PropertyChargesPage() {
                   <SelectValue placeholder="All Flats" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Flats</SelectItem>
+                  <SelectItem value="all">All Flats</SelectItem>
                   {uniqueFlatNumbers.map(flatNumber => (
                     <SelectItem key={flatNumber} value={flatNumber}>
                       Flat {flatNumber}
@@ -267,7 +267,7 @@ export default function PropertyChargesPage() {
                   <SelectValue placeholder="All Charge Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Charge Types</SelectItem>
+                  <SelectItem value="all">All Charge Types</SelectItem>
                   <SelectItem value="rent">Rent</SelectItem>
                   <SelectItem value="maint_fee">Maintenance Fee</SelectItem>
                   <SelectItem value="water_fee">Water Fee</SelectItem>
