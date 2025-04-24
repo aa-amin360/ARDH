@@ -51,13 +51,7 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import {
-  Loader2,
-  PlusCircle,
-  Edit,
-  Trash2,
-  Search,
-} from "lucide-react";
+import { Loader2, PlusCircle, Edit, Trash2, Search } from "lucide-react";
 
 import { Tenant, InsertTenant, Property } from "@shared/schema";
 import { FLATS } from "@shared/constants";
@@ -94,14 +88,16 @@ export default function TenantsPage() {
   });
 
   // Fetch properties for the dropdown
-  const { data: properties = [], isLoading: loadingProperties } = useQuery<Property[]>({
+  const { data: properties = [], isLoading: loadingProperties } = useQuery<
+    Property[]
+  >({
     queryKey: ["/api/properties"],
     staleTime: 10000,
   });
 
   // Sort properties by flat number in ascending order
-  const sortedProperties = [...properties].sort((a, b) => 
-    a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true })
+  const sortedProperties = [...properties].sort((a, b) =>
+    a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
   );
 
   // Create tenant mutation
@@ -130,7 +126,13 @@ export default function TenantsPage() {
 
   // Update tenant mutation
   const updateTenantMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number; values: TenantFormValues }) => {
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: number;
+      values: TenantFormValues;
+    }) => {
       const res = await apiRequest("PATCH", `/api/tenants/${id}`, values);
       return res.json();
     },
@@ -178,18 +180,22 @@ export default function TenantsPage() {
     resolver: zodResolver(
       z.object({
         name: z.string().min(3, "Name must be at least 3 characters"),
-        phone: z.string().min(10, "Contact number must be at least 10 characters"),
+        phone: z
+          .string()
+          .min(10, "Contact number must be at least 10 characters"),
         email: z.string().email("Please enter a valid email address"),
         propertyId: z.number().min(1, "Please select a property"),
         flatNumber: z.string().min(1, "Flat number is required"),
         leaseStartDate: z.date(),
         leaseEndDate: z.date(),
         rentAmount: z.number().min(1, "Rent amount must be greater than 0"),
-        securityDeposit: z.number().min(0, "Security deposit must be 0 or greater"),
+        securityDeposit: z
+          .number()
+          .min(0, "Security deposit must be 0 or greater"),
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
         createdBy: z.number(),
-      })
+      }),
     ),
     defaultValues: {
       name: "",
@@ -198,7 +204,9 @@ export default function TenantsPage() {
       propertyId: 0,
       flatNumber: "", // Default value for flatNumber
       leaseStartDate: new Date(),
-      leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+      leaseEndDate: new Date(
+        new Date().setFullYear(new Date().getFullYear() + 1),
+      ),
       rentAmount: 0,
       securityDeposit: 0,
       status: "active",
@@ -237,7 +245,9 @@ export default function TenantsPage() {
         propertyId: 0,
         flatNumber: "", // Added flatNumber
         leaseStartDate: new Date(),
-        leaseEndDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+        leaseEndDate: new Date(
+          new Date().setFullYear(new Date().getFullYear() + 1),
+        ),
         rentAmount: 0,
         securityDeposit: 0,
         status: "active",
@@ -259,7 +269,7 @@ export default function TenantsPage() {
   // Filter tenants based on search query
   const filteredTenants = tenants.filter((tenant) => {
     if (!searchQuery) return true;
-    
+
     const query = searchQuery.toLowerCase();
     return (
       tenant.name.toLowerCase().includes(query) ||
@@ -293,7 +303,9 @@ export default function TenantsPage() {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tenants Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Tenants Management
+          </h1>
           <p className="text-muted-foreground">
             Manage tenant information, lease details, and status.
           </p>
@@ -347,19 +359,34 @@ export default function TenantsPage() {
                 <TableBody>
                   {filteredTenants.map((tenant) => (
                     <TableRow key={tenant.id}>
-                      <TableCell className="font-medium">{tenant.name}</TableCell>
-                      <TableCell>{tenant.flatNumber || getPropertyFlatNumber(tenant.propertyId)}</TableCell>
+                      <TableCell className="font-medium">
+                        {tenant.name}
+                      </TableCell>
+                      <TableCell>
+                        {tenant.flatNumber ||
+                          getPropertyFlatNumber(tenant.propertyId)}
+                      </TableCell>
                       <TableCell>
                         <div>{tenant.phone}</div>
-                        <div className="text-sm text-muted-foreground">{tenant.email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div>{format(new Date(tenant.leaseStartDate), "dd MMM yyyy")}</div>
                         <div className="text-sm text-muted-foreground">
-                          to {format(new Date(tenant.leaseEndDate), "dd MMM yyyy")}
+                          {tenant.email}
                         </div>
                       </TableCell>
-                      <TableCell>₹{tenant.rentAmount.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div>
+                          {format(
+                            new Date(tenant.leaseStartDate),
+                            "dd MMM yyyy",
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          to{" "}
+                          {format(new Date(tenant.leaseEndDate), "dd MMM yyyy")}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        ₹{tenant.rentAmount.toLocaleString()}
+                      </TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(tenant.status)}>
                           {tenant.status.replace("_", " ")}
@@ -431,11 +458,16 @@ export default function TenantsPage() {
                         onValueChange={(value) => {
                           // Update the propertyId field
                           field.onChange(Number(value));
-                          
+
                           // When a property is selected, update the flatNumber field automatically
-                          const selectedProperty = properties.find(p => p.id === Number(value));
+                          const selectedProperty = properties.find(
+                            (p) => p.id === Number(value),
+                          );
                           if (selectedProperty) {
-                            form.setValue("flatNumber", selectedProperty.flatNumber);
+                            form.setValue(
+                              "flatNumber",
+                              selectedProperty.flatNumber,
+                            );
                           }
                         }}
                         value={field.value ? field.value.toString() : ""}
@@ -448,13 +480,22 @@ export default function TenantsPage() {
                         <SelectContent>
                           {/* Filter out non-leasable properties and sort by flat number */}
                           {sortedProperties
-                            .filter(property => property.leaseStatus !== 'Non-Leasable')
+                            .filter(
+                              (property) =>
+                                property.leaseStatus !== "Non-Leasable",
+                            )
                             .map((property) => {
                               // Find if this flat is in our predefined list
-                              const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
+                              const flatInfo = FLATS.find(
+                                (f) => f.flatNumber === property.flatNumber,
+                              );
                               return (
-                                <SelectItem key={property.id} value={property.id.toString()}>
-                                  {property.flatNumber} ({flatInfo?.flatType || property.flatType})
+                                <SelectItem
+                                  key={property.id}
+                                  value={property.id.toString()}
+                                >
+                                  {property.flatNumber} (
+                                  {flatInfo?.flatType || property.flatType})
                                 </SelectItem>
                               );
                             })}
@@ -501,7 +542,11 @@ export default function TenantsPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Email address" {...field} />
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -556,7 +601,9 @@ export default function TenantsPage() {
                           type="number"
                           placeholder="Rent amount"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -574,7 +621,9 @@ export default function TenantsPage() {
                           type="number"
                           placeholder="Security deposit"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -589,10 +638,7 @@ export default function TenantsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -600,7 +646,9 @@ export default function TenantsPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="notice_period">Notice Period</SelectItem>
+                        <SelectItem value="notice_period">
+                          Notice Period
+                        </SelectItem>
                         <SelectItem value="inactive">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
@@ -678,11 +726,16 @@ export default function TenantsPage() {
                         onValueChange={(value) => {
                           // Update the propertyId field
                           field.onChange(Number(value));
-                          
+
                           // When a property is selected, update the flatNumber field automatically
-                          const selectedProperty = properties.find(p => p.id === Number(value));
+                          const selectedProperty = properties.find(
+                            (p) => p.id === Number(value),
+                          );
                           if (selectedProperty) {
-                            form.setValue("flatNumber", selectedProperty.flatNumber);
+                            form.setValue(
+                              "flatNumber",
+                              selectedProperty.flatNumber,
+                            );
                           }
                         }}
                         value={field.value ? field.value.toString() : ""}
@@ -695,13 +748,22 @@ export default function TenantsPage() {
                         <SelectContent>
                           {/* Filter out non-leasable properties and sort by flat number */}
                           {sortedProperties
-                            .filter(property => property.leaseStatus !== 'Non-Leasable')
+                            .filter(
+                              (property) =>
+                                property.leaseStatus !== "Non-Leasable",
+                            )
                             .map((property) => {
                               // Find if this flat is in our predefined list
-                              const flatInfo = FLATS.find(f => f.flatNumber === property.flatNumber);
+                              const flatInfo = FLATS.find(
+                                (f) => f.flatNumber === property.flatNumber,
+                              );
                               return (
-                                <SelectItem key={property.id} value={property.id.toString()}>
-                                  {property.flatNumber} ({flatInfo?.flatType || property.flatType})
+                                <SelectItem
+                                  key={property.id}
+                                  value={property.id.toString()}
+                                >
+                                  {property.flatNumber} (
+                                  {flatInfo?.flatType || property.flatType})
                                 </SelectItem>
                               );
                             })}
@@ -748,7 +810,11 @@ export default function TenantsPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="Email address" {...field} />
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -803,7 +869,9 @@ export default function TenantsPage() {
                           type="number"
                           placeholder="Rent amount"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -821,7 +889,9 @@ export default function TenantsPage() {
                           type="number"
                           placeholder="Security deposit"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -836,10 +906,7 @@ export default function TenantsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -847,7 +914,9 @@ export default function TenantsPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="notice_period">Notice Period</SelectItem>
+                        <SelectItem value="notice_period">
+                          Notice Period
+                        </SelectItem>
                         <SelectItem value="inactive">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
@@ -896,7 +965,8 @@ export default function TenantsPage() {
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this tenant? This action cannot be undone.
+              Are you sure you want to delete this tenant? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
