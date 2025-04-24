@@ -12,6 +12,7 @@ import {
   Users,
   X,
   Hammer,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -66,6 +67,12 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
       href: "/vendors",
       icon: <Hammer className="w-5 h-5" />,
       isVisible: true,
+    },
+    {
+      label: "Property Charges",
+      href: "/property-charges",
+      icon: <Calculator className="w-5 h-5" />,
+      isVisible: isAdmin,
     },
     {
       label: "Reports",
