@@ -12,7 +12,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/DashboardPage";
 import PropertiesPage from "@/pages/PropertiesPage";
-import TenantsPage from "@/pages/TenantsPageNew";
+import TenantsPage from "@/pages/TenantsPage";
 import IncomePage from "@/pages/IncomePage";
 import ExpensesPage from "@/pages/ExpensesPage";
 import ReportsPage from "@/pages/ReportsPage";
