@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import React from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,17 +7,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet, Upload, Image as ImageIcon, XCircle, AlertCircle } from "lucide-react";
+import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FLATS } from "@shared/constants";
-import ExpensesBulkUpload from "@/components/bulk-upload/ExpensesBulkUpload";
+import { useAuth } from "@/hooks/use-auth";
+// import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
 import {
   Table,
   TableBody,
@@ -32,30 +30,75 @@ const expenseFormSchema = insertExpenseSchema.extend({
   amount: z.coerce.number().positive(),
   date: z.string().refine(val => !isNaN(Date.parse(val)), {
     message: "Please enter a valid date",
-  }).transform(val => new Date(val)),
-  subcategory: z.string().min(1, "Subcategory is required"),
-  time: z.string().optional(),
-  propertyId: z.string().optional().transform(val => val ? parseInt(val, 10) : null),
-  vendor: z.string().optional(),
-  receipt: z.string().optional(), // Adding a receipt field which will be mapped to vendor in the final submission
-  tankerNumber: z.string().optional(),
-  liters: z.coerce.number().optional(),
-  personInCharge: z.string().optional(),
-  attachmentUrl: z.string().optional(),
-  createdBy: z.number().optional() // This will be handled by the server
-  // Ensure the data is properly transformed before sending to the server
+  }),
+  attachmentUrl: z.string().optional(), // Making attachmentUrl optional
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
+// Categories and subcategories
+const EXPENSE_CATEGORIES = [
+  { value: "utility", label: "Utility" },
+  { value: "operational", label: "Operational" },
+  { value: "general_maintenance", label: "General Maintenance" },
+  { value: "government", label: "Government" },
+  { value: "capital_expense", label: "Capital Expense" },
+  { value: "charity", label: "Charity" },
+  { value: "guest_related", label: "Guest Related" },
+  { value: "others", label: "Others" },
+];
+
+const SUBCATEGORIES: Record<string, Array<{ value: string; label: string }>> = {
+  utility: [
+    { value: "electrical_bill", label: "Electrical Bill" },
+    { value: "sweet_water_bill", label: "Sweet Water Bill" },
+    { value: "wifi_bill", label: "WiFi Bill" },
+    { value: "water_tank_fill", label: "Water Tank Fill" },
+    { value: "others", label: "Others" },
+  ],
+  operational: [
+    { value: "security", label: "Security" },
+    { value: "housekeeping", label: "Housekeeping" },
+    { value: "salary", label: "Salary" },
+    { value: "others", label: "Others" },
+  ],
+  general_maintenance: [
+    { value: "electrical", label: "Electrical" },
+    { value: "plumbing", label: "Plumbing" },
+    { value: "painting", label: "Painting" },
+    { value: "pest_control", label: "Pest Control" },
+    { value: "lift_maintenance", label: "Lift Maintenance" },
+    { value: "others", label: "Others" },
+  ],
+  government: [
+    { value: "property_tax", label: "Property Tax" },
+    { value: "others", label: "Others" },
+  ],
+  capital_expense: [
+    { value: "renovation", label: "Renovation" },
+    { value: "new_equipment", label: "New Equipment" },
+    { value: "others", label: "Others" },
+  ],
+  charity: [
+    { value: "donation", label: "Donation" },
+    { value: "others", label: "Others" },
+  ],
+  guest_related: [
+    { value: "transportation", label: "Transportation" },
+    { value: "food", label: "Food" },
+    { value: "others", label: "Others" },
+  ],
+  others: [
+    { value: "others", label: "Others" },
+  ],
+};
+
 export default function ExpensesPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("add");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [filteredVendors, setFilteredVendors] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = React.useState("utility");
 
   // Query to fetch expenses
   const {
@@ -65,124 +108,63 @@ export default function ExpensesPage() {
   } = useQuery({
     queryKey: ["/api/expenses"],
   });
-  
-  // Query to fetch vendors
-  const {
-    data: vendors = [] as any[],
-    isLoading: vendorsLoading,
-  } = useQuery<any[]>({
-    queryKey: ["/api/vendors"],
-  });
-  
-  // Query to fetch properties
-  const {
-    data: properties = [],
-    isLoading: loadingProperties,
-  } = useQuery({
+
+  // Query to fetch properties for dropdown
+  const { data: properties = [] } = useQuery({
     queryKey: ["/api/properties"],
   });
 
-  // Form
-  const form = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseFormSchema),
-    defaultValues: {
-      category: "Utility", // Set a default category
-      subcategory: "", // Initialize empty subcategory
-      amount: 0,
-      date: new Date().toISOString().split("T")[0],
-      description: "",
-      receipt: "_none", // Set default to none
-      propertyId: "0", // Set default to common areas
-      vendor: "",
-      createdBy: 0, // Will be set on the server
-      time: new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}),
-      tankerNumber: "",
-      liters: 0,
-      personInCharge: "",
-      attachmentUrl: "",
-    },
-  } as any);
-
-  // Watch for category changes to conditionally render fields
-  const selectedCategory = useWatch({
-    control: form.control,
-    name: "category"
+  // Query to fetch vendors for dropdown
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors"],
   });
 
-  // Watch for attachmentUrl to validate form
-  const attachmentUrl = useWatch({
-    control: form.control,
-    name: "attachmentUrl"
-  });
-  
-  // Filter vendors based on selected category
-  useEffect(() => {
-    if (vendors?.length > 0 && selectedCategory) {
-      const filtered = vendors.filter((vendor: any) => 
-        vendor.serviceType === selectedCategory || 
-        vendor.serviceType === 'general'
-      );
-      setFilteredVendors(filtered);
-    }
-  }, [selectedCategory, vendors]);
+  // Filtered vendors based on selected category
+  const filteredVendors = React.useMemo(() => {
+    if (!Array.isArray(vendors)) return [];
+    
+    // Map service type to category
+    const serviceToCategory: Record<string, string> = {
+      "electrical": "utility",
+      "plumbing": "general_maintenance",
+      "construction": "capital_expense",
+      "security": "operational",
+      "housekeeping": "operational",
+      "internet_provider": "utility",
+      "general": "others"
+    };
+    
+    return vendors.filter(vendor => 
+      !selectedCategory || 
+      serviceToCategory[vendor.serviceType] === selectedCategory
+    );
+  }, [vendors, selectedCategory]);
 
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      // Create image preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      
-      // In a real app, you would upload the file to a server and get a URL back
-      // For now, we'll simulate this with a fake URL
-      setIsUploading(true);
-      setTimeout(() => {
-        // In a real implementation, this would be the URL returned from the server
-        const fakeUploadedUrl = `https://example.com/uploads/${Date.now()}-${file.name}`;
-        form.setValue("attachmentUrl", fakeUploadedUrl);
-        setIsUploading(false);
-      }, 1500);
-    }
+  // Format date for display
+  const formatDate = (date: string | Date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
-  // Remove selected file
-  const removeFile = () => {
-    setSelectedFile(null);
-    setImagePreview(null);
-    form.setValue("attachmentUrl", "");
+  // Format currency for display
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
-  // Mutation to add a new expense
-  const createExpenseMutation = useMutation({
+  // Mutation to add expense
+  const addExpenseMutation = useMutation({
     mutationFn: async (values: ExpenseFormValues) => {
-      // Validate attachment for all expenses
-      if (!values.attachmentUrl) {
-        throw new Error("Please attach a receipt or image for this expense");
-      }
-      
-      // Additional validation for Water Tanker subcategory
-      if (values.category === "Utility" && values.subcategory === "Water Tanker") {
-        if (!values.tankerNumber) {
-          throw new Error("Tanker number is required for water tank expenses");
-        }
-        if (!values.liters) {
-          throw new Error("Liters discharged is required for water tank expenses");
-        }
-        if (!values.personInCharge) {
-          throw new Error("Person in charge is required for water tank expenses");
-        }
-        if (!values.time) {
-          throw new Error("Time is required for water tank expenses");
-        }
-      }
-      
       const res = await apiRequest("POST", "/api/expenses", values);
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -190,26 +172,20 @@ export default function ExpensesPage() {
         description: "The expense has been added successfully.",
       });
       form.reset({
-        category: "Utility",
-        subcategory: "",
+        category: "utility",
+        subcategory: "electrical_bill",
         amount: 0,
         date: new Date().toISOString().split("T")[0],
         description: "",
-        receipt: "_none",
-        propertyId: "0",
-        vendor: "",
-        createdBy: 0,
-        time: new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'}),
-        tankerNumber: "",
-        liters: 0,
-        personInCharge: "",
+        vendorId: 0,
+        propertyId: null,
         attachmentUrl: "",
-      } as any);
-      setSelectedFile(null);
-      setImagePreview(null);
+        createdBy: 0,
+      });
+      setSelectedCategory("utility");
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error adding expense",
         description: error.message,
@@ -218,41 +194,48 @@ export default function ExpensesPage() {
     },
   });
 
+  // Form
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      category: "utility",
+      subcategory: "electrical_bill",
+      amount: 0,
+      date: new Date().toISOString().split("T")[0],
+      description: "",
+      vendorId: 0,
+      propertyId: null,
+      attachmentUrl: "",
+      createdBy: 0,
+    },
+  });
+
+  // Watch category field to update subcategory options
+  const watchCategory = form.watch("category");
+
+  // Update subcategory when category changes
+  React.useEffect(() => {
+    setSelectedCategory(watchCategory);
+    
+    // Reset subcategory when category changes
+    if (watchCategory !== selectedCategory) {
+      form.setValue("subcategory", SUBCATEGORIES[watchCategory][0].value);
+    }
+  }, [watchCategory, selectedCategory, form]);
+
   function onSubmit(values: ExpenseFormValues) {
-    // Map receipt to vendor since we're using receipt field in the UI
-    // Convert date to ISO string for API submission
+    // Process the values for submission
     const formattedValues = {
       ...values,
-      vendor: values.receipt,
-      date: new Date(values.date).toISOString(), // Ensure date is formatted as ISO string
-      amount: Number(values.amount), // Ensure amount is a number
-      propertyId: values.propertyId === "0" || !values.propertyId 
-        ? null 
-        : Number(values.propertyId) // Convert propertyId to number or null
+      createdBy: user?.id || 0,
     };
-    createExpenseMutation.mutate(formattedValues as any);
+
+    addExpenseMutation.mutate(formattedValues);
   }
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
-
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Expenses Management</h1>
-      </div>
+    <div className="container mx-auto py-6">
+      <h1 className="text-2xl font-bold mb-6">Expense Management</h1>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -280,11 +263,7 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Category</FormLabel>
                           <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              // Reset subcategory when category changes
-                              form.setValue("subcategory", "");
-                            }}
+                            onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
@@ -293,20 +272,18 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Utility">Utility</SelectItem>
-                              <SelectItem value="Operational">Operational</SelectItem>
-                              <SelectItem value="General Maintenance Works">General Maintenance Works</SelectItem>
-                              <SelectItem value="Government">Government</SelectItem>
-                              <SelectItem value="Capital Expense for Facilities">Capital Expense for Facilities</SelectItem>
-                              <SelectItem value="Charity">Charity</SelectItem>
-                              <SelectItem value="Guest Related">Guest Related</SelectItem>
+                              {EXPENSE_CATEGORIES.map((category) => (
+                                <SelectItem key={category.value} value={category.value}>
+                                  {category.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="subcategory"
@@ -315,8 +292,7 @@ export default function ExpensesPage() {
                           <FormLabel>Subcategory</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={!form.getValues("category")}
+                            defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -324,70 +300,11 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {form.getValues("category") === "Utility" && (
-                                <>
-                                  <SelectItem value="Electrical Bill">Electrical Bill</SelectItem>
-                                  <SelectItem value="Sweet Water Bill">Sweet Water Bill</SelectItem>
-                                  <SelectItem value="WiFi Bill">WiFi Bill</SelectItem>
-                                  <SelectItem value="Trash Collection">Trash Collection</SelectItem>
-                                  <SelectItem value="Generator Diesel">Generator Diesel</SelectItem>
-                                  <SelectItem value="Water Tanker">Water Tanker</SelectItem>
-                                  <SelectItem value="Cleaning works">Cleaning works</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
-                              
-                              {form.getValues("category") === "Operational" && (
-                                <>
-                                  <SelectItem value="Watchman Salary">Watchman Salary</SelectItem>
-                                  <SelectItem value="Manager Salary">Manager Salary</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
-                              
-                              {form.getValues("category") === "General Maintenance Works" && (
-                                <>
-                                  <SelectItem value="Elevator Maintenance">Elevator Maintenance</SelectItem>
-                                  <SelectItem value="CCTV Maintenance">CCTV Maintenance</SelectItem>
-                                  <SelectItem value="Electrical works">Electrical works</SelectItem>
-                                  <SelectItem value="Plumbing works">Plumbing works</SelectItem>
-                                  <SelectItem value="Carpenter works">Carpenter works</SelectItem>
-                                  <SelectItem value="Painting works">Painting works</SelectItem>
-                                  <SelectItem value="Gardening works">Gardening works</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
-                              
-                              {form.getValues("category") === "Government" && (
-                                <>
-                                  <SelectItem value="Income Tax">Income Tax</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
-                              
-                              {form.getValues("category") === "Capital Expense for Facilities" && (
-                                <>
-                                  <SelectItem value="Infrastructure">Infrastructure</SelectItem>
-                                  <SelectItem value="Bore Work">Bore Work</SelectItem>
-                                  <SelectItem value="Major Electrical Facility">Major Electrical Facility</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
-                              
-                              {form.getValues("category") === "Charity" && (
-                                <>
-                                  <SelectItem value="Mosque">Mosque</SelectItem>
-                                  <SelectItem value="Madarsa">Madarsa</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
-                              
-                              {form.getValues("category") === "Guest Related" && (
-                                <>
-                                  <SelectItem value="Guest Hospitality Exp / Meal">Guest Hospitality Exp / Meal</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                </>
-                              )}
+                              {SUBCATEGORIES[watchCategory]?.map((subcategory) => (
+                                <SelectItem key={subcategory.value} value={subcategory.value}>
+                                  {subcategory.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -439,8 +356,8 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Property</FormLabel>
                           <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -448,31 +365,85 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">Common Area / All Properties</SelectItem>
-                              
-                              {loadingProperties ? (
-                                <SelectItem value="_loading" disabled>Loading properties...</SelectItem>
-                              ) : Array.isArray(properties) && properties.length > 0 ? (
-                                properties
-                                  .slice()
-                                  .sort((a, b) => {
-                                    // Extract numeric parts for proper sorting (101 should come before 204)
-                                    const numA = parseInt(a.flatNumber);
-                                    const numB = parseInt(b.flatNumber);
-                                    return numA - numB;
-                                  })
-                                  .map((property) => (
-                                    <SelectItem key={property.id} value={property.id.toString()}>
-                                      {property.flatNumber}
-                                    </SelectItem>
-                                  ))
-                              ) : (
-                                <SelectItem value="_none" disabled>No properties available</SelectItem>
-                              )}
+                              <SelectItem value="0">Common Areas</SelectItem>
+                              {Array.isArray(properties) && properties.map((property) => (
+                                <SelectItem 
+                                  key={property.id} 
+                                  value={property.id.toString()}
+                                >
+                                  {property.flatNumber}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="vendorId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select vendor (optional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="0">None</SelectItem>
+                              {filteredVendors.map((vendor) => (
+                                <SelectItem 
+                                  key={vendor.id} 
+                                  value={vendor.id.toString()}
+                                >
+                                  {vendor.name} ({vendor.serviceType})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Enter description"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="attachmentUrl"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Receipt/Invoice (URL)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter attachment URL (optional)"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormDescription>
-                            Leave blank if expense applies to all properties
+                            Optional: Enter a URL to an uploaded receipt or invoice
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -480,215 +451,23 @@ export default function ExpensesPage() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Enter expense description"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  <Button
+                    type="submit"
+                    className="w-full md:w-auto"
+                    disabled={addExpenseMutation.isPending}
+                  >
+                    {addExpenseMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Expense
+                      </>
                     )}
-                  />
-
-                  {/* Water tanker specific fields - only show when Water Tanker subcategory is selected */}
-                  {selectedCategory === "Utility" && form.getValues("subcategory") === "Water Tanker" && (
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4 p-4 border rounded-lg bg-slate-50">
-                      <FormField
-                        control={form.control}
-                        name="time"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Time</FormLabel>
-                            <FormControl>
-                              <Input type="time" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="tankerNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tanker Number</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter tanker number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="liters"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Liters Discharged</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="Enter liters discharged" 
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="personInCharge"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Person In Charge</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Enter name of person in charge" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="receipt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Vendor</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select vendor" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="_none">-- Select Vendor --</SelectItem>
-                            {vendorsLoading ? (
-                              <SelectItem value="_loading" disabled>Loading vendors...</SelectItem>
-                            ) : Array.isArray(filteredVendors) && filteredVendors.length > 0 ? (
-                              filteredVendors.map((vendor) => (
-                                <SelectItem key={vendor.id} value={vendor.name}>
-                                  {vendor.name} ({vendor.serviceType})
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="_no_vendors" disabled>No vendors available for this category</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Select the vendor for this expense
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* File attachment field */}
-                  <div className="space-y-2">
-                    <Label htmlFor="attachment">
-                      Attachment <span className="text-red-500">*</span>
-                    </Label>
-                    {!attachmentUrl && (
-                      <div className="flex flex-col items-center justify-center w-full p-6 border-2 border-dashed rounded-lg border-gray-300 cursor-pointer hover:bg-gray-50">
-                        <input
-                          id="file-upload"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleFileChange}
-                        />
-                        <label htmlFor="file-upload" className="cursor-pointer">
-                          <div className="flex flex-col items-center justify-center">
-                            <Upload className="w-10 h-10 text-gray-400 mb-2" />
-                            <p className="text-sm text-gray-600">
-                              <span className="font-semibold">Click to upload</span> or drag and drop
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              PNG, JPG, or JPEG (max. 10MB)
-                            </p>
-                          </div>
-                        </label>
-                      </div>
-                    )}
-
-                    {isUploading && (
-                      <div className="flex items-center justify-center w-full p-4 border rounded-lg">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-                        <p>Uploading file...</p>
-                      </div>
-                    )}
-
-                    {imagePreview && !isUploading && (
-                      <div className="relative border rounded-lg overflow-hidden">
-                        <div className="absolute top-2 right-2 z-10">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={removeFile}
-                            className="h-8 w-8 rounded-full"
-                          >
-                            <XCircle className="h-5 w-5" />
-                          </Button>
-                        </div>
-                        <div className="relative aspect-video bg-gray-100 flex items-center justify-center">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="max-h-[300px] max-w-full object-contain"
-                          />
-                        </div>
-                        <div className="p-2 bg-gray-50 text-sm">
-                          {selectedFile?.name}
-                        </div>
-                      </div>
-                    )}
-
-                    {!attachmentUrl && !isUploading && (
-                      <Alert variant="destructive" className="mt-2">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Required</AlertTitle>
-                        <AlertDescription>
-                          An attachment is required for all expenses. Please upload an image.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="outline" type="button" onClick={() => form.reset()}>
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={createExpenseMutation.isPending}
-                      className="gap-1"
-                    >
-                      {createExpenseMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                      Add Expense
-                    </Button>
-                  </div>
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -696,7 +475,19 @@ export default function ExpensesPage() {
         </TabsContent>
 
         <TabsContent value="bulk" className="mt-4">
-          <ExpensesBulkUpload />
+          <Card>
+            <CardHeader>
+              <CardTitle>Bulk Upload</CardTitle>
+              <CardDescription>
+                Bulk upload feature is coming soon.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center p-12">
+                <p className="text-muted-foreground">Bulk upload functionality is under development.</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="view" className="mt-4">
@@ -713,44 +504,6 @@ export default function ExpensesPage() {
                 Export
               </Button>
             </CardHeader>
-            
-            {/* Last 5 expense entries section */}
-            {Array.isArray(expenses) && expenses.length > 0 && (
-              <div className="mx-6 mb-4 p-4 bg-muted rounded-md">
-                <h3 className="text-sm font-medium mb-3">Last 5 Expense Entries:</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Subcategory</TableHead>
-                        <TableHead>Property</TableHead>
-                        <TableHead>Vendor</TableHead>
-                        <TableHead>Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenses.slice(0, 5).map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell>{formatDate(expense.date)}</TableCell>
-                          <TableCell>{expense.category}</TableCell>
-                          <TableCell>{expense.subcategory || "-"}</TableCell>
-                          <TableCell>
-                            {expense.propertyId ? 
-                              (properties.find(p => p.id === expense.propertyId)?.flatNumber || "-") : 
-                              "Common Areas"}
-                          </TableCell>
-                          <TableCell>{expense.receipt || "-"}</TableCell>
-                          <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-            
             <CardContent>
               {isLoading ? (
                 <div className="flex justify-center my-8">
@@ -758,42 +511,94 @@ export default function ExpensesPage() {
                 </div>
               ) : isError ? (
                 <p className="text-center text-red-500 my-8">
-                  Error loading expenses
+                  Error loading expense records
                 </p>
               ) : Array.isArray(expenses) && expenses.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Property</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenses.map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell className="whitespace-nowrap">
-                            {formatDate(expense.date)}
-                          </TableCell>
-                          <TableCell>
-                            {expense.category} - {expense.subcategory || "Other"}
-                          </TableCell>
-                          <TableCell>{expense.description}</TableCell>
-                          <TableCell>
-                            {expense.propertyId
-                              ? `#${expense.propertyId}`
-                              : "Common"}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(expense.amount)}
-                          </TableCell>
+                <div>
+                  {/* Last 5 expense entries section */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-2">Recent Expense Entries</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Subcategory</TableHead>
+                            <TableHead>Property</TableHead>
+                            <TableHead>Vendor</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {expenses.slice(0, 5).map((expense) => (
+                            <TableRow key={expense.id}>
+                              <TableCell className="whitespace-nowrap">
+                                {formatDate(expense.date)}
+                              </TableCell>
+                              <TableCell className="capitalize">
+                                {expense.category}
+                              </TableCell>
+                              <TableCell>{expense.subcategory || "-"}</TableCell>
+                              <TableCell>
+                                {expense.propertyId ? 
+                                  (properties?.find(p => p.id === expense.propertyId)?.flatNumber || `#${expense.propertyId}`) : 
+                                  "Common Areas"}
+                              </TableCell>
+                              <TableCell>{expense.vendorId || "-"}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(expense.amount)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 text-right">
+                      Showing the 5 most recent expense entries
+                    </p>
+                  </div>
+                  
+                  {/* All expenses section */}
+                  <div className="overflow-x-auto">
+                    <h3 className="text-lg font-semibold mb-2">All Expense Entries</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Subcategory</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Property</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {expenses.map((expense) => (
+                          <TableRow key={expense.id}>
+                            <TableCell className="whitespace-nowrap">
+                              {formatDate(expense.date)}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {expense.category.replace("_", " ")}
+                            </TableCell>
+                            <TableCell>
+                              {expense.subcategory ? expense.subcategory.replace("_", " ") : "-"}
+                            </TableCell>
+                            <TableCell>{expense.description}</TableCell>
+                            <TableCell>
+                              {expense.propertyId
+                                ? (properties?.find(p => p.id === expense.propertyId)?.flatNumber || `#${expense.propertyId}`)
+                                : "Common"}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(expense.amount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">

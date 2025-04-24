@@ -48,21 +48,59 @@ export default function IncomePage() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["/api/incomes"]
-  });
-  
-  // Query to fetch properties
-  const {
-    data: properties = [],
-  } = useQuery({
-    queryKey: ["/api/properties"]
+    queryKey: ["/api/incomes"],
   });
 
-  // Mutation to add a new income
-  const createIncomeMutation = useMutation({
+  // Query to fetch properties for dropdown
+  const { data: properties = [] } = useQuery({
+    queryKey: ["/api/properties"],
+  });
+
+  // Format properties for dropdown (sorted by flat number)
+  const sortedProperties = React.useMemo(() => {
+    if (!Array.isArray(properties)) return [];
+    
+    return [...properties].sort((a, b) => {
+      return a.flatNumber.localeCompare(b.flatNumber);
+    });
+  }, [properties]);
+  
+  // Property options including "Common Areas"
+  const propertyOptions = React.useMemo(() => {
+    return [
+      { id: 0, flatNumber: "Common Areas" },
+      ...sortedProperties.map(property => ({
+        id: property.id,
+        flatNumber: property.flatNumber
+      }))
+    ];
+  }, [sortedProperties]);
+
+  // Format date for display
+  const formatDate = (date: string | Date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Format currency for display
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  // Mutation to add income
+  const addIncomeMutation = useMutation({
     mutationFn: async (values: IncomeFormValues) => {
       const res = await apiRequest("POST", "/api/incomes", values);
-      return await res.json();
+      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -75,12 +113,12 @@ export default function IncomePage() {
         date: new Date().toISOString().split("T")[0],
         description: "",
         receivedFrom: "",
-        propertyId: "0",
+        propertyId: 0,
         createdBy: 0
       });
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error adding income",
         description: error.message,
@@ -98,65 +136,27 @@ export default function IncomePage() {
       date: new Date().toISOString().split("T")[0],
       description: "",
       receivedFrom: "",
-      propertyId: "0", // Set default to common areas
+      propertyId: 0, // Set default to common areas
       createdBy: 0, // Will be set on the server
     },
-  } as any);
+  });
 
   function onSubmit(values: IncomeFormValues) {
     // Process the values for submission
-    const propertyId = values.propertyId ? parseInt(values.propertyId as unknown as string) : 0;
+    const propertyId = values.propertyId || 0;
     
     const formattedValues = {
       ...values,
-      receivedFrom: values.receivedFrom || "Unknown",
-      propertyId: propertyId === 0 ? null : propertyId,
-      date: values.date, // Keep as string - server expects string
-      amount: Number(values.amount), // Ensure amount is a number
-      createdBy: user?.id || 1 // Add user ID if available
+      propertyId,
+      createdBy: user?.id || 0,
     };
-    console.log("Submitting income with values:", formattedValues);
-    createIncomeMutation.mutate(formattedValues as any);
-  }
 
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString("en-IN")}`;
-  };
-
-  // If not admin, redirect or show access denied
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto py-6">
-        <Card className="border-red-200">
-          <CardHeader>
-            <CardTitle className="text-red-600">Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>
-              You do not have permission to access income records. Please contact an administrator for assistance.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    addIncomeMutation.mutate(formattedValues);
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Income Management</h1>
-      </div>
+    <div className="container mx-auto py-6">
+      <h1 className="text-2xl font-bold mb-6">Income Management</h1>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -194,9 +194,8 @@ export default function IncomePage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="rent">Rent</SelectItem>
-                              <SelectItem value="maintenance">Maintenance Fee</SelectItem>
+                              <SelectItem value="maintenance">Maintenance</SelectItem>
                               <SelectItem value="tax_return">Tax Return</SelectItem>
-                              <SelectItem value="rental_advance">Rental Advance</SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>
@@ -231,11 +230,7 @@ export default function IncomePage() {
                         <FormItem>
                           <FormLabel>Date</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="date" 
-                              {...field}
-                              value={field.value}
-                            />
+                            <Input type="date" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -249,8 +244,8 @@ export default function IncomePage() {
                         <FormItem>
                           <FormLabel>Property</FormLabel>
                           <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value?.toString()}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -258,83 +253,73 @@ export default function IncomePage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">Common / All Properties</SelectItem>
-                              {properties
-                                .slice()
-                                .sort((a, b) => {
-                                  // Extract numeric parts for proper sorting (101 should come before 204)
-                                  const numA = parseInt(a.flatNumber);
-                                  const numB = parseInt(b.flatNumber);
-                                  return numA - numB;
-                                })
-                                .map((property) => (
-                                  <SelectItem key={property.id} value={property.id.toString()}>
-                                    {property.flatNumber}
-                                  </SelectItem>
-                                ))
-                              }
+                              {propertyOptions.map((option) => (
+                                <SelectItem 
+                                  key={option.id} 
+                                  value={option.id.toString()}
+                                >
+                                  {option.flatNumber}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            Required for rent and maintenance income
-                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="receivedFrom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Received From</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter source of income"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter description"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Enter income description"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  <Button
+                    type="submit"
+                    className="w-full md:w-auto"
+                    disabled={addIncomeMutation.isPending}
+                  >
+                    {addIncomeMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Income
+                      </>
                     )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="receivedFrom"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Received From</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Who the income was received from"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="outline" type="button" onClick={() => form.reset()}>
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={createIncomeMutation.isPending}
-                      className="gap-1"
-                    >
-                      {createIncomeMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                      Add Income
-                    </Button>
-                  </div>
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -359,42 +344,6 @@ export default function IncomePage() {
                 Export
               </Button>
             </CardHeader>
-            {/* Last 5 income entries section */}
-            {Array.isArray(incomes) && incomes.length > 0 && (
-              <div className="mx-6 mb-4 p-4 bg-muted rounded-md">
-                <h3 className="text-sm font-medium mb-3">Last 5 Income Entries:</h3>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Property</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Received From</TableHead>
-                        <TableHead>Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {incomes.slice(0, 5).map((income) => (
-                        <TableRow key={income.id}>
-                          <TableCell>{formatDate(income.date)}</TableCell>
-                          <TableCell className="capitalize">{income.type.replace("_", " ")}</TableCell>
-                          <TableCell>
-                            {income.propertyId ? 
-                              (properties.find(p => p.id === income.propertyId)?.flatNumber || "-") : 
-                              "Common Areas"}
-                          </TableCell>
-                          <TableCell>{formatCurrency(income.amount)}</TableCell>
-                          <TableCell>{income.receivedFrom || "-"}</TableCell>
-                          <TableCell className="max-w-xs truncate">{income.description || "-"}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
             <CardContent>
               {isLoading ? (
                 <div className="flex justify-center my-8">
@@ -405,39 +354,84 @@ export default function IncomePage() {
                   Error loading income records
                 </p>
               ) : Array.isArray(incomes) && incomes.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Property</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {incomes.map((income) => (
-                        <TableRow key={income.id}>
-                          <TableCell className="whitespace-nowrap">
-                            {formatDate(income.date)}
-                          </TableCell>
-                          <TableCell className="capitalize">
-                            {income.type.replace("_", " ")}
-                          </TableCell>
-                          <TableCell>{income.description}</TableCell>
-                          <TableCell>
-                            {income.propertyId
-                              ? `#${income.propertyId}`
-                              : "Common"}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(income.amount)}
-                          </TableCell>
+                <div>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-2">Recent Income Entries</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Property</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {/* Show only last 5 entries */}
+                          {incomes.slice(0, 5).map((income) => (
+                            <TableRow key={income.id}>
+                              <TableCell className="whitespace-nowrap">
+                                {formatDate(income.date)}
+                              </TableCell>
+                              <TableCell className="capitalize">
+                                {income.type.replace("_", " ")}
+                              </TableCell>
+                              <TableCell>{income.description}</TableCell>
+                              <TableCell>
+                                {income.propertyId
+                                  ? (properties?.find(p => p.id === income.propertyId)?.flatNumber || `#${income.propertyId}`)
+                                  : "Common"}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(income.amount)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 text-right">
+                      Showing the 5 most recent income entries
+                    </p>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <h3 className="text-lg font-semibold mb-2">All Income Entries</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Property</TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {incomes.map((income) => (
+                          <TableRow key={income.id}>
+                            <TableCell className="whitespace-nowrap">
+                              {formatDate(income.date)}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {income.type.replace("_", " ")}
+                            </TableCell>
+                            <TableCell>{income.description}</TableCell>
+                            <TableCell>
+                              {income.propertyId
+                                ? (properties?.find(p => p.id === income.propertyId)?.flatNumber || `#${income.propertyId}`)
+                                : "Common"}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(income.amount)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
