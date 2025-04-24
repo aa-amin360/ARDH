@@ -60,7 +60,7 @@ export default function IncomePage() {
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState("add");
+  const [activeTab, setActiveTab] = React.useState("view");
 
   // Query to fetch incomes
   const {
