@@ -54,48 +54,54 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left side with blurred building image */}
-      <div className="hidden md:flex md:w-1/2 relative">
-        <div className="absolute inset-0 bg-black/30 backdrop-blur-sm z-10" />
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[#154c79]/50 backdrop-blur-sm z-10" />
         <img 
           src={ardhImg} 
           alt="ARDH Building" 
           className="absolute inset-0 w-full h-full object-cover" 
         />
         <div className="absolute inset-0 flex items-center justify-center z-20">
-          <div className="text-white text-center p-8">
-            <h1 className="text-4xl font-bold mb-2">ARDH</h1>
-            <p className="text-xl font-light">AR's Dream Heights</p>
-            <p className="mt-4 text-sm max-w-md">Property Management System</p>
+          <div className="text-white text-center p-8 max-w-xl">
+            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent drop-shadow-sm">ARDH</h1>
+            <p className="text-2xl font-light">AR's Dream Heights</p>
+            <div className="w-16 h-1 bg-white mx-auto my-6 rounded-full opacity-70"></div>
+            <p className="mt-4 text-lg max-w-md mx-auto">
+              Comprehensive property management system for tracking income, expenses, and tenant information
+            </p>
           </div>
         </div>
       </div>
       
       {/* Right side with login form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardHeader className="space-y-1 flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-[#154c79]/10 flex items-center justify-center mb-4">
-              <Building2 className="h-6 w-6 text-[#154c79]" />
+      <div className="w-full md:w-1/2 flex items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-b from-gray-50 to-white">
+        <Card className="w-full max-w-md border border-gray-100 shadow-xl">
+          <CardHeader className="space-y-2 flex flex-col items-center pb-8">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#154c79] to-[#2980b9] flex items-center justify-center mb-4 shadow-md">
+              <Building2 className="h-8 w-8 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold text-center">Real Estate Manager</CardTitle>
-            <CardDescription className="text-center">
-              Enter your credentials to access your account
+            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-[#154c79] to-[#2980b9] bg-clip-text text-transparent">
+              ARDH Manager
+            </CardTitle>
+            <CardDescription className="text-center text-base">
+              Enter your credentials to access the dashboard
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-8">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 <FormField
                   control={form.control}
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel className="text-[#154c79] font-medium">Username</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter your username"
                           {...field}
                           autoComplete="username"
+                          className="border-[#154c79]/20 focus-visible:ring-[#154c79]/30 h-11"
                         />
                       </FormControl>
                       <FormMessage />
@@ -107,13 +113,14 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel className="text-[#154c79] font-medium">Password</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
                           placeholder="Enter your password"
                           {...field}
                           autoComplete="current-password"
+                          className="border-[#154c79]/20 focus-visible:ring-[#154c79]/30 h-11"
                         />
                       </FormControl>
                       <FormMessage />
@@ -122,7 +129,7 @@ export default function LoginPage() {
                 />
                 <Button 
                   type="submit" 
-                  className="w-full bg-[#154c79] hover:bg-[#154c79]/90"
+                  className="w-full h-11 mt-2 bg-gradient-to-r from-[#154c79] to-[#2980b9] hover:from-[#154c79]/90 hover:to-[#2980b9]/90 text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
@@ -130,11 +137,23 @@ export default function LoginPage() {
               </form>
             </Form>
           </CardContent>
-          <CardFooter className="border-t px-6 py-4">
-            <div className="text-xs text-gray-500 text-center w-full">
-              <p>Demo Credentials:</p>
-              <p>Admin: username: <strong>admin</strong>, password: <strong>admin123</strong></p>
-              <p>Data Entry: username: <strong>dataentry</strong>, password: <strong>data123</strong></p>
+          <CardFooter className="border-t px-6 py-5 bg-gray-50/50">
+            <div className="text-sm text-gray-600 text-center w-full space-y-1">
+              <p className="font-medium text-[#154c79]">Demo Credentials</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 max-w-xs mx-auto">
+                <div className="text-left">
+                  <span className="font-semibold">Admin:</span>
+                </div>
+                <div className="text-left">
+                  admin / admin123
+                </div>
+                <div className="text-left">
+                  <span className="font-semibold">Data Entry:</span>
+                </div>
+                <div className="text-left">
+                  dataentry / data123
+                </div>
+              </div>
             </div>
           </CardFooter>
         </Card>
