@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
 import { insertIncomeSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import IncomeBulkUpload from "@/components/bulk-upload/IncomeBulkUpload";
+// Bulk upload component will be implemented later
 import {
   Table,
   TableBody,
@@ -327,7 +327,19 @@ export default function IncomePage() {
         </TabsContent>
 
         <TabsContent value="bulk" className="mt-4">
-          <IncomeBulkUpload />
+          <Card>
+            <CardHeader>
+              <CardTitle>Bulk Upload</CardTitle>
+              <CardDescription>
+                Bulk upload feature is coming soon.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center p-12">
+                <p className="text-muted-foreground">Bulk upload functionality is under development.</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="view" className="mt-4">
