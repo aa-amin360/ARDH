@@ -5,7 +5,8 @@ import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Save } from "lucide-react";
+import { Loader2, Plus, Save, Filter } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { insertPropertySchema, type Property } from "@shared/schema";
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter
+} from "@/components/ui/dialog";
+import { insertPropertySchema, type Property, PropertyCharge, chargeTypeEnum } from "@shared/schema";
 import { 
   FLATS, 
   OWNERS, 
@@ -260,10 +278,11 @@ export default function PropertiesPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="view">View Property</TabsTrigger>
           <TabsTrigger value="modify">Modify Property</TabsTrigger>
           <TabsTrigger value="add">Add Property</TabsTrigger>
+          <TabsTrigger value="charges">Property Charges</TabsTrigger>
         </TabsList>
 
         <TabsContent value="view" className="mt-4">
