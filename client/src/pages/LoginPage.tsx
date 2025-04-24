@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -36,7 +36,6 @@ type FormValues = z.infer<typeof formSchema>;
 export default function LoginPage() {
   const { loginMutation } = useAuth();
   const [, navigate] = useLocation();
-  // Remove the line below as we're using loginMutation.isPending instead
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
