@@ -705,6 +705,44 @@ export default function ExpensesPage() {
                 Export
               </Button>
             </CardHeader>
+            
+            {/* Last 5 expense entries section */}
+            {Array.isArray(expenses) && expenses.length > 0 && (
+              <div className="mx-6 mb-4 p-4 bg-muted rounded-md">
+                <h3 className="text-sm font-medium mb-3">Last 5 Expense Entries:</h3>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Subcategory</TableHead>
+                        <TableHead>Property</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.slice(0, 5).map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell>{formatDate(expense.date)}</TableCell>
+                          <TableCell>{expense.category}</TableCell>
+                          <TableCell>{expense.subcategory || "-"}</TableCell>
+                          <TableCell>
+                            {expense.propertyId ? 
+                              (properties.find(p => p.id === expense.propertyId)?.flatNumber || "-") : 
+                              "Common Areas"}
+                          </TableCell>
+                          <TableCell>{expense.receipt || "-"}</TableCell>
+                          <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+            
             <CardContent>
               {isLoading ? (
                 <div className="flex justify-center my-8">
