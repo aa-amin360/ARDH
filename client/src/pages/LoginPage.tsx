@@ -17,7 +17,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
 
 const formSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -55,24 +62,28 @@ export default function LoginPage() {
     <div className="flex min-h-screen">
       {/* Left side with blurred building image */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[#154c79]/50 backdrop-blur-sm z-10" />
         <img 
           src={ardhImg} 
           alt="ARDH Building" 
-          className="absolute inset-0 w-full h-full object-cover" 
+          className="absolute inset-0 w-full h-full object-cover"
         />
+        <div className="absolute inset-0 bg-gray-900/70 backdrop-blur-sm z-10" />
+
         <div className="absolute inset-0 flex items-center justify-center z-20">
           <div className="text-white text-center p-8 max-w-xl">
-            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent drop-shadow-sm">ARDH</h1>
+            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent drop-shadow-sm">
+              ARDH
+            </h1>
             <p className="text-2xl font-light">AR's Dream Heights</p>
             <div className="w-16 h-1 bg-white mx-auto my-6 rounded-full opacity-70"></div>
             <p className="mt-4 text-lg max-w-md mx-auto">
-              Comprehensive property management system for tracking income, expenses, and tenant information
+              Comprehensive property management system for tracking income,
+              expenses, and tenant information
             </p>
           </div>
         </div>
       </div>
-      
+
       {/* Right side with login form */}
       <div className="w-full md:w-1/2 flex items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-b from-gray-50 to-white">
         <Card className="w-full max-w-md border border-gray-100 shadow-xl">
@@ -89,13 +100,18 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent className="pb-8">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-5"
+              >
                 <FormField
                   control={form.control}
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Username</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">
+                        Username
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter your username"
@@ -113,7 +129,9 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">
+                        Password
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="password"
@@ -127,8 +145,8 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full h-11 mt-2 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800 text-base"
                   disabled={isLoading}
                 >
@@ -144,15 +162,11 @@ export default function LoginPage() {
                 <div className="text-left">
                   <span className="font-semibold">Admin:</span>
                 </div>
-                <div className="text-left">
-                  admin / admin123
-                </div>
+                <div className="text-left">admin / admin123</div>
                 <div className="text-left">
                   <span className="font-semibold">Data Entry:</span>
                 </div>
-                <div className="text-left">
-                  dataentry / data123
-                </div>
+                <div className="text-left">dataentry / data123</div>
               </div>
             </div>
           </CardFooter>
