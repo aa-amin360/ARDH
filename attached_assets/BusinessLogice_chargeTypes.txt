@@ -1,0 +1,102 @@
+1. Properties Panel Enhancements
+New Tab: "Property Unit Charges"
+
+Add a tab with three radio buttons: Rent, Maintenance Fee, and Water Fee.
+
+Fields in this tab:
+
+flat_number: Dropdown populated from the properties table.
+
+nestaway_id: Auto-filled based on selected flat_number.
+
+amount: Input field whose label changes based on selected charge type (e.g., "Rent Amount", "Maintenance Fee", or "Water Fee").
+
+effective_from: Date picker.
+
+Behavior:
+
+Submitting the form inserts a new record into property_charges with:
+
+charge_type: One of rent, main_fee, water_fee based on selected radio.
+
+flat_number, nestaway_id, amount, and effective_from taken from the form.
+
+effective_to: Left empty (NULL) initially.
+
+2. Updating Charges
+If a new charge of the same charge_type is added for an existing flat_number, the system must:
+
+Set the effective_to of the existing active record (same flat_number + charge_type) to today’s date.
+
+Insert a new row with updated amount and effective_from = today, keeping effective_to empty.
+
+3. Property Creation
+
+Add a water_fee & maintenance_fee field to the Add New Property form.
+
+On creating a new property, insert three records in property_charges with:
+
+charge_type: rent, water_fee, maint_fee
+
+Use form values for flat_number, nestaway_id, and amounts (rent/water_fee/maint_fee)
+
+Set effective_from = today, leave effective_to = NULL.
+
+4. View/Modify Property Behavior
+In the View/Modify Property page:
+
+Show only current values (property_charges table where given flat_number's effective_to IS NULL) for:
+
+Rent, Maintenance Fee, Water Fee
+
+Below each field, add a small link to show a popup table of historical values for that charge_type with:
+
+amount, effective_from, effective_to
+
+If no history, show table headers with a "No historical entry" row.
+
+5. Tenants Panel Changes
+In the Add Tenant form:
+
+Remove: Rent Amount, Security Deposit fields.
+
+After selecting a property from dropdown, show 4 read-only fields:
+
+nestaway_id, Current Rent, Current Maintenance Fee, Current Water Fee
+
+Above values fetched from property_charges table where flat_number/property matches and effective_to IS NULL.
+
+6. Auto-insert on Tenant Creation
+On adding a new tenant:
+
+Insert 3 records into tenant_charges with:
+
+charge_type: rent, maint_fee, water_fee
+
+amount (as per charge_type), effective_from = today, effective_to = NULL
+
+All above data derived from current entries in property_charges table based on selected flat_number on  Add new Tenant form.
+
+7. Sync Tenant Charges with Property Charge Updates
+If a new record is added in property_charges and the flat is currently occupied:
+
+Occupied is determined by filtering the tenants table with given flat_number, and the lease_end_date of any row is less than or equal to today, it means the flat is still occupied. 
+tenant_id is combination of tenant_name and start_lease_date 
+Current tenant is extracted by filtering the tenants table with given flat_number, and the lease_end_date of any row is less than or equal to today, get the tenant-id & name. 
+
+Add a new row in tenant_charges for the current tenant of that flat:
+
+Set the effective_to of the previous active record to today
+
+Insert new row with updated amount and effective_from = today, effective_to = NULL
+
+8. Tenants View Enhancements
+In the Tenant View Table:
+
+Show current Rent, Maintenance Fee, and Water Fee from tenant_charges where effective_to IS NULL.
+
+Add a link below each to show a popup with the history table:
+
+Columns: amount, effective_from, effective_to
+
+If no records, show headers and "No historical entry"

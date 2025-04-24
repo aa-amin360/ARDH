@@ -13,6 +13,10 @@ import {
   InsertVendor,
   Tenant,
   InsertTenant,
+  PropertyCharge,
+  InsertPropertyCharge,
+  TenantCharge,
+  InsertTenantCharge,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
@@ -22,7 +26,9 @@ import {
   expenses,
   waterTanks,
   vendors,
-  tenants
+  tenants,
+  propertyCharges,
+  tenantCharges
 } from "@shared/schema";
 import { eq, desc, sql, count } from "drizzle-orm";
 import { db, pool } from "./db";
@@ -457,5 +463,183 @@ export class DatabaseStorage implements IStorage {
   async deleteTenant(id: number): Promise<boolean> {
     await db.delete(tenants).where(eq(tenants.id, id));
     return true;
+  }
+
+  // Property Charge methods
+  async getPropertyCharge(id: number): Promise<PropertyCharge | undefined> {
+    const [charge] = await db.select().from(propertyCharges).where(eq(propertyCharges.id, id));
+    return charge;
+  }
+
+  async getPropertyCharges(): Promise<PropertyCharge[]> {
+    return await db.select().from(propertyCharges);
+  }
+
+  async getPropertyChargesByFlat(flatNumber: string): Promise<PropertyCharge[]> {
+    return await db.select().from(propertyCharges).where(eq(propertyCharges.flatNumber, flatNumber));
+  }
+
+  async getCurrentPropertyCharges(flatNumber: string): Promise<PropertyCharge[]> {
+    return await db.select().from(propertyCharges)
+      .where(eq(propertyCharges.flatNumber, flatNumber))
+      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+  }
+
+  async getPropertyChargeHistory(flatNumber: string, chargeType: string): Promise<PropertyCharge[]> {
+    return await db.select().from(propertyCharges)
+      .where(eq(propertyCharges.flatNumber, flatNumber))
+      .where(eq(propertyCharges.chargeType, chargeType as any))
+      .orderBy(desc(propertyCharges.effectiveFrom));
+  }
+
+  async createPropertyCharge(charge: InsertPropertyCharge): Promise<PropertyCharge> {
+    // First, check if there's an existing active charge for this flat and charge type
+    const currentCharges = await db.select().from(propertyCharges)
+      .where(eq(propertyCharges.flatNumber, charge.flatNumber))
+      .where(eq(propertyCharges.chargeType, charge.chargeType))
+      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+
+    // If there's an existing charge, update its effectiveTo date to today
+    if (currentCharges.length > 0) {
+      const today = new Date();
+      await db.update(propertyCharges)
+        .set({ effectiveTo: today })
+        .where(eq(propertyCharges.id, currentCharges[0].id));
+
+      // Also sync with tenant charges if flat is occupied
+      await this.syncPropertyChargeWithTenant(charge.flatNumber, charge.chargeType, charge.amount, today, charge.createdBy);
+    }
+
+    // Create the new charge record
+    const [newCharge] = await db.insert(propertyCharges).values({
+      ...charge,
+      createdAt: new Date()
+    }).returning();
+
+    return newCharge;
+  }
+
+  async updatePropertyCharge(id: number, updates: Partial<InsertPropertyCharge>): Promise<PropertyCharge | undefined> {
+    const [updatedCharge] = await db.update(propertyCharges)
+      .set(updates)
+      .where(eq(propertyCharges.id, id))
+      .returning();
+    return updatedCharge;
+  }
+
+  async deletePropertyCharge(id: number): Promise<boolean> {
+    await db.delete(propertyCharges).where(eq(propertyCharges.id, id));
+    return true;
+  }
+
+  // Tenant Charge methods
+  async getTenantCharge(id: number): Promise<TenantCharge | undefined> {
+    const [charge] = await db.select().from(tenantCharges).where(eq(tenantCharges.id, id));
+    return charge;
+  }
+
+  async getTenantCharges(): Promise<TenantCharge[]> {
+    return await db.select().from(tenantCharges);
+  }
+
+  async getTenantChargesByTenant(tenantId: number): Promise<TenantCharge[]> {
+    return await db.select().from(tenantCharges).where(eq(tenantCharges.tenantId, tenantId));
+  }
+
+  async getCurrentTenantCharges(tenantId: number): Promise<TenantCharge[]> {
+    return await db.select().from(tenantCharges)
+      .where(eq(tenantCharges.tenantId, tenantId))
+      .where(sql`${tenantCharges.effectiveTo} IS NULL`);
+  }
+
+  async getTenantChargeHistory(tenantId: number, chargeType: string): Promise<TenantCharge[]> {
+    return await db.select().from(tenantCharges)
+      .where(eq(tenantCharges.tenantId, tenantId))
+      .where(eq(tenantCharges.chargeType, chargeType as any))
+      .orderBy(desc(tenantCharges.effectiveFrom));
+  }
+
+  async createTenantCharge(charge: InsertTenantCharge): Promise<TenantCharge> {
+    // Check if there's an existing active charge of this type for the tenant
+    const currentCharges = await db.select().from(tenantCharges)
+      .where(eq(tenantCharges.tenantId, charge.tenantId))
+      .where(eq(tenantCharges.chargeType, charge.chargeType))
+      .where(sql`${tenantCharges.effectiveTo} IS NULL`);
+
+    // If there's an existing charge, update its effectiveTo date to today
+    if (currentCharges.length > 0) {
+      await db.update(tenantCharges)
+        .set({ effectiveTo: new Date() })
+        .where(eq(tenantCharges.id, currentCharges[0].id));
+    }
+
+    // Create the new charge record
+    const [newCharge] = await db.insert(tenantCharges).values({
+      ...charge,
+      createdAt: new Date()
+    }).returning();
+
+    return newCharge;
+  }
+
+  async updateTenantCharge(id: number, updates: Partial<InsertTenantCharge>): Promise<TenantCharge | undefined> {
+    const [updatedCharge] = await db.update(tenantCharges)
+      .set(updates)
+      .where(eq(tenantCharges.id, id))
+      .returning();
+    return updatedCharge;
+  }
+
+  async deleteTenantCharge(id: number): Promise<boolean> {
+    await db.delete(tenantCharges).where(eq(tenantCharges.id, id));
+    return true;
+  }
+
+  // Helper method to find the current tenant(s) for a flat
+  async getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]> {
+    const today = new Date();
+    return await db.select().from(tenants)
+      .where(eq(tenants.flatNumber, flatNumber))
+      .where(sql`${tenants.leaseEndDate} >= ${today}`);
+  }
+
+  // Helper method to sync property charges with tenant charges when a property charge is updated
+  async syncPropertyChargeWithTenant(
+    flatNumber: string, 
+    chargeType: string, 
+    amount: number, 
+    effectiveFrom: Date,
+    createdBy: number
+  ): Promise<void> {
+    // Find current tenants for this flat
+    const currentTenants = await this.getCurrentTenantsForFlat(flatNumber);
+    
+    // If there are current tenants, update their charges too
+    for (const tenant of currentTenants) {
+      // Find current tenant charge of this type
+      const currentCharges = await db.select().from(tenantCharges)
+        .where(eq(tenantCharges.tenantId, tenant.id))
+        .where(eq(tenantCharges.chargeType, chargeType as any))
+        .where(sql`${tenantCharges.effectiveTo} IS NULL`);
+      
+      // If there's an existing charge, mark it as ended
+      if (currentCharges.length > 0) {
+        await db.update(tenantCharges)
+          .set({ effectiveTo: effectiveFrom })
+          .where(eq(tenantCharges.id, currentCharges[0].id));
+      }
+      
+      // Create a new tenant charge
+      await db.insert(tenantCharges).values({
+        tenantId: tenant.id,
+        flatNumber,
+        chargeType: chargeType as any,
+        amount,
+        effectiveFrom,
+        effectiveTo: null,
+        createdBy,
+        createdAt: new Date()
+      });
+    }
   }
 }

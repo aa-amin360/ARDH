@@ -9,6 +9,7 @@ export const incomeTypeEnum = pgEnum('income_type', ['rent', 'maintenance', 'tax
 export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'inactive', 'notice_period']);
 export const leaseStatusEnum = pgEnum('lease_status', ['Leasable', 'Non-Leasable']);
 export const apartmentFloorEnum = pgEnum('apartment_floor', ['1', '2', '3', '4', '5', '6']);
+export const chargeTypeEnum = pgEnum('charge_type', ['rent', 'maint_fee', 'water_fee']);
 
 // New expense category and subcategory enums based on Excel sheet
 export const expenseCategoryEnum = pgEnum('expense_category', [
@@ -215,6 +216,32 @@ export const vendors = pgTable("vendors", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Property Charges table for tracking historical changes to property charges
+export const propertyCharges = pgTable("property_charges", {
+  id: serial("id").primaryKey(),
+  flatNumber: text("flat_number").notNull().references(() => properties.flatNumber),
+  nestawayId: text("nestaway_id"),
+  chargeType: chargeTypeEnum("charge_type").notNull(),
+  amount: integer("amount").notNull(),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Tenant Charges table for tracking historical changes to tenant charges
+export const tenantCharges = pgTable("tenant_charges", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenants.id).notNull(),
+  flatNumber: text("flat_number").notNull(),
+  chargeType: chargeTypeEnum("charge_type").notNull(),
+  amount: integer("amount").notNull(),
+  effectiveFrom: date("effective_from").notNull(),
+  effectiveTo: date("effective_to"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -260,6 +287,22 @@ export const insertVendorSchema = createInsertSchema(vendors).omit({
   updatedAt: true,
 });
 
+export const insertPropertyChargeSchema = createInsertSchema(propertyCharges, {
+  effectiveFrom: z.coerce.date(),
+  effectiveTo: z.coerce.date().optional().nullable(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTenantChargeSchema = createInsertSchema(tenantCharges, {
+  effectiveFrom: z.coerce.date(),
+  effectiveTo: z.coerce.date().optional().nullable(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Create extended schemas for login
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -281,6 +324,10 @@ export type Tenant = typeof tenants.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Vendor = typeof vendors.$inferSelect;
 export type InsertVendor = z.infer<typeof insertVendorSchema>;
+export type PropertyCharge = typeof propertyCharges.$inferSelect;
+export type InsertPropertyCharge = z.infer<typeof insertPropertyChargeSchema>;
+export type TenantCharge = typeof tenantCharges.$inferSelect;
+export type InsertTenantCharge = z.infer<typeof insertTenantChargeSchema>;
 export type Login = z.infer<typeof loginSchema>;
 
 // Summary types for dashboard
