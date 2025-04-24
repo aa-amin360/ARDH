@@ -287,7 +287,7 @@ export default function TenantsPage() {
   }
 
   // Filter tenants based on search query
-  const filteredTenants = tenants.filter((tenant) => {
+  const filteredTenants = tenants.filter((tenant: any) => {
     if (!searchQuery) return true;
 
     const query = searchQuery.toLowerCase();
@@ -392,7 +392,7 @@ export default function TenantsPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredTenants.map((tenant) => (
+                          {filteredTenants.map((tenant: any) => (
                             <TableRow key={tenant.id}>
                               <TableCell className="font-medium">
                                 {tenant.name}
