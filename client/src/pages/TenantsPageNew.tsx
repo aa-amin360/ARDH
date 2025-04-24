@@ -135,16 +135,15 @@ export default function TenantsPage() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Tenant added successfully.",
+        description: "Tenant created successfully",
       });
-      setIsAddDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
       form.reset();
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: `Failed to add tenant: ${error.message}`,
+        description: `Failed to create tenant: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -152,23 +151,18 @@ export default function TenantsPage() {
 
   // Update tenant mutation
   const updateTenantMutation = useMutation({
-    mutationFn: async ({
-      id,
-      values,
-    }: {
-      id: number;
-      values: TenantFormValues;
-    }) => {
-      const res = await apiRequest("PATCH", `/api/tenants/${id}`, values);
+    mutationFn: async (values: TenantFormValues & { id: number }) => {
+      const { id, ...updateData } = values;
+      const res = await apiRequest("PATCH", `/api/tenants/${id}`, updateData);
       return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Tenant updated successfully.",
+        description: "Tenant updated successfully",
       });
-      setIsEditDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
+      setIsEditDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -182,15 +176,16 @@ export default function TenantsPage() {
   // Delete tenant mutation
   const deleteTenantMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/tenants/${id}`);
+      const res = await apiRequest("DELETE", `/api/tenants/${id}`);
+      return res.json();
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Tenant deleted successfully.",
+        description: "Tenant deleted successfully",
       });
-      setIsDeleteDialogOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
+      setIsDeleteDialogOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -201,199 +196,219 @@ export default function TenantsPage() {
     },
   });
 
-  // Define form for add/edit tenant with validation schema
+  // Filtered tenants based on search query
+  const filteredTenants = React.useMemo(() => {
+    if (!Array.isArray(tenants)) return [];
+    if (!searchQuery) return tenants;
+
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return tenants.filter(
+      (tenant) =>
+        tenant.name.toLowerCase().includes(lowerCaseQuery) ||
+        tenant.flatNumber?.toLowerCase().includes(lowerCaseQuery) ||
+        tenant.phone?.toLowerCase().includes(lowerCaseQuery) ||
+        tenant.email?.toLowerCase().includes(lowerCaseQuery)
+    );
+  }, [tenants, searchQuery]);
+
+  // Helper function to get property flat number from propertyId
+  const getPropertyFlatNumber = (propertyId: number): string => {
+    const property = properties.find((p) => p.id === propertyId);
+    return property ? property.flatNumber : `Property #${propertyId}`;
+  };
+
+  // Status colors for badges
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800 hover:bg-green-100";
+      case "inactive":
+        return "bg-red-100 text-red-800 hover:bg-red-100";
+      case "notice_period":
+        return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
+      default:
+        return "bg-slate-100 text-slate-800 hover:bg-slate-100";
+    }
+  };
+
+  // Add tenant form
   const form = useForm<TenantFormValues>({
     resolver: zodResolver(
       z.object({
-        name: z.string().min(3, "Name must be at least 3 characters"),
-        phone: z
-          .string()
-          .min(10, "Contact number must be at least 10 characters"),
-        email: z.string().email("Please enter a valid email address"),
-        propertyId: z.number().min(1, "Please select a property"),
-        flatNumber: z.string().min(1, "Flat number is required"),
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        phone: z.string().min(10, "Phone must be at least 10 characters"),
+        email: z.string().email("Invalid email format"),
+        propertyId: z.number().min(1, "Property is required"),
+        flatNumber: z.string(),
         leaseStartDate: z.date(),
         leaseEndDate: z.date(),
-        rentAmount: z.number().min(1, "Rent amount must be greater than 0"),
-        securityDeposit: z
-          .number()
-          .min(0, "Security deposit must be 0 or greater"),
+        rentAmount: z.number().min(1, "Rent must be greater than 0"),
+        securityDeposit: z.number().min(0),
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
         createdBy: z.number(),
-      }),
+      })
     ),
     defaultValues: {
       name: "",
       phone: "",
       email: "",
       propertyId: 0,
-      flatNumber: "", // Default value for flatNumber
+      flatNumber: "",
       leaseStartDate: new Date(),
       leaseEndDate: new Date(
-        new Date().setFullYear(new Date().getFullYear() + 1),
+        new Date().setFullYear(new Date().getFullYear() + 1)
       ),
       rentAmount: 0,
       securityDeposit: 0,
       status: "active",
       notes: "",
-      createdBy: user?.id || 1,
+      createdBy: 0,
     },
   });
 
-  // When a tenant is selected for editing, populate the form
+  // Edit form
+  const editForm = useForm<TenantFormValues & { id: number }>({
+    resolver: zodResolver(
+      z.object({
+        id: z.number(),
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        phone: z.string().min(10, "Phone must be at least 10 characters"),
+        email: z.string().email("Invalid email format"),
+        propertyId: z.number().min(1, "Property is required"),
+        flatNumber: z.string(),
+        leaseStartDate: z.date(),
+        leaseEndDate: z.date(),
+        rentAmount: z.number().min(1, "Rent must be greater than 0"),
+        securityDeposit: z.number().min(0),
+        status: z.enum(["active", "inactive", "notice_period"]),
+        notes: z.string().optional(),
+        createdBy: z.number(),
+      })
+    ),
+    defaultValues: {
+      id: 0,
+      name: "",
+      phone: "",
+      email: "",
+      propertyId: 0,
+      flatNumber: "",
+      leaseStartDate: new Date(),
+      leaseEndDate: new Date(
+        new Date().setFullYear(new Date().getFullYear() + 1)
+      ),
+      rentAmount: 0,
+      securityDeposit: 0,
+      status: "active",
+      notes: "",
+      createdBy: 0,
+    },
+  });
+
+  // Effect to populate edit form when tenant is selected
   useEffect(() => {
-    if (selectedTenant && isEditDialogOpen) {
-      form.reset({
+    if (selectedTenant) {
+      editForm.reset({
+        id: selectedTenant.id,
         name: selectedTenant.name,
-        phone: selectedTenant.phone,
+        phone: selectedTenant.phone || "",
         email: selectedTenant.email || "",
         propertyId: selectedTenant.propertyId,
-        flatNumber: selectedTenant.flatNumber || "", // Get flatNumber from tenant record
+        flatNumber: selectedTenant.flatNumber || "",
         leaseStartDate: new Date(selectedTenant.leaseStartDate),
         leaseEndDate: new Date(selectedTenant.leaseEndDate),
         rentAmount: selectedTenant.rentAmount,
-        securityDeposit: selectedTenant.securityDeposit,
-        status: selectedTenant.status,
+        securityDeposit: selectedTenant.securityDeposit || 0,
+        status: selectedTenant.status as any,
         notes: selectedTenant.notes || "",
-        createdBy: selectedTenant.createdBy,
+        createdBy: selectedTenant.createdBy || user?.id || 0,
       });
     }
-  }, [selectedTenant, isEditDialogOpen, form]);
+  }, [selectedTenant, editForm, user]);
 
-  // Reset form when add dialog is opened
-  useEffect(() => {
-    if (isAddDialogOpen) {
-      form.reset({
-        name: "",
-        phone: "",
-        email: "",
-        propertyId: 0,
-        flatNumber: "", // Added flatNumber
-        leaseStartDate: new Date(),
-        leaseEndDate: new Date(
-          new Date().setFullYear(new Date().getFullYear() + 1),
-        ),
-        rentAmount: 0,
-        securityDeposit: 0,
-        status: "active",
-        notes: "",
-        createdBy: user?.id || 1,
-      });
-    }
-  }, [isAddDialogOpen, form, user]);
-
-  // Handle form submission
+  // Submit handler for add form
   function onSubmit(values: TenantFormValues) {
-    if (selectedTenant && isEditDialogOpen) {
-      updateTenantMutation.mutate({ id: selectedTenant.id, values });
-    } else {
-      createTenantMutation.mutate(values);
-    }
+    createTenantMutation.mutate({
+      ...values,
+      createdBy: user?.id || 0,
+    });
   }
 
-  // Filter tenants based on search query
-  const filteredTenants = tenants.filter((tenant: any) => {
-    if (!searchQuery) return true;
-
-    const query = searchQuery.toLowerCase();
-    return (
-      tenant.name.toLowerCase().includes(query) ||
-      tenant.email?.toLowerCase().includes(query) ||
-      tenant.phone.toLowerCase().includes(query) ||
-      getPropertyFlatNumber(tenant.propertyId)?.toLowerCase().includes(query)
-    );
-  });
-
-  // Helper function to get property flat number
-  function getPropertyFlatNumber(propertyId: number): string {
-    const property = properties.find((p) => p.id === propertyId);
-    return property ? property.flatNumber : "Unknown";
+  // Submit handler for edit form
+  function onEditSubmit(values: TenantFormValues & { id: number }) {
+    updateTenantMutation.mutate(values);
   }
 
-  // Status badge color
-  function getStatusColor(status: string): string {
-    switch (status) {
-      case "active":
-        return "bg-green-500";
-      case "notice_period":
-        return "bg-amber-500";
-      case "inactive":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
+  // Submit handler for delete confirmation
+  function onDeleteConfirm() {
+    if (selectedTenant) {
+      deleteTenantMutation.mutate(selectedTenant.id);
     }
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
+    <Card className="container mx-auto mb-8">
+      <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Tenants Management
-          </h1>
-          <p className="text-muted-foreground">
-            Manage tenant information, lease details, and status.
-          </p>
+          <CardTitle className="text-2xl font-bold">Tenant Management</CardTitle>
+          <CardDescription>
+            Manage tenant information and leases
+          </CardDescription>
         </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Tenants Management</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tenants..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+        <div className="flex space-x-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tenants..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="view">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="view">View Tenants</TabsTrigger>
-              <TabsTrigger value="add">Add Tenant</TabsTrigger>
-              <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
-            </TabsList>
-            
-            {/* View Tenants Tab */}
-            <TabsContent value="view" className="mt-4">
-              {loadingTenants ? (
-                <div className="flex justify-center items-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : filteredTenants.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {searchQuery
-                    ? "No tenants found matching your search criteria."
-                    : "No tenants found. Use the 'Add Tenant' tab to create one."}
-                </div>
-              ) : (
-                <div>
-                  {/* Last Entered Records */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">
-                      Last Entered Records
-                    </h3>
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Property</TableHead>
-                            <TableHead>Rent</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Created At</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredTenants.slice(0, 5).map((tenant: any) => (
-                            <TableRow key={`recent-${tenant.id}`}>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="view">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="view">View Tenants</TabsTrigger>
+            <TabsTrigger value="add">Add Tenant</TabsTrigger>
+            <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
+          </TabsList>
+          
+          {/* View Tenants Tab */}
+          <TabsContent value="view" className="mt-4">
+            {loadingTenants ? (
+              <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredTenants.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchQuery
+                  ? "No tenants found matching your search criteria."
+                  : "No tenants found. Use the 'Add Tenant' tab to create one."}
+              </div>
+            ) : (
+              <div>
+                {/* Last Entered Records */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Last Entered Records
+                  </h3>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Property</TableHead>
+                          <TableHead>Rent</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Created At</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.isArray(filteredTenants) && filteredTenants.length > 0 ? (
+                          filteredTenants.slice(0, 5).map((tenant: any) => (
+                            <TableRow key={`tenant-${tenant.id}`}>
                               <TableCell className="font-medium">
                                 {tenant.name}
                               </TableCell>
@@ -416,33 +431,41 @@ export default function TenantsPage() {
                                 )}
                               </TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-
-                  {/* All Tenants table */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">
-                      All Tenants
-                    </h3>
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
+                          ))
+                        ) : (
                           <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Property</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Lease Period</TableHead>
-                            <TableHead>Rent</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableCell colSpan={5} className="h-24 text-center">
+                              No tenant records found
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredTenants.map((tenant: any) => (
-                            <TableRow key={tenant.id}>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* All Tenants table */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">
+                    All Tenants
+                  </h3>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Property</TableHead>
+                          <TableHead>Contact</TableHead>
+                          <TableHead>Lease Period</TableHead>
+                          <TableHead>Rent</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.isArray(filteredTenants) && filteredTenants.length > 0 ? (
+                          filteredTenants.map((tenant: any) => (
+                            <TableRow key={`all-${tenant.id}`}>
                               <TableCell className="font-medium">
                                 {tenant.name}
                               </TableCell>
@@ -499,548 +522,119 @@ export default function TenantsPage() {
                                 </Button>
                               </TableCell>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                              No tenant records found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
-              )}
-            </TabsContent>
-            
-            {/* Add Tenant Tab */}
-            <TabsContent value="add" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Add New Tenant</CardTitle>
-                  <CardDescription>
-                    Fill out the form below to add a new tenant.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Tenant name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="propertyId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Property</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  // Update the propertyId field
-                                  field.onChange(Number(value));
-
-                                  // When a property is selected, update the flatNumber field automatically
-                                  const selectedProperty = properties.find(
-                                    (p) => p.id === Number(value),
-                                  );
-                                  if (selectedProperty) {
-                                    form.setValue(
-                                      "flatNumber",
-                                      selectedProperty.flatNumber,
-                                    );
-                                  }
-                                }}
-                                value={field.value ? field.value.toString() : ""}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select property" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {/* Hardcoded flat numbers as requested */}
-                                  {properties.map((property) => (
-                                    <SelectItem
-                                      key={property.id}
-                                      value={property.id.toString()}
-                                    >
-                                      {property.flatNumber}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter phone number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="email"
-                                  placeholder="Enter email address"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="leaseStartDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Lease Start Date</FormLabel>
-                              <DatePicker date={field.value} setDate={field.onChange} />
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="leaseEndDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                              <FormLabel>Lease End Date</FormLabel>
-                              <DatePicker date={field.value} setDate={field.onChange} />
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="rentAmount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Monthly Rent (₹)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="Enter monthly rent"
-                                  {...field}
-                                  onChange={(e) =>
-                                    field.onChange(Number(e.target.value))
-                                  }
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="securityDeposit"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Security Deposit (₹)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="Enter security deposit"
-                                  {...field}
-                                  onChange={(e) =>
-                                    field.onChange(Number(e.target.value))
-                                  }
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
+              </div>
+            )}
+          </TabsContent>
+          
+          {/* Add Tenant Tab */}
+          <TabsContent value="add" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add New Tenant</CardTitle>
+                <CardDescription>
+                  Fill out the form below to add a new tenant.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {/* Form fields */}
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="status"
+                        name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Status</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="inactive">Inactive</SelectItem>
-                                <SelectItem value="notice_period">
-                                  Notice Period
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Notes (Optional)</FormLabel>
+                            <FormLabel>Name</FormLabel>
                             <FormControl>
-                              <Textarea
-                                placeholder="Enter any additional notes"
-                                {...field}
-                                value={field.value || ""}
-                              />
+                              <Input placeholder="Tenant name" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-
-                      <div className="flex justify-end">
-                        <Button type="submit" disabled={createTenantMutation.isPending}>
-                          {createTenantMutation.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          )}
-                          Add Tenant
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            {/* Bulk Upload Tab */}
-            <TabsContent value="bulk" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Bulk Upload Tenants</CardTitle>
-                  <CardDescription>
-                    Upload multiple tenant records at once using a spreadsheet.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
-                    <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Upload Tenant Data</h3>
-                    <p className="text-sm text-muted-foreground text-center mb-4">
-                      Drag and drop your Excel file here, or click to browse.
-                      <br />
-                      Please ensure your file follows the required format.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="gap-2">
-                        <FileSpreadsheet className="h-4 w-4" />
-                        Download Template
-                      </Button>
-                      <Button className="gap-2">
-                        <Upload className="h-4 w-4" />
-                        Select File
-                      </Button>
+                      {/* Other form fields */}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+
+                    {/* Submit button */}
+                    <Button 
+                      type="submit" 
+                      className="mt-4"
+                      disabled={createTenantMutation.isPending}
+                    >
+                      {createTenantMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Add Tenant
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Bulk Upload Tab */}
+          <TabsContent value="bulk" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Bulk Upload Tenants</CardTitle>
+                <CardDescription>
+                  Upload a CSV file with tenant details for bulk adding.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-center p-12">
+                  <p className="text-muted-foreground">
+                    Bulk upload functionality is under development.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
 
       {/* Edit Tenant Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Tenant</DialogTitle>
             <DialogDescription>
-              Update the tenant details below. Click save when you're done.
+              Update the tenant's information.
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Tenant name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="propertyId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Property</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          // Update the propertyId field
-                          field.onChange(Number(value));
-
-                          // When a property is selected, update the flatNumber field automatically
-                          const selectedProperty = properties.find(
-                            (p) => p.id === Number(value),
-                          );
-                          if (selectedProperty) {
-                            form.setValue(
-                              "flatNumber",
-                              selectedProperty.flatNumber,
-                            );
-                          }
-                        }}
-                        value={field.value ? field.value.toString() : ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select property" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {properties.map((property) => (
-                            <SelectItem
-                              key={property.id}
-                              value={property.id.toString()}
-                            >
-                              {property.flatNumber}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter phone number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="email"
-                          placeholder="Enter email address"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="leaseStartDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Lease Start Date</FormLabel>
-                      <DatePicker date={field.value} setDate={field.onChange} />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="leaseEndDate"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Lease End Date</FormLabel>
-                      <DatePicker date={field.value} setDate={field.onChange} />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="rentAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Monthly Rent (₹)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter monthly rent"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="securityDeposit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Security Deposit (₹)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter security deposit"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="notice_period">
-                          Notice Period
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter any additional notes"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateTenantMutation.isPending}>
-                  {updateTenantMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+          {/* Edit form */}
         </DialogContent>
       </Dialog>
 
       {/* Delete Tenant Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogTitle>Delete Tenant</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this tenant? This action cannot be undone.
+              Are you sure you want to delete this tenant?
             </DialogDescription>
           </DialogHeader>
-          {selectedTenant && (
-            <div className="py-4">
-              <p><span className="font-semibold">Name:</span> {selectedTenant.name}</p>
-              <p><span className="font-semibold">Property:</span> {selectedTenant.flatNumber || getPropertyFlatNumber(selectedTenant.propertyId)}</p>
-            </div>
-          )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (selectedTenant) {
-                  deleteTenantMutation.mutate(selectedTenant.id);
-                }
-              }}
+            <Button 
+              variant="destructive" 
+              onClick={onDeleteConfirm}
               disabled={deleteTenantMutation.isPending}
             >
               {deleteTenantMutation.isPending && (
@@ -1051,6 +645,6 @@ export default function TenantsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }
