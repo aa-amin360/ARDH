@@ -77,10 +77,10 @@ export default function LoginPage() {
       <div className="w-full md:w-1/2 flex items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-b from-gray-50 to-white">
         <Card className="w-full max-w-md border border-gray-100 shadow-xl">
           <CardHeader className="space-y-2 flex flex-col items-center pb-8">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#154c79] to-[#2980b9] flex items-center justify-center mb-4 shadow-md">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-gray-700 to-gray-900 flex items-center justify-center mb-4 shadow-md">
               <Building2 className="h-8 w-8 text-white" />
             </div>
-            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-[#154c79] to-[#2980b9] bg-clip-text text-transparent">
+            <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
               ARDH Manager
             </CardTitle>
             <CardDescription className="text-center text-base">
@@ -95,13 +95,13 @@ export default function LoginPage() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[#154c79] font-medium">Username</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">Username</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter your username"
                           {...field}
                           autoComplete="username"
-                          className="border-[#154c79]/20 focus-visible:ring-[#154c79]/30 h-11"
+                          className="border-gray-300 focus-visible:ring-gray-500/30 h-11"
                         />
                       </FormControl>
                       <FormMessage />
@@ -113,14 +113,14 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[#154c79] font-medium">Password</FormLabel>
+                      <FormLabel className="text-gray-700 font-medium">Password</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
                           placeholder="Enter your password"
                           {...field}
                           autoComplete="current-password"
-                          className="border-[#154c79]/20 focus-visible:ring-[#154c79]/30 h-11"
+                          className="border-gray-300 focus-visible:ring-gray-500/30 h-11"
                         />
                       </FormControl>
                       <FormMessage />
@@ -129,7 +129,7 @@ export default function LoginPage() {
                 />
                 <Button 
                   type="submit" 
-                  className="w-full h-11 mt-2 bg-gradient-to-r from-[#154c79] to-[#2980b9] hover:from-[#154c79]/90 hover:to-[#2980b9]/90 text-base"
+                  className="w-full h-11 mt-2 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800 text-base"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
@@ -139,7 +139,7 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="border-t px-6 py-5 bg-gray-50/50">
             <div className="text-sm text-gray-600 text-center w-full space-y-1">
-              <p className="font-medium text-[#154c79]">Demo Credentials</p>
+              <p className="font-medium text-gray-700">Demo Credentials</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-2 max-w-xs mx-auto">
                 <div className="text-left">
                   <span className="font-semibold">Admin:</span>
