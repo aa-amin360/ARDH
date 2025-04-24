@@ -776,6 +776,40 @@ export default function TenantsPage() {
                       )}
                     />
 
+                    <FormField
+                      control={form.control}
+                      name="attachmentUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Document Attachment (optional)</FormLabel>
+                          <FormControl>
+                            <div className="flex flex-col gap-2">
+                              <Input
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                                className="cursor-pointer"
+                                onChange={(e) => {
+                                  // This just stores the file name for demo purposes
+                                  // In a real implementation, you would upload the file to a server
+                                  const fileName = e.target.files?.[0]?.name || "";
+                                  field.onChange(fileName);
+                                }}
+                              />
+                              {field.value && (
+                                <div className="text-xs text-muted-foreground">
+                                  Selected file: {field.value}
+                                </div>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormDescription>
+                            Upload lease agreement or other tenant documents
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <Button
                       type="submit"
                       className="mt-4"
@@ -1021,6 +1055,40 @@ export default function TenantsPage() {
                           value={field.value || ""}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="attachmentUrl"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel>Document Attachment (optional)</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col gap-2">
+                          <Input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                            className="cursor-pointer"
+                            onChange={(e) => {
+                              // This just stores the file name for demo purposes
+                              // In a real implementation, you would upload the file to a server
+                              const fileName = e.target.files?.[0]?.name || "";
+                              field.onChange(fileName);
+                            }}
+                          />
+                          {field.value && (
+                            <div className="text-xs text-muted-foreground">
+                              Selected file: {field.value}
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Upload lease agreement or other tenant documents
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
