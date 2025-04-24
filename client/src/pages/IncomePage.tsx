@@ -4,11 +4,31 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -28,7 +48,7 @@ import {
 // Extended schema with validation
 const incomeFormSchema = insertIncomeSchema.extend({
   amount: z.coerce.number().positive(),
-  date: z.string().refine(val => !isNaN(Date.parse(val)), {
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Please enter a valid date",
   }),
   propertyId: z.coerce.number().optional(),
@@ -51,30 +71,44 @@ export default function IncomePage() {
     queryKey: ["/api/incomes"],
   });
 
-  // Query to fetch properties for dropdown
-  const { data: properties = [] } = useQuery({
-    queryKey: ["/api/properties"],
-  });
+  //Dropdown for properties
+  const properties = [
+    { id: 0, flatNumber: "ARDH Building" },
+    { id: 1, flatNumber: "Common Areas" },
+    { id: 2, flatNumber: "101" },
+    { id: 3, flatNumber: "102" },
+    { id: 4, flatNumber: "103" },
+    { id: 5, flatNumber: "201" },
+    { id: 6, flatNumber: "202" },
+    { id: 7, flatNumber: "203" },
+    { id: 8, flatNumber: "204" },
+    { id: 9, flatNumber: "301" },
+    { id: 10, flatNumber: "302" },
+    { id: 11, flatNumber: "303" },
+    { id: 12, flatNumber: "304" },
+    { id: 13, flatNumber: "401" },
+    { id: 14, flatNumber: "402" },
+    { id: 15, flatNumber: "403" },
+    { id: 16, flatNumber: "404" },
+    { id: 17, flatNumber: "501" },
+    { id: 18, flatNumber: "502" },
+    { id: 19, flatNumber: "503" },
+    { id: 20, flatNumber: "504" },
+    { id: 21, flatNumber: "601" },
+  ];
 
-  // Format properties for dropdown (sorted by flat number)
-  const sortedProperties = React.useMemo(() => {
-    if (!Array.isArray(properties)) return [];
-    
-    return [...properties].sort((a, b) => {
-      return a.flatNumber.localeCompare(b.flatNumber);
-    });
-  }, [properties]);
-  
-  // Property options including "Common Areas"
   const propertyOptions = React.useMemo(() => {
+    const rest = properties.slice(2); // skip ARDH and Common Areas for sorting
+    const sortedFlats = rest.sort((a, b) =>
+      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
+    );
+
     return [
-      { id: 0, flatNumber: "Common Areas" },
-      ...sortedProperties.map(property => ({
-        id: property.id,
-        flatNumber: property.flatNumber
-      }))
+      properties[0], // ARDH Building
+      properties[1], // Common Areas
+      ...sortedFlats,
     ];
-  }, [sortedProperties]);
+  }, []);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
@@ -114,7 +148,7 @@ export default function IncomePage() {
         description: "",
         receivedFrom: "",
         propertyId: 0,
-        createdBy: 0
+        createdBy: 0,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
     },
@@ -144,7 +178,7 @@ export default function IncomePage() {
   function onSubmit(values: IncomeFormValues) {
     // Process the values for submission
     const propertyId = values.propertyId || 0;
-    
+
     const formattedValues = {
       ...values,
       propertyId,
@@ -175,7 +209,10 @@ export default function IncomePage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-6"
+                >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -194,8 +231,12 @@ export default function IncomePage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="rent">Rent</SelectItem>
-                              <SelectItem value="maintenance">Maintenance</SelectItem>
-                              <SelectItem value="tax_return">Tax Return</SelectItem>
+                              <SelectItem value="maintenance">
+                                Maintenance
+                              </SelectItem>
+                              <SelectItem value="tax_return">
+                                Tax Return
+                              </SelectItem>
                               <SelectItem value="other">Other</SelectItem>
                             </SelectContent>
                           </Select>
@@ -244,7 +285,9 @@ export default function IncomePage() {
                         <FormItem>
                           <FormLabel>Property</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
                             value={field.value?.toString()}
                           >
                             <FormControl>
@@ -254,8 +297,8 @@ export default function IncomePage() {
                             </FormControl>
                             <SelectContent>
                               {propertyOptions.map((option) => (
-                                <SelectItem 
-                                  key={option.id} 
+                                <SelectItem
+                                  key={option.id}
                                   value={option.id.toString()}
                                 >
                                   {option.flatNumber}
@@ -292,10 +335,7 @@ export default function IncomePage() {
                         <FormItem>
                           <FormLabel>Description</FormLabel>
                           <FormControl>
-                            <Input
-                              placeholder="Enter description"
-                              {...field}
-                            />
+                            <Input placeholder="Enter description" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -336,7 +376,9 @@ export default function IncomePage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center p-12">
-                <p className="text-muted-foreground">Bulk upload functionality is under development.</p>
+                <p className="text-muted-foreground">
+                  Bulk upload functionality is under development.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -347,9 +389,7 @@ export default function IncomePage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Income Records</CardTitle>
-                <CardDescription>
-                  View all income records.
-                </CardDescription>
+                <CardDescription>View all income records.</CardDescription>
               </div>
               <Button variant="outline" className="gap-1">
                 <FileSpreadsheet className="h-4 w-4" />
@@ -368,7 +408,9 @@ export default function IncomePage() {
               ) : Array.isArray(incomes) && incomes.length > 0 ? (
                 <div>
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">Recent Income Entries</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Recent Income Entries
+                    </h3>
                     <div className="overflow-x-auto rounded-md border">
                       <Table>
                         <TableHeader>
@@ -393,7 +435,9 @@ export default function IncomePage() {
                               <TableCell>{income.description}</TableCell>
                               <TableCell>
                                 {income.propertyId
-                                  ? (properties?.find(p => p.id === income.propertyId)?.flatNumber || `#${income.propertyId}`)
+                                  ? properties?.find(
+                                      (p) => p.id === income.propertyId,
+                                    )?.flatNumber || `#${income.propertyId}`
                                   : "Common"}
                               </TableCell>
                               <TableCell className="text-right font-medium">
@@ -408,9 +452,11 @@ export default function IncomePage() {
                       Showing the 5 most recent income entries
                     </p>
                   </div>
-                  
+
                   <div className="overflow-x-auto">
-                    <h3 className="text-lg font-semibold mb-2">All Income Entries</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      All Income Entries
+                    </h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -433,7 +479,9 @@ export default function IncomePage() {
                             <TableCell>{income.description}</TableCell>
                             <TableCell>
                               {income.propertyId
-                                ? (properties?.find(p => p.id === income.propertyId)?.flatNumber || `#${income.propertyId}`)
+                                ? properties?.find(
+                                    (p) => p.id === income.propertyId,
+                                  )?.flatNumber || `#${income.propertyId}`
                                 : "Common"}
                             </TableCell>
                             <TableCell className="text-right font-medium">

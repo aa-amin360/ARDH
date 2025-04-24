@@ -72,13 +72,6 @@ type TenantFormValues = {
   createdBy: number;
 };
 
-// Hardcoded flat numbers as requested
-const FLAT_NUMBERS = [
-  "101", "102", "103", "201", "202", "203", "204", 
-  "301", "302", "303", "304", "401", "402", "403", 
-  "404", "501", "502", "503", "504"
-];
-
 export default function TenantsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -97,48 +90,35 @@ export default function TenantsPage() {
     },
     onError: (error) => {
       console.error("Error fetching tenants:", error);
-    }
+    },
   });
 
   // Use state for properties to ensure we have control over the data
-  const [properties, setProperties] = useState<Property[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
-  
-  // Fetch properties using a direct approach
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        setLoadingProperties(true);
-        const response = await fetch('/api/properties', {
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch properties: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Properties loaded for tenant form:", data.length);
-        setProperties(data);
-      } catch (error) {
-        console.error("Error loading properties:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load properties. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingProperties(false);
-      }
-    };
-    
-    fetchProperties();
-  }, [toast]);
 
-  // Sort properties by flat number in ascending order
-  const sortedProperties = [...properties].sort((a, b) =>
-    a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
-  );
+  // Fetch properties using a direct approach
+  const properties = [
+    { id: 2, flatNumber: "101" },
+    { id: 3, flatNumber: "102" },
+    { id: 4, flatNumber: "103" },
+    { id: 5, flatNumber: "201" },
+    { id: 6, flatNumber: "202" },
+    { id: 7, flatNumber: "203" },
+    { id: 8, flatNumber: "204" },
+    { id: 9, flatNumber: "301" },
+    { id: 10, flatNumber: "302" },
+    { id: 11, flatNumber: "303" },
+    { id: 12, flatNumber: "304" },
+    { id: 13, flatNumber: "401" },
+    { id: 14, flatNumber: "402" },
+    { id: 15, flatNumber: "403" },
+    { id: 16, flatNumber: "404" },
+    { id: 17, flatNumber: "501" },
+    { id: 18, flatNumber: "502" },
+    { id: 19, flatNumber: "503" },
+    { id: 20, flatNumber: "504" },
+    { id: 21, flatNumber: "601" },
+  ];
 
   // Create tenant mutation
   const createTenantMutation = useMutation({
@@ -519,23 +499,14 @@ export default function TenantsPage() {
                         </FormControl>
                         <SelectContent>
                           {/* Hardcoded flat numbers as requested */}
-                          {FLAT_NUMBERS.map((flatNumber) => {
-                            // Find property with this flat number
-                            const property = properties.find(p => p.flatNumber === flatNumber);
-                            if (!property) return null;
-                            
-                            // Find if this flat is in our predefined list
-                            const flatInfo = FLATS.find(f => f.flatNumber === flatNumber);
-                            
-                            return (
-                              <SelectItem
-                                key={property.id}
-                                value={property.id.toString()}
-                              >
-                                {flatNumber} ({flatInfo?.flatType || property.flatType})
-                              </SelectItem>
-                            );
-                          }).filter(Boolean)}
+                          {properties.map((property) => (
+                            <SelectItem
+                              key={property.id}
+                              value={property.id.toString()}
+                            >
+                              {property.flatNumber}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -552,10 +523,7 @@ export default function TenantsPage() {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter phone number"
-                          {...field}
-                        />
+                        <Input placeholder="Enter phone number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -587,10 +555,7 @@ export default function TenantsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Lease Start Date</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
+                      <DatePicker date={field.value} setDate={field.onChange} />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -601,10 +566,7 @@ export default function TenantsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Lease End Date</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
+                      <DatePicker date={field.value} setDate={field.onChange} />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -660,10 +622,7 @@ export default function TenantsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -707,10 +666,7 @@ export default function TenantsPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={createTenantMutation.isPending}
-                >
+                <Button type="submit" disabled={createTenantMutation.isPending}>
                   {createTenantMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -781,18 +737,23 @@ export default function TenantsPage() {
                           {/* Hardcoded flat numbers as requested */}
                           {FLAT_NUMBERS.map((flatNumber) => {
                             // Find property with this flat number
-                            const property = properties.find(p => p.flatNumber === flatNumber);
+                            const property = properties.find(
+                              (p) => p.flatNumber === flatNumber,
+                            );
                             if (!property) return null;
-                            
+
                             // Find if this flat is in our predefined list
-                            const flatInfo = FLATS.find(f => f.flatNumber === flatNumber);
-                            
+                            const flatInfo = FLATS.find(
+                              (f) => f.flatNumber === flatNumber,
+                            );
+
                             return (
                               <SelectItem
                                 key={property.id}
                                 value={property.id.toString()}
                               >
-                                {flatNumber} ({flatInfo?.flatType || property.flatType})
+                                {flatNumber} (
+                                {flatInfo?.flatType || property.flatType})
                               </SelectItem>
                             );
                           }).filter(Boolean)}
@@ -813,10 +774,7 @@ export default function TenantsPage() {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Enter phone number"
-                          {...field}
-                        />
+                        <Input placeholder="Enter phone number" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -848,10 +806,7 @@ export default function TenantsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Lease Start Date</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
+                      <DatePicker date={field.value} setDate={field.onChange} />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -862,10 +817,7 @@ export default function TenantsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Lease End Date</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
+                      <DatePicker date={field.value} setDate={field.onChange} />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -921,10 +873,7 @@ export default function TenantsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select status" />
@@ -968,10 +917,7 @@ export default function TenantsPage() {
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={updateTenantMutation.isPending}
-                >
+                <Button type="submit" disabled={updateTenantMutation.isPending}>
                   {updateTenantMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

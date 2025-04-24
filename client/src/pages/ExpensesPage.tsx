@@ -4,12 +4,32 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
@@ -28,7 +48,7 @@ import {
 // Extended schema with validation
 const expenseFormSchema = insertExpenseSchema.extend({
   amount: z.coerce.number().positive(),
-  date: z.string().refine(val => !isNaN(Date.parse(val)), {
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: "Please enter a valid date",
   }),
   attachmentUrl: z.string().optional(), // Making attachmentUrl optional
@@ -88,9 +108,7 @@ const SUBCATEGORIES: Record<string, Array<{ value: string; label: string }>> = {
     { value: "food", label: "Food" },
     { value: "others", label: "Others" },
   ],
-  others: [
-    { value: "others", label: "Others" },
-  ],
+  others: [{ value: "others", label: "Others" }],
 };
 
 export default function ExpensesPage() {
@@ -110,10 +128,29 @@ export default function ExpensesPage() {
   });
 
   // Query to fetch properties for dropdown
-  const { data: properties = [] } = useQuery({
-    queryKey: ["/api/properties"],
-  });
-
+  const properties = [
+    { id: 0, flatNumber: "ARDH Building" },
+    { id: 2, flatNumber: "101" },
+    { id: 3, flatNumber: "102" },
+    { id: 4, flatNumber: "103" },
+    { id: 5, flatNumber: "201" },
+    { id: 6, flatNumber: "202" },
+    { id: 7, flatNumber: "203" },
+    { id: 8, flatNumber: "204" },
+    { id: 9, flatNumber: "301" },
+    { id: 10, flatNumber: "302" },
+    { id: 11, flatNumber: "303" },
+    { id: 12, flatNumber: "304" },
+    { id: 13, flatNumber: "401" },
+    { id: 14, flatNumber: "402" },
+    { id: 15, flatNumber: "403" },
+    { id: 16, flatNumber: "404" },
+    { id: 17, flatNumber: "501" },
+    { id: 18, flatNumber: "502" },
+    { id: 19, flatNumber: "503" },
+    { id: 20, flatNumber: "504" },
+    { id: 21, flatNumber: "601" },
+  ];
   // Query to fetch vendors for dropdown
   const { data: vendors = [] } = useQuery({
     queryKey: ["/api/vendors"],
@@ -122,21 +159,22 @@ export default function ExpensesPage() {
   // Filtered vendors based on selected category
   const filteredVendors = React.useMemo(() => {
     if (!Array.isArray(vendors)) return [];
-    
+
     // Map service type to category
     const serviceToCategory: Record<string, string> = {
-      "electrical": "utility",
-      "plumbing": "general_maintenance",
-      "construction": "capital_expense",
-      "security": "operational",
-      "housekeeping": "operational",
-      "internet_provider": "utility",
-      "general": "others"
+      electrical: "utility",
+      plumbing: "general_maintenance",
+      construction: "capital_expense",
+      security: "operational",
+      housekeeping: "operational",
+      internet_provider: "utility",
+      general: "others",
     };
-    
-    return vendors.filter(vendor => 
-      !selectedCategory || 
-      serviceToCategory[vendor.serviceType] === selectedCategory
+
+    return vendors.filter(
+      (vendor) =>
+        !selectedCategory ||
+        serviceToCategory[vendor.serviceType] === selectedCategory,
     );
   }, [vendors, selectedCategory]);
 
@@ -216,7 +254,7 @@ export default function ExpensesPage() {
   // Update subcategory when category changes
   React.useEffect(() => {
     setSelectedCategory(watchCategory);
-    
+
     // Reset subcategory when category changes
     if (watchCategory !== selectedCategory) {
       form.setValue("subcategory", SUBCATEGORIES[watchCategory][0].value);
@@ -254,7 +292,10 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-6"
+                >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -273,7 +314,10 @@ export default function ExpensesPage() {
                             </FormControl>
                             <SelectContent>
                               {EXPENSE_CATEGORIES.map((category) => (
-                                <SelectItem key={category.value} value={category.value}>
+                                <SelectItem
+                                  key={category.value}
+                                  value={category.value}
+                                >
                                   {category.label}
                                 </SelectItem>
                               ))}
@@ -300,11 +344,16 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {SUBCATEGORIES[watchCategory]?.map((subcategory) => (
-                                <SelectItem key={subcategory.value} value={subcategory.value}>
-                                  {subcategory.label}
-                                </SelectItem>
-                              ))}
+                              {SUBCATEGORIES[watchCategory]?.map(
+                                (subcategory) => (
+                                  <SelectItem
+                                    key={subcategory.value}
+                                    value={subcategory.value}
+                                  >
+                                    {subcategory.label}
+                                  </SelectItem>
+                                ),
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -338,10 +387,14 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Date</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="date" 
+                            <Input
+                              type="date"
                               {...field}
-                              value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                              value={
+                                field.value instanceof Date
+                                  ? field.value.toISOString().split("T")[0]
+                                  : field.value
+                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -356,7 +409,9 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Property</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
                             value={field.value?.toString()}
                           >
                             <FormControl>
@@ -366,14 +421,15 @@ export default function ExpensesPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">Common Areas</SelectItem>
-                              {Array.isArray(properties) && properties.map((property) => (
-                                <SelectItem 
-                                  key={property.id} 
-                                  value={property.id.toString()}
-                                >
-                                  {property.flatNumber}
-                                </SelectItem>
-                              ))}
+                              {Array.isArray(properties) &&
+                                properties.map((property) => (
+                                  <SelectItem
+                                    key={property.id}
+                                    value={property.id.toString()}
+                                  >
+                                    {property.flatNumber}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -388,7 +444,9 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
                             value={field.value?.toString()}
                           >
                             <FormControl>
@@ -399,8 +457,8 @@ export default function ExpensesPage() {
                             <SelectContent>
                               <SelectItem value="0">None</SelectItem>
                               {filteredVendors.map((vendor) => (
-                                <SelectItem 
-                                  key={vendor.id} 
+                                <SelectItem
+                                  key={vendor.id}
                                   value={vendor.id.toString()}
                                 >
                                   {vendor.name} ({vendor.serviceType})
@@ -443,7 +501,8 @@ export default function ExpensesPage() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Optional: Enter a URL to an uploaded receipt or invoice
+                            Optional: Enter a URL to an uploaded receipt or
+                            invoice
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -484,7 +543,9 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center p-12">
-                <p className="text-muted-foreground">Bulk upload functionality is under development.</p>
+                <p className="text-muted-foreground">
+                  Bulk upload functionality is under development.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -495,9 +556,7 @@ export default function ExpensesPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Expense Records</CardTitle>
-                <CardDescription>
-                  View all expense records.
-                </CardDescription>
+                <CardDescription>View all expense records.</CardDescription>
               </div>
               <Button variant="outline" className="gap-1">
                 <FileSpreadsheet className="h-4 w-4" />
@@ -517,7 +576,9 @@ export default function ExpensesPage() {
                 <div>
                   {/* Last 5 expense entries section */}
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">Recent Expense Entries</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Recent Expense Entries
+                    </h3>
                     <div className="overflow-x-auto rounded-md border">
                       <Table>
                         <TableHeader>
@@ -539,11 +600,15 @@ export default function ExpensesPage() {
                               <TableCell className="capitalize">
                                 {expense.category}
                               </TableCell>
-                              <TableCell>{expense.subcategory || "-"}</TableCell>
                               <TableCell>
-                                {expense.propertyId ? 
-                                  (properties?.find(p => p.id === expense.propertyId)?.flatNumber || `#${expense.propertyId}`) : 
-                                  "Common Areas"}
+                                {expense.subcategory || "-"}
+                              </TableCell>
+                              <TableCell>
+                                {expense.propertyId
+                                  ? properties?.find(
+                                      (p) => p.id === expense.propertyId,
+                                    )?.flatNumber || `#${expense.propertyId}`
+                                  : "Common Areas"}
                               </TableCell>
                               <TableCell>{expense.vendorId || "-"}</TableCell>
                               <TableCell className="text-right font-medium">
@@ -558,10 +623,12 @@ export default function ExpensesPage() {
                       Showing the 5 most recent expense entries
                     </p>
                   </div>
-                  
+
                   {/* All expenses section */}
                   <div className="overflow-x-auto">
-                    <h3 className="text-lg font-semibold mb-2">All Expense Entries</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      All Expense Entries
+                    </h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -583,12 +650,16 @@ export default function ExpensesPage() {
                               {expense.category.replace("_", " ")}
                             </TableCell>
                             <TableCell>
-                              {expense.subcategory ? expense.subcategory.replace("_", " ") : "-"}
+                              {expense.subcategory
+                                ? expense.subcategory.replace("_", " ")
+                                : "-"}
                             </TableCell>
                             <TableCell>{expense.description}</TableCell>
                             <TableCell>
                               {expense.propertyId
-                                ? (properties?.find(p => p.id === expense.propertyId)?.flatNumber || `#${expense.propertyId}`)
+                                ? properties?.find(
+                                    (p) => p.id === expense.propertyId,
+                                  )?.flatNumber || `#${expense.propertyId}`
                                 : "Common"}
                             </TableCell>
                             <TableCell className="text-right font-medium">

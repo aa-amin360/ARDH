@@ -1,4 +1,3 @@
-
 import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -53,16 +52,19 @@ export default function LoginPage() {
     <div className="flex min-h-screen">
       {/* Left side with blurred building image */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <img 
+        {/* Dark grey overlay with blur */}
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-10" />
+
+        {/* Removed the image */}
+        {/* <img 
           src={ardhImg} 
           alt="ARDH Building" 
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gray-900/70 backdrop-blur-sm z-10" />
+          className="absolute inset-0 w-full h-full object-cover brightness-50" 
+        /> */}
 
         <div className="absolute inset-0 flex items-center justify-center z-20">
           <div className="text-white text-center p-8 max-w-xl">
-            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent drop-shadow-sm">
+            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent drop-shadow-sm">
               ARDH
             </h1>
             <p className="text-2xl font-light">AR's Dream Heights</p>
@@ -76,7 +78,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right side with login form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-4 md:p-8 lg:p-12 bg-gradient-to-b from-gray-50 to-white">
+      <div className="bg-black text-white w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
         <Card className="w-full max-w-md border border-gray-100 shadow-xl">
           <CardHeader className="space-y-2 flex flex-col items-center pb-8">
             <div className="w-16 h-16 rounded-full bg-gradient-to-r from-gray-700 to-gray-900 flex items-center justify-center mb-4 shadow-md">

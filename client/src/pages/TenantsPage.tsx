@@ -90,48 +90,41 @@ export default function TenantsPage() {
     },
     onError: (error) => {
       console.error("Error fetching tenants:", error);
-    }
+    },
   });
 
   // Use state for properties to ensure we have control over the data
   const [properties, setProperties] = useState<Property[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
-  
-  // Fetch properties using a direct approach
-  useEffect(() => {
-    const fetchProperties = async () => {
-      try {
-        setLoadingProperties(true);
-        const response = await fetch('/api/properties', {
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch properties: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Properties loaded for tenant form:", data.length);
-        setProperties(data);
-      } catch (error) {
-        console.error("Error loading properties:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load properties. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingProperties(false);
-      }
-    };
-    
-    fetchProperties();
-  }, [toast]);
 
-  // Sort properties by flat number in ascending order
-  const sortedProperties = [...properties].sort((a, b) =>
-    a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
-  );
+  useEffect(() => {
+    // Directly set hardcoded property values instead of fetching from API
+    const hardcodedProperties = [
+      { flatNumber: "101" },
+      { flatNumber: "102" },
+      { flatNumber: "103" },
+      { flatNumber: "201" },
+      { flatNumber: "202" },
+      { flatNumber: "203" },
+      { flatNumber: "204" },
+      { flatNumber: "301" },
+      { flatNumber: "302" },
+      { flatNumber: "303" },
+      { flatNumber: "304" },
+      { flatNumber: "401" },
+      { flatNumber: "402" },
+      { flatNumber: "403" },
+      { flatNumber: "404" },
+      { flatNumber: "501" },
+      { flatNumber: "502" },
+      { flatNumber: "503" },
+      { flatNumber: "504" },
+    ];
+
+    setLoadingProperties(true);
+    setProperties(hardcodedProperties);
+    setLoadingProperties(false);
+  }, []);
 
   // Create tenant mutation
   const createTenantMutation = useMutation({
