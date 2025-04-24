@@ -3,9 +3,9 @@ import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { Building2 } from "lucide-react";
-import ardhImg from "@assets/ARDH_Img.png";
+import ardhImg from "../assets/ARDH_Img.png";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -34,9 +34,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { loginMutation } = useAuth();
   const [, navigate] = useLocation();
-  const [isLoading, setIsLoading] = useState(false);
+  // Remove the line below as we're using loginMutation.isPending instead
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -47,15 +47,7 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: FormValues) => {
-    setIsLoading(true);
-    try {
-      const success = await login(data.username, data.password);
-      if (success) {
-        navigate("/dashboard");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    loginMutation.mutate(data);
   };
 
   return (
@@ -148,9 +140,9 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="w-full h-11 mt-2 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800 text-base"
-                  disabled={isLoading}
+                  disabled={loginMutation.isPending}
                 >
-                  {isLoading ? "Signing in..." : "Sign in"}
+                  {loginMutation.isPending ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
             </Form>
