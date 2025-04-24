@@ -111,6 +111,13 @@ export default function PropertiesPage() {
     refetchOnWindowFocus: true,
     enabled: false // Don't run automatically - we'll use our custom fetch
   });
+  
+  // Sort properties by flat number for consistent display
+  const sortedProperties = useMemo(() => {
+    return [...(properties || [])].sort((a, b) => 
+      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true })
+    );
+  }, [properties]);
 
   // Create property mutation
   const createPropertyMutation = useMutation({
