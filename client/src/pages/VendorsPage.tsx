@@ -53,15 +53,13 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
-import {
-  Loader2,
-  PlusCircle,
-  PencilLine,
-  Trash2,
-  Search,
-} from "lucide-react";
+import { Loader2, PlusCircle, PencilLine, Trash2, Search } from "lucide-react";
 
-import { Vendor, vendorServiceTypeEnum, vendorProvisionTypeEnum } from "@shared/schema";
+import {
+  Vendor,
+  vendorServiceTypeEnum,
+  vendorProvisionTypeEnum,
+} from "@shared/schema";
 
 // Define form validation schema
 const formSchema = z.object({
@@ -92,6 +90,7 @@ export default function VendorsPage() {
   // Fetch vendors
   const { data: vendors = [], isLoading } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
+    queryFn: () => apiRequest("GET", "/api/vendors").then((res) => res.json()),
   });
 
   // Form
@@ -137,7 +136,13 @@ export default function VendorsPage() {
 
   // Update vendor mutation
   const updateVendorMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<FormValues> }) => {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<FormValues>;
+    }) => {
       const res = await apiRequest("PUT", `/api/vendors/${id}`, data);
       return res.json();
     },
@@ -195,7 +200,7 @@ export default function VendorsPage() {
       address: data.address === "" ? undefined : data.address,
       notes: data.notes === "" ? undefined : data.notes,
     };
-    
+
     if (selectedVendor && isEditDialogOpen) {
       updateVendorMutation.mutate({ id: selectedVendor.id, data: submitData });
     } else {
@@ -230,7 +235,7 @@ export default function VendorsPage() {
   // Filter vendors based on search query
   const filteredVendors = vendors.filter((vendor) => {
     if (!searchQuery) return true;
-    
+
     const query = searchQuery.toLowerCase();
     return (
       vendor.name.toLowerCase().includes(query) ||
@@ -242,9 +247,9 @@ export default function VendorsPage() {
 
   // Get service type display name
   function getServiceTypeName(type: string): string {
-    return type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+    return type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   }
-  
+
   // Get provision type display name
   function getProvisionTypeName(type: string): string {
     if (type === "service") return "Service Provider";
@@ -257,7 +262,9 @@ export default function VendorsPage() {
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vendors Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Vendors Management
+          </h1>
           <p className="text-muted-foreground">
             Manage service providers and suppliers.
           </p>
@@ -319,20 +326,28 @@ export default function VendorsPage() {
                       <TableBody>
                         {filteredVendors.map((vendor) => (
                           <TableRow key={vendor.id}>
-                            <TableCell className="font-medium">{vendor.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {vendor.name}
+                            </TableCell>
                             <TableCell>
                               {getServiceTypeName(vendor.serviceType)}
                               <div className="text-xs text-muted-foreground">
-                                {vendor.provisionType === "service" ? "Service Provider" : "Supplier"}
+                                {vendor.provisionType === "service"
+                                  ? "Service Provider"
+                                  : "Supplier"}
                               </div>
                             </TableCell>
                             <TableCell>
                               <div>{vendor.phone}</div>
                               {vendor.email && (
-                                <div className="text-xs text-muted-foreground">{vendor.email}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {vendor.email}
+                                </div>
                               )}
                               {vendor.contactPerson && (
-                                <div className="text-xs">Contact: {vendor.contactPerson}</div>
+                                <div className="text-xs">
+                                  Contact: {vendor.contactPerson}
+                                </div>
                               )}
                             </TableCell>
                             <TableCell className="max-w-[200px] truncate">
@@ -341,7 +356,9 @@ export default function VendorsPage() {
                             <TableCell>
                               <span
                                 className={`inline-block px-2 py-1 rounded-full text-xs ${
-                                  vendor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                  vendor.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
                               >
                                 {vendor.isActive ? "Active" : "Inactive"}
@@ -372,7 +389,7 @@ export default function VendorsPage() {
                   </div>
                 )}
               </TabsContent>
-              
+
               {/* Other tabs with filtered lists */}
               {["utility", "maintenance", "other"].map((category) => (
                 <TabsContent key={category} value={category}>
@@ -390,7 +407,9 @@ export default function VendorsPage() {
                             <TableHead>Contact</TableHead>
                             <TableHead>Notes</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="text-right">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -402,7 +421,7 @@ export default function VendorsPage() {
                                   "plumbing",
                                   "water",
                                   "wifi",
-                                  "trash_collection"
+                                  "trash_collection",
                                 ].includes(vendor.serviceType);
                               } else if (category === "maintenance") {
                                 return [
@@ -412,7 +431,7 @@ export default function VendorsPage() {
                                   "pest_control",
                                   "hvac",
                                   "security",
-                                  "landscaping"
+                                  "landscaping",
                                 ].includes(vendor.serviceType);
                               } else if (category === "other") {
                                 return vendor.serviceType === "other";
@@ -421,17 +440,23 @@ export default function VendorsPage() {
                             })
                             .map((vendor) => (
                               <TableRow key={vendor.id}>
-                                <TableCell className="font-medium">{vendor.name}</TableCell>
+                                <TableCell className="font-medium">
+                                  {vendor.name}
+                                </TableCell>
                                 <TableCell>
                                   {getServiceTypeName(vendor.serviceType)}
                                   <div className="text-xs text-muted-foreground">
-                                    {vendor.provisionType === "service" ? "Service Provider" : "Supplier"}
+                                    {vendor.provisionType === "service"
+                                      ? "Service Provider"
+                                      : "Supplier"}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <div>{vendor.phone}</div>
                                   {vendor.email && (
-                                    <div className="text-xs text-muted-foreground">{vendor.email}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {vendor.email}
+                                    </div>
                                   )}
                                 </TableCell>
                                 <TableCell className="max-w-[200px] truncate">
@@ -440,7 +465,9 @@ export default function VendorsPage() {
                                 <TableCell>
                                   <span
                                     className={`inline-block px-2 py-1 rounded-full text-xs ${
-                                      vendor.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                                      vendor.isActive
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
                                     }`}
                                   >
                                     {vendor.isActive ? "Active" : "Inactive"}
@@ -563,7 +590,9 @@ export default function VendorsPage() {
                         <SelectContent>
                           {vendorProvisionTypeEnum.enumValues.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === "service" ? "Service Provider" : "Product Supplier"}
+                              {type === "service"
+                                ? "Service Provider"
+                                : "Product Supplier"}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -582,7 +611,11 @@ export default function VendorsPage() {
                     <FormItem>
                       <FormLabel>Email (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter email address" {...field} value={field.value || ""} />
+                        <Input
+                          placeholder="Enter email address"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -595,7 +628,11 @@ export default function VendorsPage() {
                     <FormItem>
                       <FormLabel>Contact Person (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter contact person name" {...field} value={field.value || ""} />
+                        <Input
+                          placeholder="Enter contact person name"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -610,7 +647,11 @@ export default function VendorsPage() {
                   <FormItem>
                     <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter address" {...field} value={field.value || ""} />
+                      <Input
+                        placeholder="Enter address"
+                        {...field}
+                        value={field.value || ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -624,7 +665,11 @@ export default function VendorsPage() {
                   <FormItem>
                     <FormLabel>Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Add any additional notes" {...field} value={field.value || ""} />
+                      <Textarea
+                        placeholder="Add any additional notes"
+                        {...field}
+                        value={field.value || ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -760,7 +805,9 @@ export default function VendorsPage() {
                         <SelectContent>
                           {vendorProvisionTypeEnum.enumValues.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === "service" ? "Service Provider" : "Product Supplier"}
+                              {type === "service"
+                                ? "Service Provider"
+                                : "Product Supplier"}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -779,7 +826,11 @@ export default function VendorsPage() {
                     <FormItem>
                       <FormLabel>Email (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter email address" {...field} value={field.value || ""} />
+                        <Input
+                          placeholder="Enter email address"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -792,7 +843,11 @@ export default function VendorsPage() {
                     <FormItem>
                       <FormLabel>Contact Person (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter contact person name" {...field} value={field.value || ""} />
+                        <Input
+                          placeholder="Enter contact person name"
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -807,7 +862,11 @@ export default function VendorsPage() {
                   <FormItem>
                     <FormLabel>Address (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter address" {...field} value={field.value || ""} />
+                      <Input
+                        placeholder="Enter address"
+                        {...field}
+                        value={field.value || ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -821,7 +880,11 @@ export default function VendorsPage() {
                   <FormItem>
                     <FormLabel>Notes (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Add any additional notes" {...field} value={field.value || ""} />
+                      <Textarea
+                        placeholder="Add any additional notes"
+                        {...field}
+                        value={field.value || ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -877,15 +940,25 @@ export default function VendorsPage() {
           <DialogHeader>
             <DialogTitle>Delete Vendor</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this vendor? This action cannot be undone.
+              Are you sure you want to delete this vendor? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             {selectedVendor && (
               <div className="space-y-2">
-                <p><span className="font-semibold">Name:</span> {selectedVendor.name}</p>
-                <p><span className="font-semibold">Service Type:</span> {getServiceTypeName(selectedVendor.serviceType)}</p>
-                <p><span className="font-semibold">Phone:</span> {selectedVendor.phone}</p>
+                <p>
+                  <span className="font-semibold">Name:</span>{" "}
+                  {selectedVendor.name}
+                </p>
+                <p>
+                  <span className="font-semibold">Service Type:</span>{" "}
+                  {getServiceTypeName(selectedVendor.serviceType)}
+                </p>
+                <p>
+                  <span className="font-semibold">Phone:</span>{" "}
+                  {selectedVendor.phone}
+                </p>
               </div>
             )}
           </div>

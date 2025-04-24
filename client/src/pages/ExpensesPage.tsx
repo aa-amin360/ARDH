@@ -52,6 +52,13 @@ const expenseFormSchema = insertExpenseSchema.extend({
     message: "Please enter a valid date",
   }),
   attachmentUrl: z.string().optional(), // Making attachmentUrl optional
+  
+  // Water tanker specific fields
+  tankerNumber: z.string().optional(),
+  liters: z.coerce.number().optional(),
+  personInCharge: z.string().optional(),
+  driverContact: z.string().optional(),
+  time: z.string().optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -220,6 +227,13 @@ export default function ExpensesPage() {
         propertyId: null,
         attachmentUrl: "",
         createdBy: 0,
+        
+        // Reset water tanker specific fields
+        tankerNumber: "",
+        liters: 0,
+        personInCharge: "",
+        driverContact: "",
+        time: "",
       });
       setSelectedCategory("utility");
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
@@ -246,6 +260,13 @@ export default function ExpensesPage() {
       propertyId: null,
       attachmentUrl: "",
       createdBy: 0,
+      
+      // Water tanker specific fields
+      tankerNumber: "",
+      liters: 0,
+      personInCharge: "",
+      driverContact: "",
+      time: "",
     },
   });
 
@@ -474,6 +495,84 @@ export default function ExpensesPage() {
                     />
                   </div>
 
+                  {/* Water Tanker specific fields */}
+                  {watchCategory === "utility" && form.watch("subcategory") === "water_tank_fill" && (
+                    <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                      <h3 className="text-lg font-medium">Water Tanker Details</h3>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="tankerNumber"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tanker Number</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter tanker number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="liters"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Liters Discharged</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="Enter liters" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="personInCharge"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Driver Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter driver name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="driverContact"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Driver Contact</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Enter driver contact" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="time"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Time Filled</FormLabel>
+                              <FormControl>
+                                <Input type="time" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
                   <FormField
                     control={form.control}
                     name="description"
