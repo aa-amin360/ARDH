@@ -90,7 +90,13 @@ export default function TenantsPage() {
   // Fetch tenants with console logging for debugging
   const { data: tenants = [], isLoading: loadingTenants } = useQuery<Tenant[]>({
     queryKey: ["/api/tenants"],
-    staleTime: 1000
+    staleTime: 1000,
+    onSuccess: (data) => {
+      console.log("Tenants data fetched:", data);
+    },
+    onError: (error) => {
+      console.error("Error fetching tenants:", error);
+    }
   });
 
   // Use state for properties to ensure we have control over the data

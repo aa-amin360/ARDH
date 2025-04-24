@@ -69,6 +69,12 @@ export default function IncomePage() {
     isError,
   } = useQuery({
     queryKey: ["/api/incomes"],
+    onSuccess: (data) => {
+      console.log("Income data fetched:", data);
+    },
+    onError: (error) => {
+      console.error("Error fetching income data:", error);
+    }
   });
 
   //Dropdown for properties

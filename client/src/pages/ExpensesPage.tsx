@@ -125,6 +125,12 @@ export default function ExpensesPage() {
     isError,
   } = useQuery({
     queryKey: ["/api/expenses"],
+    onSuccess: (data) => {
+      console.log("Expenses data fetched:", data);
+    },
+    onError: (error) => {
+      console.error("Error fetching expenses data:", error);
+    }
   });
 
   // Query to fetch properties for dropdown
