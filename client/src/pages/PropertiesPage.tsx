@@ -35,6 +35,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Table, 
@@ -967,7 +969,380 @@ export default function PropertiesPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="charges" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Property Charges</CardTitle>
+              <CardDescription>
+                Manage rent, maintenance, and water fees for properties
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PropertyChargesTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Property Charges Tab Component
+function PropertyChargesTab() {
+  const { toast } = useToast();
+  const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("");
+  const [selectedChargeType, setSelectedChargeType] = useState<string>("");
+  const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    flatNumber: "",
+    chargeType: "rent",
+    amount: 0,
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+    nestawayId: ""
+  });
+
+  // Load all property charges
+  const { 
+    data: propertyCharges, 
+    isLoading: isLoadingCharges 
+  } = useQuery<PropertyCharge[]>({
+    queryKey: ['/api/property-charges'],
+    enabled: true,
+  });
+
+  // Load all properties to populate the dropdown
+  const { 
+    data: properties, 
+    isLoading: isLoadingProperties 
+  } = useQuery({
+    queryKey: ['/api/properties'],
+    enabled: true,
+  });
+
+  // Create mutation for adding a new property charge
+  const createChargeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/property-charges", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Charge added successfully",
+        description: "The property charge has been added.",
+      });
+      setIsAddChargeOpen(false);
+      setFormData({
+        flatNumber: "",
+        chargeType: "rent",
+        amount: 0,
+        effectiveFrom: new Date().toISOString().slice(0, 10),
+        nestawayId: ""
+      });
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['/api/property-charges'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error adding charge",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Helper function to convert charge type to display name
+  const getChargeTypeName = (chargeType: string) => {
+    switch (chargeType) {
+      case "rent": return "Rent";
+      case "maint_fee": return "Maintenance Fee";
+      case "water_fee": return "Water Fee";
+      default: return chargeType;
+    }
+  };
+
+  // Extract unique flat numbers
+  const uniqueFlatNumbers: string[] = [];
+  if (Array.isArray(properties)) {
+    properties.forEach(p => {
+      if (p.flatNumber && !uniqueFlatNumbers.includes(p.flatNumber)) {
+        uniqueFlatNumbers.push(p.flatNumber);
+      }
+    });
+  }
+
+  // Filter charges based on selections
+  const filteredCharges = Array.isArray(propertyCharges) 
+    ? propertyCharges.filter(charge => {
+        return (
+          (selectedFlatNumber === "all" || selectedFlatNumber === "" || charge.flatNumber === selectedFlatNumber) &&
+          (selectedChargeType === "all" || selectedChargeType === "" || charge.chargeType === selectedChargeType)
+        );
+      })
+    : [];
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createChargeMutation.mutate(formData);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Property Charges Management</h2>
+          <p className="text-muted-foreground">
+            View and manage property charges including rent, maintenance fees, and water fees
+          </p>
+        </div>
+
+        <Button onClick={() => setIsAddChargeOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Add New Charge
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Property Charges History</CardTitle>
+          <CardDescription>
+            View history of charges for all properties
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-4 mb-6">
+            <div className="flex-1">
+              <Label htmlFor="flatFilter">Filter by Flat Number</Label>
+              <Select
+                value={selectedFlatNumber}
+                onValueChange={setSelectedFlatNumber}
+              >
+                <SelectTrigger id="flatFilter">
+                  <SelectValue placeholder="All Flats" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Flats</SelectItem>
+                  {uniqueFlatNumbers.map(flatNumber => (
+                    <SelectItem key={flatNumber} value={flatNumber}>
+                      Flat {flatNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex-1">
+              <Label htmlFor="chargeTypeFilter">Filter by Charge Type</Label>
+              <Select
+                value={selectedChargeType}
+                onValueChange={setSelectedChargeType}
+              >
+                <SelectTrigger id="chargeTypeFilter">
+                  <SelectValue placeholder="All Charge Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Charge Types</SelectItem>
+                  <SelectItem value="rent">Rent</SelectItem>
+                  <SelectItem value="maint_fee">Maintenance Fee</SelectItem>
+                  <SelectItem value="water_fee">Water Fee</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedFlatNumber("");
+                  setSelectedChargeType("");
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </div>
+          
+          {isLoadingCharges ? (
+            <div className="flex justify-center items-center h-32">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Flat Number</TableHead>
+                    <TableHead>Charge Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Effective From</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCharges && filteredCharges.length > 0 ? (
+                    filteredCharges.map(charge => (
+                      <TableRow key={charge.id}>
+                        <TableCell className="font-medium">{charge.flatNumber}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            charge.chargeType === "rent" ? "default" : 
+                            charge.chargeType === "maint_fee" ? "secondary" : 
+                            "outline"
+                          }>
+                            {getChargeTypeName(charge.chargeType)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatCurrency(charge.amount)}</TableCell>
+                        <TableCell>{formatDate(new Date(charge.effectiveFrom))}</TableCell>
+                        <TableCell>
+                          {charge.effectiveTo ? (
+                            <Badge variant="outline">Historical</Badge>
+                          ) : (
+                            <Badge variant="default">Current</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4">
+                        {filteredCharges?.length === 0 ? 
+                          "No charges found with the selected filters." : 
+                          "No property charges found."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add New Charge Dialog */}
+      <Dialog open={isAddChargeOpen} onOpenChange={setIsAddChargeOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add New Property Charge</DialogTitle>
+            <DialogDescription>
+              Set a new rate for rent, maintenance fee, or water charge for a property.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="flatNumber" className="text-right">
+                  Flat Number
+                </Label>
+                <div className="col-span-3">
+                  <Select
+                    value={formData.flatNumber}
+                    onValueChange={(value) => setFormData({...formData, flatNumber: value})}
+                    required
+                  >
+                    <SelectTrigger id="flatNumber">
+                      <SelectValue placeholder="Select flat number" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueFlatNumbers.map(flatNumber => (
+                        <SelectItem key={flatNumber} value={flatNumber}>
+                          Flat {flatNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="chargeType" className="text-right">
+                  Charge Type
+                </Label>
+                <div className="col-span-3">
+                  <Select
+                    value={formData.chargeType}
+                    onValueChange={(value) => setFormData({...formData, chargeType: value})}
+                    required
+                  >
+                    <SelectTrigger id="chargeType">
+                      <SelectValue placeholder="Select charge type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rent">Rent</SelectItem>
+                      <SelectItem value="maint_fee">Maintenance Fee</SelectItem>
+                      <SelectItem value="water_fee">Water Fee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="amount" className="text-right">
+                  Amount (₹)
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value) || 0})}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="effectiveFrom" className="text-right">
+                  Effective From
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="effectiveFrom"
+                    type="date"
+                    value={formData.effectiveFrom}
+                    onChange={(e) => setFormData({...formData, effectiveFrom: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nestawayId" className="text-right">
+                  Nestaway ID
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="nestawayId"
+                    type="text"
+                    value={formData.nestawayId}
+                    onChange={(e) => setFormData({...formData, nestawayId: e.target.value})}
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                onClick={() => setIsAddChargeOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createChargeMutation.isPending}>
+                {createChargeMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Add Charge
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
