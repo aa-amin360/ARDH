@@ -81,10 +81,16 @@ export default function TenantsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch tenants
+  // Fetch tenants with console logging for debugging
   const { data: tenants = [], isLoading: loadingTenants } = useQuery<Tenant[]>({
     queryKey: ["/api/tenants"],
-    staleTime: 10000,
+    staleTime: 1000,
+    onSuccess: (data) => {
+      console.log("Tenants loaded:", data.length);
+    },
+    onError: (error) => {
+      console.error("Error fetching tenants:", error);
+    }
   });
 
   // Use state for properties to ensure we have control over the data
