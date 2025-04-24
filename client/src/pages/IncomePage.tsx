@@ -409,7 +409,7 @@ export default function IncomePage() {
                 <div>
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-2">
-                      Recent Income Entries
+                      Last Entered Records
                     </h3>
                     <div className="overflow-x-auto rounded-md border">
                       <Table>
@@ -449,7 +449,7 @@ export default function IncomePage() {
                       </Table>
                     </div>
                     <p className="text-xs text-gray-500 mt-2 text-right">
-                      Showing the 5 most recent income entries
+                      Showing the 5 most recent entries
                     </p>
                   </div>
 

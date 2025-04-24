@@ -620,7 +620,7 @@ export default function ExpensesPage() {
                       </Table>
                     </div>
                     <p className="text-xs text-gray-500 mt-2 text-right">
-                      Showing the 5 most recent expense entries
+                      Showing the 5 most recent entries
                     </p>
                   </div>
 
