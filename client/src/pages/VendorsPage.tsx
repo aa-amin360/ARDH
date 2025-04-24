@@ -101,7 +101,7 @@ export default function VendorsPage() {
       name: "",
       phone: "",
       email: "",
-      serviceType: "Plumbing", // Valid enum value from vendorServiceTypeEnum
+      serviceType: "plumbing", // Valid enum value from vendorServiceTypeEnum - lowercase is crucial
       provisionType: "service", // Default provision type
       contactPerson: "",
       address: "",
@@ -398,17 +398,17 @@ export default function VendorsPage() {
                             .filter((vendor) => {
                               if (category === "maintenance") {
                                 return [
-                                  "Plumbing",
-                                  "Electrical",
-                                  "Wood_work",
-                                  "Paint_Job",
-                                  "Other"
+                                  "plumbing",
+                                  "electrical",
+                                  "wood_work",
+                                  "paint_job",
+                                  "other"
                                 ].includes(vendor.serviceType);
                               } else if (category === "utilities") {
                                 return [
-                                  "Electrical",
-                                  "Water",
-                                  "Other"
+                                  "electrical",
+                                  "water",
+                                  "other"
                                 ].includes(vendor.serviceType);
                               } else if (category === "supplies") {
                                 return vendor.provisionType === "product";
