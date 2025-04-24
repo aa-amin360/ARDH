@@ -10,7 +10,9 @@ import {
   insertExpenseSchema,
   insertWaterTankSchema,
   insertTenantSchema,
-  insertVendorSchema
+  insertVendorSchema,
+  insertPropertyChargeSchema,
+  insertTenantChargeSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -672,6 +674,256 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({ message: 'Vendor deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Property Charges routes
+  app.get('/api/property-charges', isAuthenticated, async (req, res, next) => {
+    try {
+      const charges = await storage.getPropertyCharges();
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/properties/:flatNumber/charges', isAuthenticated, async (req, res, next) => {
+    try {
+      const flatNumber = req.params.flatNumber;
+      const charges = await storage.getPropertyChargesByFlat(flatNumber);
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/properties/:flatNumber/current-charges', isAuthenticated, async (req, res, next) => {
+    try {
+      const flatNumber = req.params.flatNumber;
+      const charges = await storage.getCurrentPropertyCharges(flatNumber);
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/properties/:flatNumber/charge-history/:chargeType', isAuthenticated, async (req, res, next) => {
+    try {
+      const { flatNumber, chargeType } = req.params;
+      const charges = await storage.getPropertyChargeHistory(flatNumber, chargeType);
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/property-charges/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const charge = await storage.getPropertyCharge(id);
+      
+      if (!charge) {
+        return res.status(404).json({ message: 'Property charge not found' });
+      }
+      
+      res.json(charge);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post('/api/property-charges', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
+    try {
+      const chargeData = insertPropertyChargeSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id
+      });
+      
+      const newCharge = await storage.createPropertyCharge(chargeData);
+      res.status(201).json(newCharge);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.put('/api/property-charges/:id', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const chargeData = insertPropertyChargeSchema.partial().parse(req.body);
+      
+      const updatedCharge = await storage.updatePropertyCharge(id, chargeData);
+      
+      if (!updatedCharge) {
+        return res.status(404).json({ message: 'Property charge not found' });
+      }
+      
+      res.json(updatedCharge);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.delete('/api/property-charges/:id', isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deletePropertyCharge(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Property charge not found' });
+      }
+      
+      res.json({ message: 'Property charge deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Tenant Charges routes
+  app.get('/api/tenant-charges', isAuthenticated, async (req, res, next) => {
+    try {
+      const charges = await storage.getTenantCharges();
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/tenants/:tenantId/charges', isAuthenticated, async (req, res, next) => {
+    try {
+      const tenantId = parseInt(req.params.tenantId);
+      const charges = await storage.getTenantChargesByTenant(tenantId);
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/tenants/:tenantId/current-charges', isAuthenticated, async (req, res, next) => {
+    try {
+      const tenantId = parseInt(req.params.tenantId);
+      const charges = await storage.getCurrentTenantCharges(tenantId);
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/tenants/:tenantId/charge-history/:chargeType', isAuthenticated, async (req, res, next) => {
+    try {
+      const tenantId = parseInt(req.params.tenantId);
+      const { chargeType } = req.params;
+      const charges = await storage.getTenantChargeHistory(tenantId, chargeType);
+      res.json(charges);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.get('/api/tenant-charges/:id', isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const charge = await storage.getTenantCharge(id);
+      
+      if (!charge) {
+        return res.status(404).json({ message: 'Tenant charge not found' });
+      }
+      
+      res.json(charge);
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  app.post('/api/tenant-charges', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
+    try {
+      const chargeData = insertTenantChargeSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id
+      });
+      
+      const newCharge = await storage.createTenantCharge(chargeData);
+      res.status(201).json(newCharge);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.put('/api/tenant-charges/:id', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const chargeData = insertTenantChargeSchema.partial().parse(req.body);
+      
+      const updatedCharge = await storage.updateTenantCharge(id, chargeData);
+      
+      if (!updatedCharge) {
+        return res.status(404).json({ message: 'Tenant charge not found' });
+      }
+      
+      res.json(updatedCharge);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+  
+  app.delete('/api/tenant-charges/:id', isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTenantCharge(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: 'Tenant charge not found' });
+      }
+      
+      res.json({ message: 'Tenant charge deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Helper route to sync property charge with tenant
+  app.post('/api/properties/:flatNumber/sync-charge', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
+    try {
+      const { flatNumber } = req.params;
+      const { chargeType, amount, effectiveFrom } = req.body;
+      
+      if (!chargeType || !amount || !effectiveFrom) {
+        return res.status(400).json({ message: 'Missing required fields: chargeType, amount, effectiveFrom' });
+      }
+      
+      await storage.syncPropertyChargeWithTenant(
+        flatNumber,
+        chargeType,
+        amount,
+        new Date(effectiveFrom),
+        (req.user as any).id
+      );
+      
+      res.json({ message: 'Property charge synced with tenant charges successfully' });
+    } catch (error) {
+      next(error);
+    }
+  });
+  
+  // Helper route to get current tenants for a flat
+  app.get('/api/properties/:flatNumber/current-tenants', isAuthenticated, async (req, res, next) => {
+    try {
+      const { flatNumber } = req.params;
+      const tenants = await storage.getCurrentTenantsForFlat(flatNumber);
+      res.json(tenants);
     } catch (error) {
       next(error);
     }
