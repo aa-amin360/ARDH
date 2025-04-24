@@ -101,7 +101,7 @@ export default function VendorsPage() {
       name: "",
       phone: "",
       email: "",
-      serviceType: "Plumbing", // Default service type
+      serviceType: "Plumbing", // Default service type - make sure it's a valid enum value
       provisionType: "service", // Default provision type
       contactPerson: "",
       address: "",
