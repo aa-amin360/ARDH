@@ -50,6 +50,13 @@ export default function IncomePage() {
   } = useQuery({
     queryKey: ["/api/incomes"]
   });
+  
+  // Query to fetch properties
+  const {
+    data: properties = [],
+  } = useQuery({
+    queryKey: ["/api/properties"]
+  });
 
   // Mutation to add a new income
   const createIncomeMutation = useMutation({
@@ -243,7 +250,7 @@ export default function IncomePage() {
                           <FormLabel>Property</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            defaultValue={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -252,25 +259,20 @@ export default function IncomePage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">Common / All Properties</SelectItem>
-                              <SelectItem value="1">101</SelectItem>
-                              <SelectItem value="2">102</SelectItem>
-                              <SelectItem value="3">103</SelectItem>
-                              <SelectItem value="4">201</SelectItem>
-                              <SelectItem value="5">202</SelectItem>
-                              <SelectItem value="6">203</SelectItem>
-                              <SelectItem value="7">204</SelectItem>
-                              <SelectItem value="8">301</SelectItem>
-                              <SelectItem value="9">302</SelectItem>
-                              <SelectItem value="10">303</SelectItem>
-                              <SelectItem value="11">304</SelectItem>
-                              <SelectItem value="12">401</SelectItem>
-                              <SelectItem value="13">402</SelectItem>
-                              <SelectItem value="14">403</SelectItem>
-                              <SelectItem value="15">404</SelectItem>
-                              <SelectItem value="16">501</SelectItem>
-                              <SelectItem value="17">502</SelectItem>
-                              <SelectItem value="18">503</SelectItem>
-                              <SelectItem value="19">504</SelectItem>
+                              {properties
+                                .slice()
+                                .sort((a, b) => {
+                                  // Extract numeric parts for proper sorting (101 should come before 204)
+                                  const numA = parseInt(a.flatNumber);
+                                  const numB = parseInt(b.flatNumber);
+                                  return numA - numB;
+                                })
+                                .map((property) => (
+                                  <SelectItem key={property.id} value={property.id.toString()}>
+                                    {property.flatNumber}
+                                  </SelectItem>
+                                ))
+                              }
                             </SelectContent>
                           </Select>
                           <FormDescription>
