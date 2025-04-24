@@ -453,11 +453,19 @@ export default function ExpensesPage() {
                               {loadingProperties ? (
                                 <SelectItem value="_loading" disabled>Loading properties...</SelectItem>
                               ) : Array.isArray(properties) && properties.length > 0 ? (
-                                properties.map((property) => (
-                                  <SelectItem key={property.id} value={property.id.toString()}>
-                                    {property.flatNumber}
-                                  </SelectItem>
-                                ))
+                                properties
+                                  .slice()
+                                  .sort((a, b) => {
+                                    // Extract numeric parts for proper sorting (101 should come before 204)
+                                    const numA = parseInt(a.flatNumber);
+                                    const numB = parseInt(b.flatNumber);
+                                    return numA - numB;
+                                  })
+                                  .map((property) => (
+                                    <SelectItem key={property.id} value={property.id.toString()}>
+                                      {property.flatNumber}
+                                    </SelectItem>
+                                  ))
                               ) : (
                                 <SelectItem value="_none" disabled>No properties available</SelectItem>
                               )}
