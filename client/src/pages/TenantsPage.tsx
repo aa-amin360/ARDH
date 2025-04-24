@@ -87,13 +87,40 @@ export default function TenantsPage() {
     staleTime: 10000,
   });
 
-  // Fetch properties for the dropdown
-  const { data: properties = [], isLoading: loadingProperties } = useQuery<
-    Property[]
-  >({
-    queryKey: ["/api/properties"],
-    staleTime: 10000,
-  });
+  // Use state for properties to ensure we have control over the data
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
+  
+  // Fetch properties using a direct approach
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoadingProperties(true);
+        const response = await fetch('/api/properties', {
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch properties: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Properties loaded for tenant form:", data.length);
+        setProperties(data);
+      } catch (error) {
+        console.error("Error loading properties:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load properties. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingProperties(false);
+      }
+    };
+    
+    fetchProperties();
+  }, [toast]);
 
   // Sort properties by flat number in ascending order
   const sortedProperties = [...properties].sort((a, b) =>
