@@ -288,9 +288,9 @@ export default function VendorsPage() {
             <Tabs defaultValue="all" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="all">All Vendors</TabsTrigger>
+                <TabsTrigger value="utility">Utility</TabsTrigger>
                 <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-                <TabsTrigger value="utilities">Utilities</TabsTrigger>
-                <TabsTrigger value="supplies">Supplies</TabsTrigger>
+                <TabsTrigger value="other">Others</TabsTrigger>
               </TabsList>
               <TabsContent value="all">
                 {isLoading ? (
@@ -374,7 +374,7 @@ export default function VendorsPage() {
               </TabsContent>
               
               {/* Other tabs with filtered lists */}
-              {["maintenance", "utilities", "supplies"].map((category) => (
+              {["utility", "maintenance", "other"].map((category) => (
                 <TabsContent key={category} value={category}>
                   {isLoading ? (
                     <div className="flex justify-center py-8">
@@ -396,22 +396,26 @@ export default function VendorsPage() {
                         <TableBody>
                           {filteredVendors
                             .filter((vendor) => {
-                              if (category === "maintenance") {
+                              if (category === "utility") {
                                 return [
+                                  "electrical",
                                   "plumbing",
-                                  "electrical",
-                                  "wood_work",
-                                  "paint_job",
-                                  "other"
-                                ].includes(vendor.serviceType);
-                              } else if (category === "utilities") {
-                                return [
-                                  "electrical",
                                   "water",
-                                  "other"
+                                  "wifi",
+                                  "trash_collection"
                                 ].includes(vendor.serviceType);
-                              } else if (category === "supplies") {
-                                return vendor.provisionType === "product";
+                              } else if (category === "maintenance") {
+                                return [
+                                  "paint_job",
+                                  "wood_work",
+                                  "cleaning",
+                                  "pest_control",
+                                  "hvac",
+                                  "security",
+                                  "landscaping"
+                                ].includes(vendor.serviceType);
+                              } else if (category === "other") {
+                                return vendor.serviceType === "other";
                               }
                               return false;
                             })

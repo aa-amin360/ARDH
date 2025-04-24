@@ -71,11 +71,21 @@ export const expenseSubcategoryEnum = pgEnum('expense_subcategory', [
   'Other'
 ]);
 export const vendorServiceTypeEnum = pgEnum('vendor_service_type', [
+  // Utility vendors
   'electrical',
   'plumbing',
+  'water',
+  'wifi',
+  'trash_collection',
+  // Maintenance vendors
   'paint_job',
   'wood_work',
-  'water',
+  'cleaning',
+  'pest_control', 
+  'hvac',
+  'security', 
+  'landscaping',
+  // Others
   'other'
 ]);
 export const vendorProvisionTypeEnum = pgEnum('vendor_provision_type', [
