@@ -101,7 +101,7 @@ export default function VendorsPage() {
       name: "",
       phone: "",
       email: "",
-      serviceType: "Plumbing", // Default service type - make sure it's a valid enum value
+      serviceType: "Plumbing", // Valid enum value from vendorServiceTypeEnum
       provisionType: "service", // Default provision type
       contactPerson: "",
       address: "",
@@ -189,11 +189,11 @@ export default function VendorsPage() {
     const submitData = {
       ...data,
       createdBy: user?.id || 1,
-      // Handle empty string fields as null for optional fields
-      email: data.email === "" ? null : data.email,
-      contactPerson: data.contactPerson === "" ? null : data.contactPerson,
-      address: data.address === "" ? null : data.address,
-      notes: data.notes === "" ? null : data.notes,
+      // Convert empty strings to undefined (not null) for optional fields
+      email: data.email === "" ? undefined : data.email,
+      contactPerson: data.contactPerson === "" ? undefined : data.contactPerson,
+      address: data.address === "" ? undefined : data.address,
+      notes: data.notes === "" ? undefined : data.notes,
     };
     
     if (selectedVendor && isEditDialogOpen) {
@@ -243,6 +243,14 @@ export default function VendorsPage() {
   // Get service type display name
   function getServiceTypeName(type: string): string {
     return type.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  }
+  
+  // Get provision type display name
+  function getProvisionTypeName(type: string): string {
+    if (type === "service") return "Service Provider";
+    if (type === "product") return "Product Supplier";
+    if (type === "both") return "Both Services & Products";
+    return type;
   }
 
   return (
