@@ -57,7 +57,15 @@ import {
   TabsList,
   TabsTrigger,
 } from "../components/ui/tabs";
-import { Loader2, PlusCircle, Edit, Trash2, Search, Upload, FileSpreadsheet } from "lucide-react";
+import {
+  Loader2,
+  PlusCircle,
+  Edit,
+  Trash2,
+  Search,
+  Upload,
+  FileSpreadsheet,
+} from "lucide-react";
 
 import { Tenant, InsertTenant, Property } from "@shared/schema";
 import { FLATS } from "@shared/constants";
@@ -90,13 +98,14 @@ export default function TenantsPage() {
   // Fetch tenants with console logging for debugging
   const { data: tenants = [], isLoading: loadingTenants } = useQuery<Tenant[]>({
     queryKey: ["/api/tenants"],
+    queryFn: () => apiRequest("GET", "/api/tenants").then((res) => res.json()),
     staleTime: 1000,
     onSuccess: (data) => {
       console.log("Tenants data fetched:", data);
     },
     onError: (error) => {
       console.error("Error fetching tenants:", error);
-    }
+    },
   });
 
   // Use state for properties to ensure we have control over the data
@@ -207,7 +216,7 @@ export default function TenantsPage() {
         tenant.name.toLowerCase().includes(lowerCaseQuery) ||
         tenant.flatNumber?.toLowerCase().includes(lowerCaseQuery) ||
         tenant.phone?.toLowerCase().includes(lowerCaseQuery) ||
-        tenant.email?.toLowerCase().includes(lowerCaseQuery)
+        tenant.email?.toLowerCase().includes(lowerCaseQuery),
     );
   }, [tenants, searchQuery]);
 
@@ -247,7 +256,7 @@ export default function TenantsPage() {
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
         createdBy: z.number(),
-      })
+      }),
     ),
     defaultValues: {
       name: "",
@@ -257,7 +266,7 @@ export default function TenantsPage() {
       flatNumber: "",
       leaseStartDate: new Date(),
       leaseEndDate: new Date(
-        new Date().setFullYear(new Date().getFullYear() + 1)
+        new Date().setFullYear(new Date().getFullYear() + 1),
       ),
       rentAmount: 0,
       securityDeposit: 0,
@@ -284,7 +293,7 @@ export default function TenantsPage() {
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
         createdBy: z.number(),
-      })
+      }),
     ),
     defaultValues: {
       id: 0,
@@ -295,7 +304,7 @@ export default function TenantsPage() {
       flatNumber: "",
       leaseStartDate: new Date(),
       leaseEndDate: new Date(
-        new Date().setFullYear(new Date().getFullYear() + 1)
+        new Date().setFullYear(new Date().getFullYear() + 1),
       ),
       rentAmount: 0,
       securityDeposit: 0,
@@ -350,7 +359,9 @@ export default function TenantsPage() {
     <Card className="container mx-auto mb-8">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-2xl font-bold">Tenant Management</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Tenant Management
+          </CardTitle>
           <CardDescription>
             Manage tenant information and leases
           </CardDescription>
@@ -374,7 +385,7 @@ export default function TenantsPage() {
             <TabsTrigger value="add">Add Tenant</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           </TabsList>
-          
+
           {/* View Tenants Tab */}
           <TabsContent value="view" className="mt-4">
             {loadingTenants ? (
@@ -406,7 +417,8 @@ export default function TenantsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Array.isArray(filteredTenants) && filteredTenants.length > 0 ? (
+                        {Array.isArray(filteredTenants) &&
+                        filteredTenants.length > 0 ? (
                           filteredTenants.slice(0, 5).map((tenant: any) => (
                             <TableRow key={`tenant-${tenant.id}`}>
                               <TableCell className="font-medium">
@@ -420,14 +432,16 @@ export default function TenantsPage() {
                                 ₹{tenant.rentAmount.toLocaleString()}
                               </TableCell>
                               <TableCell>
-                                <Badge className={getStatusColor(tenant.status)}>
+                                <Badge
+                                  className={getStatusColor(tenant.status)}
+                                >
                                   {tenant.status.replace("_", " ")}
                                 </Badge>
                               </TableCell>
                               <TableCell>
                                 {format(
                                   new Date(tenant.createdAt || new Date()),
-                                  "dd MMM yyyy"
+                                  "dd MMM yyyy",
                                 )}
                               </TableCell>
                             </TableRow>
@@ -446,9 +460,7 @@ export default function TenantsPage() {
 
                 {/* All Tenants table */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">
-                    All Tenants
-                  </h3>
+                  <h3 className="text-lg font-semibold mb-2">All Tenants</h3>
                   <div className="rounded-md border">
                     <Table>
                       <TableHeader>
@@ -463,7 +475,8 @@ export default function TenantsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Array.isArray(filteredTenants) && filteredTenants.length > 0 ? (
+                        {Array.isArray(filteredTenants) &&
+                        filteredTenants.length > 0 ? (
                           filteredTenants.map((tenant: any) => (
                             <TableRow key={`all-${tenant.id}`}>
                               <TableCell className="font-medium">
@@ -488,14 +501,19 @@ export default function TenantsPage() {
                                 </div>
                                 <div className="text-sm text-muted-foreground">
                                   to{" "}
-                                  {format(new Date(tenant.leaseEndDate), "dd MMM yyyy")}
+                                  {format(
+                                    new Date(tenant.leaseEndDate),
+                                    "dd MMM yyyy",
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 ₹{tenant.rentAmount.toLocaleString()}
                               </TableCell>
                               <TableCell>
-                                <Badge className={getStatusColor(tenant.status)}>
+                                <Badge
+                                  className={getStatusColor(tenant.status)}
+                                >
                                   {tenant.status.replace("_", " ")}
                                 </Badge>
                               </TableCell>
@@ -537,7 +555,7 @@ export default function TenantsPage() {
               </div>
             )}
           </TabsContent>
-          
+
           {/* Add Tenant Tab */}
           <TabsContent value="add" className="mt-4">
             <Card>
@@ -549,7 +567,10 @@ export default function TenantsPage() {
               </CardHeader>
               <CardContent>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-4"
+                  >
                     {/* Form fields */}
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
@@ -569,8 +590,8 @@ export default function TenantsPage() {
                     </div>
 
                     {/* Submit button */}
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="mt-4"
                       disabled={createTenantMutation.isPending}
                     >
@@ -629,11 +650,14 @@ export default function TenantsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={onDeleteConfirm}
               disabled={deleteTenantMutation.isPending}
             >

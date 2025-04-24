@@ -124,7 +124,8 @@ export default function ExpensesPage() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["/api/expenses"]
+    queryKey: ["/api/expenses"],
+    queryFn: () => apiRequest("GET", "/api/expenses").then((res) => res.json()),
   });
 
   // Query to fetch properties for dropdown
@@ -296,8 +297,227 @@ export default function ExpensesPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-6"
                 >
-                  {/* Form fields */}
-                  {/* ... form fields here ... */}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {EXPENSE_CATEGORIES.map((category) => (
+                                <SelectItem
+                                  key={category.value}
+                                  value={category.value}
+                                >
+                                  {category.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="subcategory"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subcategory</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subcategory" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {SUBCATEGORIES[watchCategory]?.map(
+                                (subcategory) => (
+                                  <SelectItem
+                                    key={subcategory.value}
+                                    value={subcategory.value}
+                                  >
+                                    {subcategory.label}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount (₹)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Enter amount"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={
+                                field.value instanceof Date
+                                  ? field.value.toISOString().split("T")[0]
+                                  : field.value
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="propertyId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Property</FormLabel>
+                          <Select
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
+                            value={field.value?.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select property (optional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="0">Common Areas</SelectItem>
+                              {Array.isArray(properties) &&
+                                properties.map((property) => (
+                                  <SelectItem
+                                    key={property.id}
+                                    value={property.id.toString()}
+                                  >
+                                    {property.flatNumber}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="vendorId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vendor</FormLabel>
+                          <Select
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
+                            value={field.value?.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select vendor (optional)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="0">No Vendor</SelectItem>
+                              {Array.isArray(filteredVendors) &&
+                                filteredVendors.map((vendor) => (
+                                  <SelectItem
+                                    key={vendor.id}
+                                    value={vendor.id.toString()}
+                                  >
+                                    {vendor.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter expense description"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="attachmentUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Attachment URL (optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter attachment URL"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    disabled={addExpenseMutation.isPending}
+                    className="w-full"
+                  >
+                    {addExpenseMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Add Expense
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -347,9 +567,10 @@ export default function ExpensesPage() {
                 <div>
                   {/* Debug information */}
                   <div className="text-sm text-muted-foreground mb-4">
-                    Total expense records: {Array.isArray(expenses) ? expenses.length : 0}
+                    Total expense records:{" "}
+                    {Array.isArray(expenses) ? expenses.length : 0}
                   </div>
-                  
+
                   {/* Last 5 expense entries section */}
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-2">
@@ -395,7 +616,10 @@ export default function ExpensesPage() {
                             ))
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={6} className="h-24 text-center">
+                              <TableCell
+                                colSpan={6}
+                                className="h-24 text-center"
+                              >
                                 No expense records found
                               </TableCell>
                             </TableRow>

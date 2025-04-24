@@ -69,12 +69,16 @@ export default function IncomePage() {
     isError,
   } = useQuery({
     queryKey: ["/api/incomes"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/incomes");
+      return res.json(); // assuming your `apiRequest` returns a Response object
+    },
     onSuccess: (data) => {
       console.log("Income data fetched:", data);
     },
     onError: (error) => {
       console.error("Error fetching income data:", error);
-    }
+    },
   });
 
   //Dropdown for properties
