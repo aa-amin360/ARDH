@@ -595,12 +595,26 @@ export default function ExpensesPage() {
                     name="attachmentUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Attachment URL (optional)</FormLabel>
+                        <FormLabel>Attachment (optional)</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Enter attachment URL"
-                            {...field}
-                          />
+                          <div className="flex flex-col gap-2">
+                            <Input
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                              className="cursor-pointer"
+                              onChange={(e) => {
+                                // This just stores the file name for demo purposes
+                                // In a real implementation, you would upload the file to a server
+                                const fileName = e.target.files?.[0]?.name || "";
+                                field.onChange(fileName);
+                              }}
+                            />
+                            {field.value && (
+                              <div className="text-xs text-muted-foreground">
+                                Selected file: {field.value}
+                              </div>
+                            )}
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -638,7 +652,7 @@ export default function ExpensesPage() {
                   Drop your CSV file here, or click to browse
                 </p>
                 <Button className="gap-2">
-                  <Upload className="h-4 w-4" />
+                  <FileSpreadsheet className="h-4 w-4" />
                   Select File
                 </Button>
               </div>

@@ -802,7 +802,7 @@ export default function TenantsPage() {
                     Drop your CSV file here, or click to browse
                   </p>
                   <Button className="gap-2">
-                    <Upload className="h-4 w-4" />
+                    <FileSpreadsheet className="h-4 w-4" />
                     Select File
                   </Button>
                 </div>
@@ -811,6 +811,13 @@ export default function TenantsPage() {
                   <p className="text-xs text-muted-foreground">
                     Your CSV should have the following columns: name, phone, email, property_id, lease_start_date, lease_end_date, rent_amount, security_deposit, status, notes
                   </p>
+                  <div className="mt-4">
+                    <h3 className="text-sm font-medium mb-2">Download Template</h3>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <FileSpreadsheet className="h-4 w-4" />
+                      Download CSV Template
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

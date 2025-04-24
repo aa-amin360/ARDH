@@ -379,16 +379,34 @@ export default function IncomePage() {
         <TabsContent value="bulk" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Bulk Upload</CardTitle>
+              <CardTitle>Bulk Upload Income</CardTitle>
               <CardDescription>
-                Bulk upload feature is coming soon.
+                Upload a CSV file with income details for bulk adding.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-center p-12">
-                <p className="text-muted-foreground">
-                  Bulk upload functionality is under development.
+              <div className="flex flex-col items-center justify-center gap-4 p-8 border-2 border-dashed rounded-lg">
+                <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground text-center">
+                  Drop your CSV file here, or click to browse
                 </p>
+                <Button className="gap-2">
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Select File
+                </Button>
+              </div>
+              <div className="mt-6">
+                <h3 className="text-sm font-medium mb-2">Expected CSV Format</h3>
+                <p className="text-xs text-muted-foreground">
+                  Your CSV should have the following columns: date, amount, type, description, flatNumber, receivedFrom, notes
+                </p>
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium mb-2">Download Template</h3>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Download CSV Template
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
