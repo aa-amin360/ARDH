@@ -13,6 +13,10 @@ import {
   InsertTenant,
   Vendor,
   InsertVendor,
+  PropertyCharge,
+  InsertPropertyCharge,
+  TenantCharge,
+  InsertTenantCharge,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary
@@ -72,6 +76,36 @@ export interface IStorage {
   updateVendor(id: number, vendor: Partial<InsertVendor>): Promise<Vendor | undefined>;
   deleteVendor(id: number): Promise<boolean>;
   
+  // Property Charge management
+  getPropertyCharge(id: number): Promise<PropertyCharge | undefined>;
+  getPropertyCharges(): Promise<PropertyCharge[]>;
+  getPropertyChargesByFlat(flatNumber: string): Promise<PropertyCharge[]>;
+  getCurrentPropertyCharges(flatNumber: string): Promise<PropertyCharge[]>;
+  getPropertyChargeHistory(flatNumber: string, chargeType: string): Promise<PropertyCharge[]>;
+  createPropertyCharge(charge: InsertPropertyCharge): Promise<PropertyCharge>;
+  updatePropertyCharge(id: number, charge: Partial<InsertPropertyCharge>): Promise<PropertyCharge | undefined>;
+  deletePropertyCharge(id: number): Promise<boolean>;
+  
+  // Tenant Charge management
+  getTenantCharge(id: number): Promise<TenantCharge | undefined>;
+  getTenantCharges(): Promise<TenantCharge[]>;
+  getTenantChargesByTenant(tenantId: number): Promise<TenantCharge[]>;
+  getCurrentTenantCharges(tenantId: number): Promise<TenantCharge[]>;
+  getTenantChargeHistory(tenantId: number, chargeType: string): Promise<TenantCharge[]>;
+  createTenantCharge(charge: InsertTenantCharge): Promise<TenantCharge>;
+  updateTenantCharge(id: number, charge: Partial<InsertTenantCharge>): Promise<TenantCharge | undefined>;
+  deleteTenantCharge(id: number): Promise<boolean>;
+  
+  // Helper methods for property and tenant charge sync
+  getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]>;
+  syncPropertyChargeWithTenant(
+    flatNumber: string, 
+    chargeType: string, 
+    amount: number, 
+    effectiveFrom: Date,
+    createdBy: number
+  ): Promise<void>;
+  
   // Summary/Dashboard data
   getIncomeSummary(): Promise<IncomeSummary>;
   getExpenseSummary(): Promise<ExpenseSummary>;
@@ -90,6 +124,8 @@ export class MemStorage implements IStorage {
   private waterTanks: Map<number, WaterTank>;
   private tenants: Map<number, Tenant>;
   private vendors: Map<number, Vendor>;
+  private propertyCharges: Map<number, PropertyCharge>;
+  private tenantCharges: Map<number, TenantCharge>;
   
   private userCounter: number;
   private propertyCounter: number;
@@ -98,6 +134,8 @@ export class MemStorage implements IStorage {
   private waterTankCounter: number;
   private tenantCounter: number;
   private vendorCounter: number;
+  private propertyChargeCounter: number;
+  private tenantChargeCounter: number;
   
   sessionStore: session.Store;
 
@@ -109,6 +147,8 @@ export class MemStorage implements IStorage {
     this.waterTanks = new Map();
     this.tenants = new Map();
     this.vendors = new Map();
+    this.propertyCharges = new Map();
+    this.tenantCharges = new Map();
     
     this.userCounter = 1;
     this.propertyCounter = 1;
@@ -117,6 +157,8 @@ export class MemStorage implements IStorage {
     this.waterTankCounter = 1;
     this.tenantCounter = 1;
     this.vendorCounter = 1;
+    this.propertyChargeCounter = 1;
+    this.tenantChargeCounter = 1;
     
     // Create an in-memory session store
     const MemoryStore = require('memorystore')(session);
@@ -639,6 +681,221 @@ export class MemStorage implements IStorage {
   
   async deleteVendor(id: number): Promise<boolean> {
     return this.vendors.delete(id);
+  }
+
+  // Property Charge methods
+  async getPropertyCharge(id: number): Promise<PropertyCharge | undefined> {
+    return this.propertyCharges.get(id);
+  }
+
+  async getPropertyCharges(): Promise<PropertyCharge[]> {
+    return Array.from(this.propertyCharges.values());
+  }
+
+  async getPropertyChargesByFlat(flatNumber: string): Promise<PropertyCharge[]> {
+    return Array.from(this.propertyCharges.values()).filter(charge => 
+      charge.flatNumber === flatNumber
+    );
+  }
+
+  async getCurrentPropertyCharges(flatNumber: string): Promise<PropertyCharge[]> {
+    return Array.from(this.propertyCharges.values()).filter(charge => 
+      charge.flatNumber === flatNumber && charge.effectiveTo === null
+    );
+  }
+
+  async getPropertyChargeHistory(flatNumber: string, chargeType: string): Promise<PropertyCharge[]> {
+    return Array.from(this.propertyCharges.values())
+      .filter(charge => charge.flatNumber === flatNumber && charge.chargeType === chargeType)
+      .sort((a, b) => b.effectiveFrom.getTime() - a.effectiveFrom.getTime());
+  }
+
+  async createPropertyCharge(charge: InsertPropertyCharge): Promise<PropertyCharge> {
+    const id = this.propertyChargeCounter++;
+    const now = new Date();
+    
+    // Check if there are any existing active charges that need to be closed
+    const currentCharges = Array.from(this.propertyCharges.values()).filter(
+      c => c.flatNumber === charge.flatNumber && 
+           c.chargeType === charge.chargeType && 
+           c.effectiveTo === null
+    );
+    
+    // Update the effective end date for the current charges
+    if (currentCharges.length > 0) {
+      for (const currentCharge of currentCharges) {
+        const updatedCharge = { 
+          ...currentCharge,
+          effectiveTo: charge.effectiveFrom
+        };
+        this.propertyCharges.set(currentCharge.id, updatedCharge);
+        
+        // Sync with tenant charges if flat is occupied
+        await this.syncPropertyChargeWithTenant(
+          charge.flatNumber,
+          charge.chargeType,
+          charge.amount,
+          charge.effectiveFrom,
+          charge.createdBy
+        );
+      }
+    }
+    
+    // Create the new charge
+    const newCharge: PropertyCharge = { 
+      ...charge,
+      id,
+      createdAt: now
+    };
+    this.propertyCharges.set(id, newCharge);
+    return newCharge;
+  }
+
+  async updatePropertyCharge(id: number, updates: Partial<InsertPropertyCharge>): Promise<PropertyCharge | undefined> {
+    const charge = this.propertyCharges.get(id);
+    if (!charge) return undefined;
+    
+    const updatedCharge: PropertyCharge = { 
+      ...charge,
+      ...updates
+    };
+    this.propertyCharges.set(id, updatedCharge);
+    return updatedCharge;
+  }
+
+  async deletePropertyCharge(id: number): Promise<boolean> {
+    return this.propertyCharges.delete(id);
+  }
+
+  // Tenant Charge methods
+  async getTenantCharge(id: number): Promise<TenantCharge | undefined> {
+    return this.tenantCharges.get(id);
+  }
+
+  async getTenantCharges(): Promise<TenantCharge[]> {
+    return Array.from(this.tenantCharges.values());
+  }
+
+  async getTenantChargesByTenant(tenantId: number): Promise<TenantCharge[]> {
+    return Array.from(this.tenantCharges.values()).filter(charge => 
+      charge.tenantId === tenantId
+    );
+  }
+
+  async getCurrentTenantCharges(tenantId: number): Promise<TenantCharge[]> {
+    return Array.from(this.tenantCharges.values()).filter(charge => 
+      charge.tenantId === tenantId && charge.effectiveTo === null
+    );
+  }
+
+  async getTenantChargeHistory(tenantId: number, chargeType: string): Promise<TenantCharge[]> {
+    return Array.from(this.tenantCharges.values())
+      .filter(charge => charge.tenantId === tenantId && charge.chargeType === chargeType)
+      .sort((a, b) => b.effectiveFrom.getTime() - a.effectiveFrom.getTime());
+  }
+
+  async createTenantCharge(charge: InsertTenantCharge): Promise<TenantCharge> {
+    const id = this.tenantChargeCounter++;
+    const now = new Date();
+    
+    // Check if there are any existing active charges that need to be closed
+    const currentCharges = Array.from(this.tenantCharges.values()).filter(
+      c => c.tenantId === charge.tenantId && 
+           c.chargeType === charge.chargeType && 
+           c.effectiveTo === null
+    );
+    
+    // Update the effective end date for the current charges
+    if (currentCharges.length > 0) {
+      for (const currentCharge of currentCharges) {
+        const updatedCharge = { 
+          ...currentCharge,
+          effectiveTo: charge.effectiveFrom
+        };
+        this.tenantCharges.set(currentCharge.id, updatedCharge);
+      }
+    }
+    
+    // Create the new charge
+    const newCharge: TenantCharge = { 
+      ...charge,
+      id,
+      createdAt: now
+    };
+    this.tenantCharges.set(id, newCharge);
+    return newCharge;
+  }
+
+  async updateTenantCharge(id: number, updates: Partial<InsertTenantCharge>): Promise<TenantCharge | undefined> {
+    const charge = this.tenantCharges.get(id);
+    if (!charge) return undefined;
+    
+    const updatedCharge: TenantCharge = { 
+      ...charge,
+      ...updates
+    };
+    this.tenantCharges.set(id, updatedCharge);
+    return updatedCharge;
+  }
+
+  async deleteTenantCharge(id: number): Promise<boolean> {
+    return this.tenantCharges.delete(id);
+  }
+
+  // Helper methods for property and tenant charge sync
+  async getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]> {
+    const today = new Date();
+    return Array.from(this.tenants.values()).filter(tenant => 
+      tenant.flatNumber === flatNumber && 
+      tenant.leaseEndDate >= today
+    );
+  }
+
+  async syncPropertyChargeWithTenant(
+    flatNumber: string, 
+    chargeType: string, 
+    amount: number, 
+    effectiveFrom: Date,
+    createdBy: number
+  ): Promise<void> {
+    // Find current tenants for this flat
+    const currentTenants = await this.getCurrentTenantsForFlat(flatNumber);
+    
+    // If there are current tenants, update their charges too
+    for (const tenant of currentTenants) {
+      // Find current charges for this tenant
+      const currentCharges = Array.from(this.tenantCharges.values()).filter(
+        c => c.tenantId === tenant.id && 
+             c.chargeType === chargeType && 
+             c.effectiveTo === null
+      );
+      
+      // Update the effective end date for the current charges
+      if (currentCharges.length > 0) {
+        for (const currentCharge of currentCharges) {
+          const updatedCharge = { 
+            ...currentCharge,
+            effectiveTo: effectiveFrom
+          };
+          this.tenantCharges.set(currentCharge.id, updatedCharge);
+        }
+      }
+      
+      // Create a new tenant charge
+      const id = this.tenantChargeCounter++;
+      const newCharge: TenantCharge = {
+        id,
+        tenantId: tenant.id,
+        flatNumber,
+        chargeType: chargeType as any,
+        amount,
+        effectiveFrom,
+        effectiveTo: null,
+        createdBy,
+        createdAt: new Date()
+      };
+      this.tenantCharges.set(id, newCharge);
+    }
   }
   
   // Dashboard data
