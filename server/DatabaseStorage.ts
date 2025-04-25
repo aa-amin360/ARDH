@@ -851,34 +851,45 @@ export class DatabaseStorage implements IStorage {
     effectiveFrom: Date,
     createdBy: number
   ): Promise<void> {
-    // Find current tenants for this flat
-    const currentTenants = await this.getCurrentTenantsForFlat(flatNumber);
-    
-    // If there are current tenants, update their charges too
-    for (const tenant of currentTenants) {
-      // Find current tenant charge of this type
-      const currentCharges = await db.select().from(tenantCharges)
-        .where(eq(tenantCharges.tenantId, tenant.id))
-        .where(eq(tenantCharges.chargeType, chargeType as any))
-        .where(sql`${tenantCharges.effectiveTo} IS NULL`);
+    try {
+      // Find current tenants for this flat
+      const currentTenants = await this.getCurrentTenantsForFlat(flatNumber);
+      console.log(`Found ${currentTenants.length} current tenants for flat ${flatNumber}`);
       
-      // If there's an existing charge, mark it as ended
-      if (currentCharges.length > 0) {
-        await db.update(tenantCharges)
-          .set({ effectiveTo: effectiveFrom.toISOString() })
-          .where(eq(tenantCharges.id, currentCharges[0].id));
+      // If there are current tenants, update their charges too
+      for (const tenant of currentTenants) {
+        console.log(`Syncing charges for tenant ${tenant.name} (ID: ${tenant.id})`);
+        // Find current tenant charge of this type
+        const currentCharges = await db.select().from(tenantCharges)
+          .where(eq(tenantCharges.tenantId, tenant.id))
+          .where(eq(tenantCharges.chargeType, chargeType as any))
+          .where(sql`${tenantCharges.effectiveTo} IS NULL`);
+        
+        // If there's an existing charge, mark it as ended
+        if (currentCharges.length > 0) {
+          console.log(`Updating existing tenant charge ID ${currentCharges[0].id} with effectiveTo date`);
+          await db.update(tenantCharges)
+            .set({ 
+              effectiveTo: effectiveFrom
+            })
+            .where(eq(tenantCharges.id, currentCharges[0].id));
+        }
+        
+        // Create a new tenant charge
+        console.log(`Creating new tenant charge for tenant ${tenant.id}, charge type ${chargeType}, amount ${amount}`);
+        await db.insert(tenantCharges).values({
+          tenantId: tenant.id,
+          flatNumber,
+          chargeType: chargeType as any,
+          amount,
+          effectiveFrom,
+          effectiveTo: null,
+          createdBy
+        });
       }
-      
-      // Create a new tenant charge
-      await db.insert(tenantCharges).values({
-        tenantId: tenant.id,
-        flatNumber,
-        chargeType: chargeType as any,
-        amount,
-        effectiveFrom: effectiveFrom.toISOString(),
-        effectiveTo: null,
-        createdBy
-      });
+    } catch (error) {
+      console.error("Error in syncPropertyChargeWithTenant:", error);
+      throw error;
     }
   }
 }
