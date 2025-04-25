@@ -1043,8 +1043,8 @@ export default function PropertiesPage() {
 // Property Charges Tab Component
 function PropertyChargesTab() {
   const { toast } = useToast();
-  const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("");
-  const [selectedChargeType, setSelectedChargeType] = useState<string>("");
+  const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("all");
+  const [selectedChargeType, setSelectedChargeType] = useState<string>("all");
   const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
   const [formData, setFormData] = useState({
     flatNumber: "",
@@ -1122,6 +1122,13 @@ function PropertyChargesTab() {
       if (p.flatNumber && !uniqueFlatNumbers.includes(p.flatNumber)) {
         uniqueFlatNumbers.push(p.flatNumber);
       }
+    });
+
+    uniqueFlatNumbers.sort((a, b) => {
+      // Convert to number if flatNumber is numeric
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      return numA - numB;
     });
   }
 
