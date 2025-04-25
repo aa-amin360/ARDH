@@ -108,38 +108,59 @@ export class DatabaseStorage implements IStorage {
       // create property charges records
       if (property.flatNumber) {
         const today = new Date();
+        // Default to admin user (id=1) if no createdBy is provided
+        const createdBy = property.createdBy || 1;
+        
         // These would come from the form but are not in the property table anymore
-        if (property.rentAmount) {
-          await this.createPropertyCharge({
-            flatNumber: property.flatNumber,
-            nestawayId: property.nestawayId || null,
-            chargeType: 'rent',
-            amount: property.rentAmount,
-            effectiveFrom: today,
-            effectiveTo: null
-          });
+        if (property.rentAmount !== undefined) {
+          console.log(`Adding rent charge of ${property.rentAmount} for flat ${property.flatNumber}`);
+          try {
+            await this.createPropertyCharge({
+              flatNumber: property.flatNumber,
+              nestawayId: property.nestawayId || null,
+              chargeType: 'rent',
+              amount: property.rentAmount,
+              effectiveFrom: today,
+              effectiveTo: null,
+              createdBy
+            });
+          } catch (error) {
+            console.error(`Failed to create rent charge: ${error}`);
+          }
         }
         
-        if (property.maintenanceFee) {
-          await this.createPropertyCharge({
-            flatNumber: property.flatNumber,
-            nestawayId: property.nestawayId || null,
-            chargeType: 'maint_fee',
-            amount: property.maintenanceFee,
-            effectiveFrom: today,
-            effectiveTo: null
-          });
+        if (property.maintenanceFee !== undefined) {
+          console.log(`Adding maintenance fee charge of ${property.maintenanceFee} for flat ${property.flatNumber}`);
+          try {
+            await this.createPropertyCharge({
+              flatNumber: property.flatNumber,
+              nestawayId: property.nestawayId || null,
+              chargeType: 'maint_fee',
+              amount: property.maintenanceFee,
+              effectiveFrom: today,
+              effectiveTo: null,
+              createdBy
+            });
+          } catch (error) {
+            console.error(`Failed to create maintenance fee charge: ${error}`);
+          }
         }
         
-        if (property.waterFee) {
-          await this.createPropertyCharge({
-            flatNumber: property.flatNumber,
-            nestawayId: property.nestawayId || null,
-            chargeType: 'water_fee',
-            amount: property.waterFee,
-            effectiveFrom: today,
-            effectiveTo: null
-          });
+        if (property.waterFee !== undefined) {
+          console.log(`Adding water fee charge of ${property.waterFee} for flat ${property.flatNumber}`);
+          try {
+            await this.createPropertyCharge({
+              flatNumber: property.flatNumber,
+              nestawayId: property.nestawayId || null,
+              chargeType: 'water_fee',
+              amount: property.waterFee,
+              effectiveFrom: today,
+              effectiveTo: null,
+              createdBy
+            });
+          } catch (error) {
+            console.error(`Failed to create water fee charge: ${error}`);
+          }
         }
       }
       
@@ -170,39 +191,59 @@ export class DatabaseStorage implements IStorage {
       
       if (property && property.flatNumber) {
         const today = new Date();
+        // Default to the user who made the update or admin (id=1) if not provided
+        const createdBy = updates.createdBy || 1;
         
         // Update property charges if they were provided
         if (rentAmount !== undefined) {
-          await this.createPropertyCharge({
-            flatNumber: property.flatNumber,
-            nestawayId: property.nestawayId || null,
-            chargeType: 'rent',
-            amount: rentAmount,
-            effectiveFrom: today,
-            effectiveTo: null
-          });
+          console.log(`Updating rent charge to ${rentAmount} for flat ${property.flatNumber}`);
+          try {
+            await this.createPropertyCharge({
+              flatNumber: property.flatNumber,
+              nestawayId: property.nestawayId || null,
+              chargeType: 'rent',
+              amount: rentAmount,
+              effectiveFrom: today,
+              effectiveTo: null,
+              createdBy
+            });
+          } catch (error) {
+            console.error(`Failed to update rent charge: ${error}`);
+          }
         }
         
         if (maintenanceFee !== undefined) {
-          await this.createPropertyCharge({
-            flatNumber: property.flatNumber,
-            nestawayId: property.nestawayId || null,
-            chargeType: 'maint_fee',
-            amount: maintenanceFee,
-            effectiveFrom: today,
-            effectiveTo: null
-          });
+          console.log(`Updating maintenance fee charge to ${maintenanceFee} for flat ${property.flatNumber}`);
+          try {
+            await this.createPropertyCharge({
+              flatNumber: property.flatNumber,
+              nestawayId: property.nestawayId || null,
+              chargeType: 'maint_fee',
+              amount: maintenanceFee,
+              effectiveFrom: today,
+              effectiveTo: null,
+              createdBy
+            });
+          } catch (error) {
+            console.error(`Failed to update maintenance fee charge: ${error}`);
+          }
         }
         
         if (waterFee !== undefined) {
-          await this.createPropertyCharge({
-            flatNumber: property.flatNumber,
-            nestawayId: property.nestawayId || null,
-            chargeType: 'water_fee',
-            amount: waterFee,
-            effectiveFrom: today,
-            effectiveTo: null
-          });
+          console.log(`Updating water fee charge to ${waterFee} for flat ${property.flatNumber}`);
+          try {
+            await this.createPropertyCharge({
+              flatNumber: property.flatNumber,
+              nestawayId: property.nestawayId || null,
+              chargeType: 'water_fee',
+              amount: waterFee,
+              effectiveFrom: today,
+              effectiveTo: null,
+              createdBy
+            });
+          } catch (error) {
+            console.error(`Failed to update water fee charge: ${error}`);
+          }
         }
       }
       
@@ -626,40 +667,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPropertyCharge(charge: InsertPropertyCharge): Promise<PropertyCharge> {
-    // First, check if there's an existing active charge for this flat and charge type
-    const currentCharges = await db.select().from(propertyCharges)
-      .where(eq(propertyCharges.flatNumber, charge.flatNumber))
-      .where(eq(propertyCharges.chargeType, charge.chargeType))
-      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+    console.log("Creating property charge with data:", charge);
+    try {
+      // First, check if there's an existing active charge for this flat and charge type
+      const currentCharges = await db.select().from(propertyCharges)
+        .where(eq(propertyCharges.flatNumber, charge.flatNumber))
+        .where(eq(propertyCharges.chargeType, charge.chargeType))
+        .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+  
+      console.log("Found current charges:", currentCharges);
+  
+      // If there's an existing charge, update its effectiveTo date to today
+      if (currentCharges.length > 0) {
+        const today = new Date();
+        await db.update(propertyCharges)
+          .set({ effectiveTo: today.toISOString() })
+          .where(eq(propertyCharges.id, currentCharges[0].id));
+  
+        console.log("Updated existing charge with effectiveTo:", today);
+  
+        // Also sync with tenant charges if flat is occupied
+        try {
+          const user = await this.getUser(charge.createdBy || 1); // Use provided user ID or admin as fallback
+          await this.syncPropertyChargeWithTenant(charge.flatNumber, charge.chargeType, charge.amount, today, user?.id || 1);
+        } catch (syncError) {
+          console.error("Error in sync with tenant charges:", syncError);
+          // Continue execution even if sync fails
+        }
+      }
 
-    // If there's an existing charge, update its effectiveTo date to today
-    if (currentCharges.length > 0) {
-      const today = new Date();
-      await db.update(propertyCharges)
-        .set({ effectiveTo: today.toISOString() })
-        .where(eq(propertyCharges.id, currentCharges[0].id));
+      // Create the new charge record with proper date formatting
+      const formattedCharge = {
+        ...charge,
+        effectiveFrom: typeof charge.effectiveFrom === 'string' 
+          ? charge.effectiveFrom 
+          : charge.effectiveFrom.toISOString(),
+        effectiveTo: charge.effectiveTo 
+          ? typeof charge.effectiveTo === 'string'
+            ? charge.effectiveTo
+            : charge.effectiveTo.toISOString()
+          : null
+      };
+      
+      console.log("Inserting formatted charge:", formattedCharge);
 
-      // Also sync with tenant charges if flat is occupied
-      const user = await this.getUser(1); // Use admin user as default
-      await this.syncPropertyChargeWithTenant(charge.flatNumber, charge.chargeType, charge.amount, today, user?.id || 1);
+      const [newCharge] = await db.insert(propertyCharges).values(formattedCharge).returning();
+      return newCharge;
+    } catch (error) {
+      console.error("Error creating property charge:", error);
+      throw error;
     }
-
-    // Create the new charge record with proper date formatting
-    const formattedCharge = {
-      ...charge,
-      effectiveFrom: typeof charge.effectiveFrom === 'string' 
-        ? charge.effectiveFrom 
-        : charge.effectiveFrom.toISOString(),
-      effectiveTo: charge.effectiveTo 
-        ? typeof charge.effectiveTo === 'string'
-          ? charge.effectiveTo
-          : charge.effectiveTo.toISOString()
-        : null
-    };
-
-    const [newCharge] = await db.insert(propertyCharges).values(formattedCharge).returning();
-
-    return newCharge;
   }
 
   async updatePropertyCharge(id: number, updates: Partial<InsertPropertyCharge>): Promise<PropertyCharge | undefined> {
