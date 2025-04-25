@@ -219,14 +219,12 @@ export const vendors = pgTable("vendors", {
 // Property Charges table for tracking historical changes to property charges
 export const propertyCharges = pgTable("property_charges", {
   id: serial("id").primaryKey(),
-  flatNumber: text("flat_number").notNull().references(() => properties.flatNumber),
+  flatNumber: text("flat_number").notNull(),
   nestawayId: text("nestaway_id"),
   chargeType: chargeTypeEnum("charge_type").notNull(),
   amount: integer("amount").notNull(),
   effectiveFrom: date("effective_from").notNull(),
   effectiveTo: date("effective_to"),
-  createdBy: integer("created_by").references(() => users.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Tenant Charges table for tracking historical changes to tenant charges
@@ -292,7 +290,6 @@ export const insertPropertyChargeSchema = createInsertSchema(propertyCharges, {
   effectiveTo: z.coerce.date().optional().nullable(),
 }).omit({
   id: true,
-  createdAt: true,
 });
 
 export const insertTenantChargeSchema = createInsertSchema(tenantCharges, {

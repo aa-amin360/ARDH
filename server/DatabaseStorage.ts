@@ -507,14 +507,12 @@ export class DatabaseStorage implements IStorage {
         .where(eq(propertyCharges.id, currentCharges[0].id));
 
       // Also sync with tenant charges if flat is occupied
-      await this.syncPropertyChargeWithTenant(charge.flatNumber, charge.chargeType, charge.amount, today, charge.createdBy);
+      const user = await this.getUser(1); // Use admin user as default
+      await this.syncPropertyChargeWithTenant(charge.flatNumber, charge.chargeType, charge.amount, today, user?.id || 1);
     }
 
     // Create the new charge record
-    const [newCharge] = await db.insert(propertyCharges).values({
-      ...charge,
-      createdAt: new Date()
-    }).returning();
+    const [newCharge] = await db.insert(propertyCharges).values(charge).returning();
 
     return newCharge;
   }

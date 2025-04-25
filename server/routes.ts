@@ -736,10 +736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/property-charges', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
-      const chargeData = insertPropertyChargeSchema.parse({
-        ...req.body,
-        createdBy: (req.user as any).id
-      });
+      const chargeData = insertPropertyChargeSchema.parse(req.body);
       
       const newCharge = await storage.createPropertyCharge(chargeData);
       res.status(201).json(newCharge);
