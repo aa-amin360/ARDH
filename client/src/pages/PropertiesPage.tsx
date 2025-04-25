@@ -1073,6 +1073,7 @@ function PropertyChargesTab() {
   // Create mutation for adding a new property charge
   const createChargeMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Submitting property charge data:", data); // Debug log
       const response = await apiRequest("POST", "/api/property-charges", data);
       return await response.json();
     },
@@ -1098,6 +1099,7 @@ function PropertyChargesTab() {
         description: error.message,
         variant: "destructive",
       });
+      console.error("Error creating property charge:", error);
     },
   });
 

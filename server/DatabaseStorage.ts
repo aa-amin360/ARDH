@@ -503,7 +503,7 @@ export class DatabaseStorage implements IStorage {
     if (currentCharges.length > 0) {
       const today = new Date();
       await db.update(propertyCharges)
-        .set({ effectiveTo: today })
+        .set({ effectiveTo: today.toISOString() })
         .where(eq(propertyCharges.id, currentCharges[0].id));
 
       // Also sync with tenant charges if flat is occupied
@@ -511,8 +511,20 @@ export class DatabaseStorage implements IStorage {
       await this.syncPropertyChargeWithTenant(charge.flatNumber, charge.chargeType, charge.amount, today, user?.id || 1);
     }
 
-    // Create the new charge record
-    const [newCharge] = await db.insert(propertyCharges).values(charge).returning();
+    // Create the new charge record with proper date formatting
+    const formattedCharge = {
+      ...charge,
+      effectiveFrom: typeof charge.effectiveFrom === 'string' 
+        ? charge.effectiveFrom 
+        : charge.effectiveFrom.toISOString(),
+      effectiveTo: charge.effectiveTo 
+        ? typeof charge.effectiveTo === 'string'
+          ? charge.effectiveTo
+          : charge.effectiveTo.toISOString()
+        : null
+    };
+
+    const [newCharge] = await db.insert(propertyCharges).values(formattedCharge).returning();
 
     return newCharge;
   }
@@ -566,16 +578,26 @@ export class DatabaseStorage implements IStorage {
 
     // If there's an existing charge, update its effectiveTo date to today
     if (currentCharges.length > 0) {
+      const today = new Date();
       await db.update(tenantCharges)
-        .set({ effectiveTo: new Date() })
+        .set({ effectiveTo: today.toISOString() })
         .where(eq(tenantCharges.id, currentCharges[0].id));
     }
 
-    // Create the new charge record
-    const [newCharge] = await db.insert(tenantCharges).values({
+    // Create the new charge record with proper date formatting
+    const formattedCharge = {
       ...charge,
-      createdAt: new Date()
-    }).returning();
+      effectiveFrom: typeof charge.effectiveFrom === 'string' 
+        ? charge.effectiveFrom 
+        : charge.effectiveFrom.toISOString(),
+      effectiveTo: charge.effectiveTo 
+        ? typeof charge.effectiveTo === 'string'
+          ? charge.effectiveTo
+          : charge.effectiveTo.toISOString()
+        : null
+    };
+
+    const [newCharge] = await db.insert(tenantCharges).values(formattedCharge).returning();
 
     return newCharge;
   }
@@ -623,7 +645,7 @@ export class DatabaseStorage implements IStorage {
       // If there's an existing charge, mark it as ended
       if (currentCharges.length > 0) {
         await db.update(tenantCharges)
-          .set({ effectiveTo: effectiveFrom })
+          .set({ effectiveTo: effectiveFrom.toISOString() })
           .where(eq(tenantCharges.id, currentCharges[0].id));
       }
       
@@ -633,10 +655,9 @@ export class DatabaseStorage implements IStorage {
         flatNumber,
         chargeType: chargeType as any,
         amount,
-        effectiveFrom,
+        effectiveFrom: effectiveFrom.toISOString(),
         effectiveTo: null,
-        createdBy,
-        createdAt: new Date()
+        createdBy
       });
     }
   }
