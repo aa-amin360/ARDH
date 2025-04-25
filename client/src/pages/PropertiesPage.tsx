@@ -758,9 +758,9 @@ export default function PropertiesPage() {
                         render={({ field }) => (
                           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                             <div className="space-y-0.5">
-                              <FormLabel>Currently Occupied</FormLabel>
+                              <FormLabel>Lease Status</FormLabel>
                               <FormDescription>
-                                Is this property currently rented?
+                                Is this property currently available for lease?
                               </FormDescription>
                             </div>
                             <FormControl>
@@ -770,24 +770,6 @@ export default function PropertiesPage() {
                                 onCheckedChange={field.onChange}
                               />
                             </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="currentTenant"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Current Tenant</FormLabel>
-                            <FormControl>
-                              <Input
-                                readOnly={isReadOnly}
-                                {...field}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -1240,7 +1222,21 @@ function PropertyChargesTab() {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createChargeMutation.mutate(formData);
+    console.log("Creating property charge with data:", formData);
+
+    // Convert the date string to ISO format
+    const effectiveFromDate = new Date(formData.effectiveFrom);
+    const formattedDate = effectiveFromDate.toISOString();
+    
+    // Create a properly formatted data object
+    const chargeData = {
+      ...formData,
+      effectiveFrom: formattedDate,
+      effectiveTo: null
+    };
+    
+    console.log("Submitting formatted charge data:", chargeData);
+    createChargeMutation.mutate(chargeData);
   };
 
   return (
