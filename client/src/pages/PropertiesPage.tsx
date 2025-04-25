@@ -1003,9 +1003,9 @@ export default function PropertiesPage() {
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                           <div className="space-y-0.5">
-                            <FormLabel>Currently Occupied</FormLabel>
+                            <FormLabel>Lease Status</FormLabel>
                             <FormDescription>
-                              Is this property currently rented?
+                              Is this property currently available for lease?
                             </FormDescription>
                           </div>
                           <FormControl>
@@ -1014,20 +1014,6 @@ export default function PropertiesPage() {
                               onCheckedChange={field.onChange}
                             />
                           </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="currentTenant"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Tenant</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ""} />
-                          </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -1402,7 +1388,7 @@ function PropertyChargesTab() {
                     value={formData.flatNumber}
                     onValueChange={(value) => {
                       // Find the property with this flat number
-                      const property = properties.find(p => p.flatNumber === value);
+                      const property = properties.find((p: Property) => p.flatNumber === value);
                       // Update form with flat number and nestaway ID if available
                       setFormData({ 
                         ...formData, 
