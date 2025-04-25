@@ -221,6 +221,8 @@ export const propertyCharges = pgTable("property_charges", {
   amount: integer("amount").notNull(),
   effectiveFrom: date("effective_from").notNull(),
   effectiveTo: date("effective_to"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Tenant Charges table for tracking historical changes to tenant charges

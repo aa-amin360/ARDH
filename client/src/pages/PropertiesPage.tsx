@@ -1203,7 +1203,8 @@ function PropertyChargesTab() {
     const chargeData = {
       ...formData,
       effectiveFrom: formattedDate,
-      effectiveTo: null
+      effectiveTo: null,
+      createdBy: 1 // Use admin user ID as default
     };
     
     console.log("Submitting formatted charge data:", chargeData);
