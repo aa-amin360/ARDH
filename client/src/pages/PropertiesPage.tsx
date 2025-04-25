@@ -413,7 +413,7 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Nestaway ID</FormLabel>
                             <FormControl>
-                              <Input readOnly={true} {...field} />
+                              <Input readOnly={true} {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -507,22 +507,7 @@ export default function PropertiesPage() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="currentTenant"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Current Tenant</FormLabel>
-                            <FormControl>
-                              <Input
-                                readOnly={true}
-                                value={field.value || "None"}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+
 
                       <FormField
                         control={form.control}
@@ -632,7 +617,7 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Nestaway ID</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Input {...field} value={field.value || ""} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
