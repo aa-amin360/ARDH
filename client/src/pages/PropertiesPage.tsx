@@ -261,12 +261,18 @@ export default function PropertiesPage() {
     };
 
     if (activeTab === "modify" && selectedProperty) {
+      // For updates, we need to include the property ID
       updatePropertyMutation.mutate({
         id: selectedProperty.id,
         values: formattedValues as any,
       });
     } else if (activeTab === "add") {
+      // For new properties, we'll create both the property and initial charges
       createPropertyMutation.mutate(formattedValues as any);
+      
+      // The backend will create property charges automatically based on the
+      // rentAmount, maintenanceFee, and waterFee fields we're passing
+      // See DatabaseStorage.createProperty implementation
     }
   }
 
@@ -965,7 +971,7 @@ export default function PropertiesPage() {
 
                     <FormField
                       control={form.control}
-                      name="expectedRent"
+                      name="rentAmount"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Monthly Rent (₹)</FormLabel>
@@ -985,6 +991,24 @@ export default function PropertiesPage() {
                           <FormLabel>Maintenance Fee (₹)</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="waterFee"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Water Fee (₹)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              placeholder="Enter water fee"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
