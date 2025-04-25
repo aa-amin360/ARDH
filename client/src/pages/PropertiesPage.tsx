@@ -1404,9 +1404,16 @@ function PropertyChargesTab() {
                 <div className="col-span-3">
                   <Select
                     value={formData.flatNumber}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, flatNumber: value })
-                    }
+                    onValueChange={(value) => {
+                      // Find the property with this flat number
+                      const property = properties.find(p => p.flatNumber === value);
+                      // Update form with flat number and nestaway ID if available
+                      setFormData({ 
+                        ...formData, 
+                        flatNumber: value,
+                        nestawayId: property?.nestawayId || ""
+                      });
+                    }}
                     required
                   >
                     <SelectTrigger id="flatNumber">
@@ -1498,10 +1505,9 @@ function PropertyChargesTab() {
                     id="nestawayId"
                     type="text"
                     value={formData.nestawayId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nestawayId: e.target.value })
-                    }
-                    placeholder="Optional"
+                    readOnly={true}
+                    className="bg-muted"
+                    placeholder="Auto-populated from property data"
                   />
                 </div>
               </div>
