@@ -165,11 +165,65 @@ export default function PropertiesPage() {
       const res = await apiRequest("POST", "/api/properties", values);
       return await res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Property added",
-        description: "The property has been added successfully.",
-      });
+    onSuccess: async (createdProperty) => {
+      try {
+        // Create initial property charges after property creation
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const formValues = form.getValues();
+        
+        // Initial rent charge
+        const rentCharge = {
+          flatNumber: createdProperty.flatNumber,
+          nestawayId: createdProperty.nestawayId || '',
+          chargeType: 'rent',
+          amount: formValues.rentAmount,
+          effectiveFrom: today,
+          effectiveTo: null,
+          createdBy: 1 // Assuming admin user
+        };
+        
+        // Initial maintenance fee charge
+        const maintenanceCharge = {
+          flatNumber: createdProperty.flatNumber,
+          nestawayId: createdProperty.nestawayId || '',
+          chargeType: 'maint_fee',
+          amount: formValues.maintenanceFee,
+          effectiveFrom: today,
+          effectiveTo: null,
+          createdBy: 1 // Assuming admin user
+        };
+        
+        // Initial water fee charge
+        const waterCharge = {
+          flatNumber: createdProperty.flatNumber,
+          nestawayId: createdProperty.nestawayId || '',
+          chargeType: 'water_fee',
+          amount: formValues.waterFee,
+          effectiveFrom: today,
+          effectiveTo: null,
+          createdBy: 1 // Assuming admin user
+        };
+        
+        // Create all three charges
+        await apiRequest("POST", "/api/property-charges", rentCharge);
+        await apiRequest("POST", "/api/property-charges", maintenanceCharge);
+        await apiRequest("POST", "/api/property-charges", waterCharge);
+        
+        console.log("Successfully created all initial property charges");
+        
+        toast({
+          title: "Property added",
+          description: "The property has been added successfully with initial charges.",
+        });
+      } catch (error) {
+        console.error("Error creating initial property charges:", error);
+        toast({
+          title: "Property added but charge creation failed",
+          description: "Property was added but there was an error creating the charge records.",
+          variant: "destructive",
+        });
+      }
+      
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       refetch(); // Explicitly refetch to ensure we have the latest data
@@ -267,13 +321,85 @@ export default function PropertiesPage() {
         id: selectedProperty.id,
         values: formattedValues as any,
       });
+      
+      // Get the current charges for comparison
+      const currentRentCharge = propertyCharges.find(c => c.chargeType === 'rent');
+      const currentMaintenanceCharge = propertyCharges.find(c => c.chargeType === 'maint_fee');
+      const currentWaterCharge = propertyCharges.find(c => c.chargeType === 'water_fee');
+      
+      // Check if any charges have changed and create new charge records
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Update rent charge if changed
+      if (currentRentCharge && formattedValues.rentAmount !== currentRentCharge.amount) {
+        console.log(`Updating rent charge from ${currentRentCharge.amount} to ${formattedValues.rentAmount}`);
+        
+        const newRentCharge = {
+          flatNumber: formattedValues.flatNumber,
+          nestawayId: formattedValues.nestawayId || '',
+          chargeType: 'rent',
+          amount: formattedValues.rentAmount,
+          effectiveFrom: today,
+          effectiveTo: null,
+          createdBy: 1 // Assuming admin user
+        };
+        
+        apiRequest("POST", "/api/property-charges", newRentCharge)
+          .then(() => {
+            console.log("Successfully updated rent charge");
+            queryClient.invalidateQueries({ queryKey: ["/api/properties/current-charges", formattedValues.flatNumber] });
+          })
+          .catch(err => console.error("Error updating rent charge:", err));
+      }
+      
+      // Update maintenance fee charge if changed
+      if (currentMaintenanceCharge && formattedValues.maintenanceFee !== currentMaintenanceCharge.amount) {
+        console.log(`Updating maintenance fee charge from ${currentMaintenanceCharge.amount} to ${formattedValues.maintenanceFee}`);
+        
+        const newMaintenanceCharge = {
+          flatNumber: formattedValues.flatNumber,
+          nestawayId: formattedValues.nestawayId || '',
+          chargeType: 'maint_fee',
+          amount: formattedValues.maintenanceFee,
+          effectiveFrom: today,
+          effectiveTo: null,
+          createdBy: 1 // Assuming admin user
+        };
+        
+        apiRequest("POST", "/api/property-charges", newMaintenanceCharge)
+          .then(() => {
+            console.log("Successfully updated maintenance fee charge");
+            queryClient.invalidateQueries({ queryKey: ["/api/properties/current-charges", formattedValues.flatNumber] });
+          })
+          .catch(err => console.error("Error updating maintenance fee charge:", err));
+      }
+      
+      // Update water fee charge if changed
+      if (currentWaterCharge && formattedValues.waterFee !== currentWaterCharge.amount) {
+        console.log(`Updating water fee charge from ${currentWaterCharge.amount} to ${formattedValues.waterFee}`);
+        
+        const newWaterCharge = {
+          flatNumber: formattedValues.flatNumber,
+          nestawayId: formattedValues.nestawayId || '',
+          chargeType: 'water_fee',
+          amount: formattedValues.waterFee,
+          effectiveFrom: today,
+          effectiveTo: null,
+          createdBy: 1 // Assuming admin user
+        };
+        
+        apiRequest("POST", "/api/property-charges", newWaterCharge)
+          .then(() => {
+            console.log("Successfully updated water fee charge");
+            queryClient.invalidateQueries({ queryKey: ["/api/properties/current-charges", formattedValues.flatNumber] });
+          })
+          .catch(err => console.error("Error updating water fee charge:", err));
+      }
     } else if (activeTab === "add") {
       // For new properties, we'll create both the property and initial charges
       createPropertyMutation.mutate(formattedValues as any);
-      
-      // The backend will create property charges automatically based on the
-      // rentAmount, maintenanceFee, and waterFee fields we're passing
-      // See DatabaseStorage.createProperty implementation
+      // The onSuccess handler defined during mutation initialization will 
+      // handle creating property charges, so no more code needed here
     }
   }
 
@@ -291,13 +417,16 @@ export default function PropertiesPage() {
   }
 
   // Fetch current charges for the selected property
-  const { data: propertyCharges = [] } = useQuery<PropertyCharge[]>({
+  const { data: propertyCharges = [], isLoading: isLoadingCharges } = useQuery<PropertyCharge[]>({
     queryKey: ["/api/properties/current-charges", selectedFlatNumber], 
     queryFn: async () => {
       if (!selectedFlatNumber) return [];
+      console.log(`Getting current property charges for flat: ${selectedFlatNumber}`);
       const res = await fetch(`/api/properties/${selectedFlatNumber}/current-charges`);
       if (!res.ok) throw new Error("Failed to fetch property charges");
-      return res.json();
+      const data = await res.json();
+      console.log(`Found ${data.length} current charges for flat ${selectedFlatNumber}`);
+      return data;
     },
     enabled: !!selectedFlatNumber,
   });
@@ -449,47 +578,56 @@ export default function PropertiesPage() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="rentAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Monthly Rent (₹)</FormLabel>
-                            <FormControl>
-                              <Input readOnly={true} type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    </div>
+                    
+                    <div className="border p-4 rounded-lg bg-slate-50 mt-2 mb-4">
+                      <h3 className="text-lg font-medium mb-2">Current Property Charges</h3>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <FormField
+                          control={form.control}
+                          name="rentAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Monthly Rent (₹)</FormLabel>
+                              <FormControl>
+                                <Input readOnly={true} type="number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="maintenanceFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Maintenance Fee (₹)</FormLabel>
-                            <FormControl>
-                              <Input readOnly={true} type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="waterFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Water Fee (₹)</FormLabel>
-                            <FormControl>
-                              <Input readOnly={true} type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="maintenanceFee"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Maintenance Fee (₹)</FormLabel>
+                              <FormControl>
+                                <Input readOnly={true} type="number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="waterFee"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Water Fee (₹)</FormLabel>
+                              <FormControl>
+                                <Input readOnly={true} type="number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
                       <FormField
                         control={form.control}
@@ -684,59 +822,75 @@ export default function PropertiesPage() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="rentAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Monthly Rent (₹)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                readOnly={isReadOnly}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    </div>
+                    
+                    {/* Property Charges Section */}
+                    <div className="border p-4 rounded-lg space-y-4 mt-4 bg-slate-50">
+                      <div className="flex items-center">
+                        <h3 className="text-lg font-medium">Property Charges</h3>
+                        <Badge variant="outline" className="ml-2">Stored in charge history</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Changing these values will update the property charge records with new entries effective from today.
+                      </p>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <FormField
+                          control={form.control}
+                          name="rentAmount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Monthly Rent (₹)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  readOnly={isReadOnly}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="maintenanceFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Maintenance Fee (₹)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                readOnly={isReadOnly}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="waterFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Water Fee (₹)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                readOnly={isReadOnly}
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                          control={form.control}
+                          name="maintenanceFee"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Maintenance Fee (₹)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  readOnly={isReadOnly}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="waterFee"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Water Fee (₹)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  readOnly={isReadOnly}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
                       <FormField
                         control={form.control}
