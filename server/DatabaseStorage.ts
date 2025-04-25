@@ -480,9 +480,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCurrentPropertyCharges(flatNumber: string): Promise<PropertyCharge[]> {
-    return await db.select().from(propertyCharges)
-      .where(eq(propertyCharges.flatNumber, flatNumber))
-      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+    try {
+      console.log(`Getting current property charges for flat: ${flatNumber}`);
+      const results = await db.select().from(propertyCharges)
+        .where(eq(propertyCharges.flatNumber, flatNumber))
+        .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+      console.log(`Found ${results.length} current charges for flat ${flatNumber}`);
+      return results;
+    } catch (error) {
+      console.error(`Error getting current property charges: ${error}`);
+      return [];
+    }
   }
 
   async getPropertyChargeHistory(flatNumber: string, chargeType: string): Promise<PropertyCharge[]> {
@@ -530,8 +538,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePropertyCharge(id: number, updates: Partial<InsertPropertyCharge>): Promise<PropertyCharge | undefined> {
+    // Format dates properly
+    const formattedUpdates: any = { ...updates };
+    
+    if (updates.effectiveFrom) {
+      formattedUpdates.effectiveFrom = typeof updates.effectiveFrom === 'string' 
+        ? updates.effectiveFrom 
+        : updates.effectiveFrom.toISOString();
+    }
+    
+    if (updates.effectiveTo) {
+      formattedUpdates.effectiveTo = typeof updates.effectiveTo === 'string'
+        ? updates.effectiveTo
+        : updates.effectiveTo.toISOString();
+    }
+    
     const [updatedCharge] = await db.update(propertyCharges)
-      .set(updates)
+      .set(formattedUpdates)
       .where(eq(propertyCharges.id, id))
       .returning();
     return updatedCharge;
@@ -603,8 +626,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTenantCharge(id: number, updates: Partial<InsertTenantCharge>): Promise<TenantCharge | undefined> {
+    // Format dates properly
+    const formattedUpdates: any = { ...updates };
+    
+    if (updates.effectiveFrom) {
+      formattedUpdates.effectiveFrom = typeof updates.effectiveFrom === 'string' 
+        ? updates.effectiveFrom 
+        : updates.effectiveFrom.toISOString();
+    }
+    
+    if (updates.effectiveTo) {
+      formattedUpdates.effectiveTo = typeof updates.effectiveTo === 'string'
+        ? updates.effectiveTo
+        : updates.effectiveTo.toISOString();
+    }
+    
     const [updatedCharge] = await db.update(tenantCharges)
-      .set(updates)
+      .set(formattedUpdates)
       .where(eq(tenantCharges.id, id))
       .returning();
     return updatedCharge;
@@ -617,7 +655,7 @@ export class DatabaseStorage implements IStorage {
 
   // Helper method to find the current tenant(s) for a flat
   async getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]> {
-    const today = new Date();
+    const today = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD string
     return await db.select().from(tenants)
       .where(eq(tenants.flatNumber, flatNumber))
       .where(sql`${tenants.leaseEndDate} >= ${today}`);
