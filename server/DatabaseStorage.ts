@@ -72,33 +72,145 @@ export class DatabaseStorage implements IStorage {
   
   // Property methods
   async getProperty(id: number): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.id, id));
-    return property;
+    try {
+      console.log(`Getting property with ID: ${id}`);
+      const [property] = await db.select().from(properties).where(eq(properties.id, id));
+      return property;
+    } catch (error) {
+      console.error(`Error fetching property: ${error}`);
+      throw error;
+    }
   }
   
   async getProperties(): Promise<Property[]> {
-    return await db.select().from(properties);
+    try {
+      console.log("Getting all properties");
+      const propertyList = await db.select().from(properties);
+      console.log(`Retrieved ${propertyList.length} properties`);
+      return propertyList;
+    } catch (error) {
+      console.error(`Error fetching properties: ${error}`);
+      throw error;
+    }
   }
   
   async createProperty(property: InsertProperty): Promise<Property> {
-    const now = new Date();
-    const [newProperty] = await db.insert(properties).values({
-      ...property,
-      createdAt: now,
-      updatedAt: now
-    }).returning();
-    return newProperty;
+    try {
+      console.log("Creating new property:", property);
+      const now = new Date();
+      const [newProperty] = await db.insert(properties).values({
+        ...property,
+        createdAt: now,
+        updatedAt: now
+      }).returning();
+      
+      // If property creation was successful and we have rent, maintenance fee, or water fee data,
+      // create property charges records
+      if (property.flatNumber) {
+        const today = new Date();
+        // These would come from the form but are not in the property table anymore
+        if (property.rentAmount) {
+          await this.createPropertyCharge({
+            flatNumber: property.flatNumber,
+            nestawayId: property.nestawayId || null,
+            chargeType: 'rent',
+            amount: property.rentAmount,
+            effectiveFrom: today,
+            effectiveTo: null
+          });
+        }
+        
+        if (property.maintenanceFee) {
+          await this.createPropertyCharge({
+            flatNumber: property.flatNumber,
+            nestawayId: property.nestawayId || null,
+            chargeType: 'maint_fee',
+            amount: property.maintenanceFee,
+            effectiveFrom: today,
+            effectiveTo: null
+          });
+        }
+        
+        if (property.waterFee) {
+          await this.createPropertyCharge({
+            flatNumber: property.flatNumber,
+            nestawayId: property.nestawayId || null,
+            chargeType: 'water_fee',
+            amount: property.waterFee,
+            effectiveFrom: today,
+            effectiveTo: null
+          });
+        }
+      }
+      
+      return newProperty;
+    } catch (error) {
+      console.error(`Error creating property: ${error}`);
+      throw error;
+    }
   }
   
   async updateProperty(id: number, updates: Partial<InsertProperty>): Promise<Property | undefined> {
-    const [updatedProperty] = await db.update(properties)
-      .set({
-        ...updates,
-        updatedAt: new Date()
-      })
-      .where(eq(properties.id, id))
-      .returning();
-    return updatedProperty;
+    try {
+      console.log(`Updating property with ID: ${id}`, updates);
+      
+      // Extract the property charge related fields that are not in the properties table
+      const { rentAmount, maintenanceFee, waterFee, ...propertyUpdates } = updates as any;
+      
+      const [updatedProperty] = await db.update(properties)
+        .set({
+          ...propertyUpdates,
+          updatedAt: new Date()
+        })
+        .where(eq(properties.id, id))
+        .returning();
+      
+      // Get the property to access its flatNumber
+      const property = await this.getProperty(id);
+      
+      if (property && property.flatNumber) {
+        const today = new Date();
+        
+        // Update property charges if they were provided
+        if (rentAmount !== undefined) {
+          await this.createPropertyCharge({
+            flatNumber: property.flatNumber,
+            nestawayId: property.nestawayId || null,
+            chargeType: 'rent',
+            amount: rentAmount,
+            effectiveFrom: today,
+            effectiveTo: null
+          });
+        }
+        
+        if (maintenanceFee !== undefined) {
+          await this.createPropertyCharge({
+            flatNumber: property.flatNumber,
+            nestawayId: property.nestawayId || null,
+            chargeType: 'maint_fee',
+            amount: maintenanceFee,
+            effectiveFrom: today,
+            effectiveTo: null
+          });
+        }
+        
+        if (waterFee !== undefined) {
+          await this.createPropertyCharge({
+            flatNumber: property.flatNumber,
+            nestawayId: property.nestawayId || null,
+            chargeType: 'water_fee',
+            amount: waterFee,
+            effectiveFrom: today,
+            effectiveTo: null
+          });
+        }
+      }
+      
+      return updatedProperty;
+    } catch (error) {
+      console.error(`Error updating property: ${error}`);
+      throw error;
+    }
   }
   
   async deleteProperty(id: number): Promise<boolean> {
@@ -285,61 +397,74 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getPropertySummary(): Promise<PropertySummary> {
-    // Get total properties
-    const totalResult = await db.select({
-      total: count()
-    }).from(properties);
-    
-    const total = totalResult[0]?.total || 0;
-    
-    // Group by flat type
-    const byTypeResult = await db.select({
-      type: properties.flatType,
-      count: count()
-    })
-    .from(properties)
-    .groupBy(properties.flatType);
-    
-    const byType = byTypeResult.map(item => ({
-      type: item.type,
-      count: item.count
-    }));
-    
-    // Calculate occupancy rate
-    const rentedCountResult = await db.select({
-      count: count()
-    })
-    .from(properties)
-    .where(eq(properties.isRented, true));
-    
-    const rentedCount = rentedCountResult[0]?.count || 0;
-    const occupancyRate = total > 0 ? (rentedCount / total) * 100 : 0;
-    
-    // Calculate total monthly rent
-    const totalRentResult = await db.select({
-      total: sql<number>`sum(${properties.expectedRent})`
-    })
-    .from(properties)
-    .where(eq(properties.isRented, true));
-    
-    const totalMonthlyRent = totalRentResult[0]?.total || 0;
-    
-    // Calculate total maintenance collection
-    const totalMaintenanceResult = await db.select({
-      total: sql<number>`sum(${properties.maintenanceFee})`
-    })
-    .from(properties)
-    .where(eq(properties.isRented, true));
-    
-    const totalMaintenanceCollection = totalMaintenanceResult[0]?.total || 0;
-    
-    return {
-      total,
-      byType,
-      occupancyRate,
-      totalMonthlyRent,
-      totalMaintenanceCollection
-    };
+    try {
+      // Get total properties
+      const totalResult = await db.select({
+        total: count()
+      }).from(properties);
+      
+      const total = totalResult[0]?.total || 0;
+      
+      // Group by flat type
+      const byTypeResult = await db.select({
+        type: properties.flatType,
+        count: count()
+      })
+      .from(properties)
+      .groupBy(properties.flatType);
+      
+      const byType = byTypeResult.map(item => ({
+        type: item.type,
+        count: item.count
+      }));
+      
+      // Calculate occupancy rate
+      const rentedCountResult = await db.select({
+        count: count()
+      })
+      .from(properties)
+      .where(eq(properties.isRented, true));
+      
+      const rentedCount = rentedCountResult[0]?.count || 0;
+      const occupancyRate = total > 0 ? (rentedCount / total) * 100 : 0;
+      
+      // Calculate total monthly rent from property_charges instead of properties table
+      const totalRentResult = await db.select({
+        total: sql<number>`sum(${propertyCharges.amount})`
+      })
+      .from(propertyCharges)
+      .where(eq(propertyCharges.chargeType, 'rent'))
+      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+      
+      const totalMonthlyRent = totalRentResult[0]?.total || 0;
+      
+      // Calculate total maintenance collection from property_charges
+      const totalMaintenanceResult = await db.select({
+        total: sql<number>`sum(${propertyCharges.amount})`
+      })
+      .from(propertyCharges)
+      .where(eq(propertyCharges.chargeType, 'maint_fee'))
+      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+      
+      const totalMaintenanceCollection = totalMaintenanceResult[0]?.total || 0;
+      
+      return {
+        total,
+        byType,
+        occupancyRate,
+        totalMonthlyRent,
+        totalMaintenanceCollection
+      };
+    } catch (error) {
+      console.error(`Error getting property summary: ${error}`);
+      return {
+        total: 0,
+        byType: [],
+        occupancyRate: 0,
+        totalMonthlyRent: 0,
+        totalMaintenanceCollection: 0
+      };
+    }
   }
   
   async getRecentTransactions(limit: number): Promise<(Income | Expense)[]> {
