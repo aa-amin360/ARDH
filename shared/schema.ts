@@ -288,6 +288,7 @@ export const insertPropertyChargeSchema = createInsertSchema(propertyCharges, {
   effectiveTo: z.coerce.date().optional().nullable(),
 }).omit({
   id: true,
+  createdAt: true,
 });
 
 export const insertTenantChargeSchema = createInsertSchema(tenantCharges, {
