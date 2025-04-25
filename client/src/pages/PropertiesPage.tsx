@@ -847,7 +847,7 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Flat Number</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -861,7 +861,7 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Nestaway ID</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
