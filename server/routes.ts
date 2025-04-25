@@ -736,11 +736,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/property-charges', isAuthenticated, adminOnlyForIncome, async (req, res, next) => {
     try {
-      const chargeData = insertPropertyChargeSchema.parse(req.body);
+      console.log("Creating property charge with data:", req.body);
+
+      // Make sure we have the user ID
+      const chargeData = insertPropertyChargeSchema.parse({
+        ...req.body,
+        createdBy: (req.body.createdBy || (req.user as any).id)
+      });
       
+      console.log("Parsed charge data:", chargeData);
       const newCharge = await storage.createPropertyCharge(chargeData);
       res.status(201).json(newCharge);
     } catch (error) {
+      console.error("Error creating property charge:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors });
       }
