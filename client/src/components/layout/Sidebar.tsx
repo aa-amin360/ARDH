@@ -22,7 +22,10 @@ interface SidebarProps {
   toggleSidebar: () => void;
 }
 
-export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) {
+export default function Sidebar({
+  isSidebarOpen,
+  toggleSidebar,
+}: SidebarProps) {
   const [location] = useLocation();
   const { user, isAdmin, logoutMutation } = useAuth();
 
@@ -67,12 +70,6 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
       href: "/vendors",
       icon: <Hammer className="w-5 h-5" />,
       isVisible: true,
-    },
-    {
-      label: "Property Charges",
-      href: "/property-charges",
-      icon: <Calculator className="w-5 h-5" />,
-      isVisible: isAdmin,
     },
     {
       label: "Reports",
@@ -141,7 +138,7 @@ export default function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) 
                       {
                         "bg-gray-100 text-primary": location === item.href,
                         "text-gray-700": location !== item.href,
-                      }
+                      },
                     )}
                   >
                     {item.icon}

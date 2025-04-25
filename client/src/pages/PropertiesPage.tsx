@@ -14,14 +14,14 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Form,
@@ -30,7 +30,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,32 +38,37 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { insertPropertySchema, type Property, PropertyCharge, chargeTypeEnum } from "@shared/schema";
-import { 
-  FLATS, 
-  OWNERS, 
-  MAINTENANCE_FEES, 
-  getOwnerByFlatNumber, 
-  getFlatTypeByFlatNumber, 
+import {
+  insertPropertySchema,
+  type Property,
+  PropertyCharge,
+  chargeTypeEnum,
+} from "@shared/schema";
+import {
+  FLATS,
+  OWNERS,
+  MAINTENANCE_FEES,
+  getOwnerByFlatNumber,
+  getFlatTypeByFlatNumber,
   getMaintenanceFeeByFlatNumber,
-  getNestawayIdByFlatNumber 
+  getNestawayIdByFlatNumber,
 } from "@shared/constants";
 
 // Extended schema with validation
@@ -71,11 +76,15 @@ const propertyFormSchema = insertPropertySchema.extend({
   flatNumber: z.string().min(3, "Flat number is required"),
   ownerName: z.string().min(2, "Owner name is required"),
   flatType: z.enum(["1BHK", "2BHK", "3BHK", "penthouse"]),
-  expectedRent: z.coerce.number().min(0, "Expected rent must be a positive number"),
-  maintenanceFee: z.coerce.number().min(0, "Maintenance fee must be a positive number"),
+  expectedRent: z.coerce
+    .number()
+    .min(0, "Expected rent must be a positive number"),
+  maintenanceFee: z.coerce
+    .number()
+    .min(0, "Maintenance fee must be a positive number"),
   isRented: z.boolean().default(false),
   floorArea: z.coerce.number().optional(),
-  createdBy: z.number().optional()
+  createdBy: z.number().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertyFormSchema>;
@@ -85,22 +94,22 @@ export default function PropertiesPage() {
   const [activeTab, setActiveTab] = useState("view");
   const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("");
   const [isReadOnly, setIsReadOnly] = useState(true);
-  
+
   // Fetch properties - use explicit fetch to debug authentication issues
   const [propertyData, setPropertyData] = useState<Property[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
-  
+
   const fetchProperties = async () => {
     try {
       setLoadingProperties(true);
-      const response = await fetch('/api/properties', {
-        credentials: 'include',
+      const response = await fetch("/api/properties", {
+        credentials: "include",
       });
-      
+
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`);
       }
-      
+
       const data = await response.json();
       console.log("Properties loaded:", data.length, data);
       setPropertyData(data);
@@ -110,18 +119,18 @@ export default function PropertiesPage() {
       setLoadingProperties(false);
     }
   };
-  
+
   // Fetch data on component mount
   useEffect(() => {
     fetchProperties();
   }, []);
-  
+
   // Also support the existing React Query interface for backwards compatibility
-  const { 
-    data: properties = propertyData, 
-    isLoading = loadingProperties, 
+  const {
+    data: properties = propertyData,
+    isLoading = loadingProperties,
     isError,
-    refetch = fetchProperties
+    refetch = fetchProperties,
   } = useQuery<Property[]>({
     queryKey: ["/api/properties"],
     // Adding retry options and staleTime to improve data fetching reliability
@@ -129,13 +138,13 @@ export default function PropertiesPage() {
     staleTime: 60000, // 1 minute
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    enabled: false // Don't run automatically - we'll use our custom fetch
+    enabled: false, // Don't run automatically - we'll use our custom fetch
   });
-  
+
   // Sort properties by flat number for consistent display
   const sortedProperties = useMemo(() => {
-    return [...(properties || [])].sort((a, b) => 
-      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true })
+    return [...(properties || [])].sort((a, b) =>
+      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
     );
   }, [properties]);
 
@@ -148,7 +157,7 @@ export default function PropertiesPage() {
     onSuccess: () => {
       toast({
         title: "Property added",
-        description: "The property has been added successfully."
+        description: "The property has been added successfully.",
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
@@ -159,21 +168,27 @@ export default function PropertiesPage() {
       toast({
         title: "Error adding property",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Update property mutation
   const updatePropertyMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number, values: PropertyFormValues }) => {
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: number;
+      values: PropertyFormValues;
+    }) => {
       const res = await apiRequest("PATCH", `/api/properties/${id}`, values);
       return await res.json();
     },
     onSuccess: () => {
       toast({
         title: "Property updated",
-        description: "The property has been updated successfully."
+        description: "The property has been updated successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       refetch(); // Explicitly refetch to ensure we have the latest data
@@ -183,9 +198,9 @@ export default function PropertiesPage() {
       toast({
         title: "Error updating property",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Form
@@ -201,35 +216,37 @@ export default function PropertiesPage() {
       currentTenant: "",
       floorArea: 0,
       notes: "",
-      createdBy: 0
-    }
+      createdBy: 0,
+    },
   } as any);
 
   // Handle form submission
   function onSubmit(values: PropertyFormValues) {
     const selectedProperty = getSelectedProperty();
-    
+
     // Format the values for API submission
     const formattedValues = {
       ...values,
       isRented: !!values.isRented, // Ensure boolean
-      expectedRent: typeof values.expectedRent === 'string' 
-        ? parseFloat(values.expectedRent) 
-        : values.expectedRent, // Ensure number
-      maintenanceFee: typeof values.maintenanceFee === 'string' 
-        ? parseFloat(values.maintenanceFee) 
-        : values.maintenanceFee, // Ensure number
-      floorArea: values.floorArea 
-        ? (typeof values.floorArea === 'string' 
-            ? parseFloat(values.floorArea) 
-            : values.floorArea) 
-        : null // Handle optional floor area
+      expectedRent:
+        typeof values.expectedRent === "string"
+          ? parseFloat(values.expectedRent)
+          : values.expectedRent, // Ensure number
+      maintenanceFee:
+        typeof values.maintenanceFee === "string"
+          ? parseFloat(values.maintenanceFee)
+          : values.maintenanceFee, // Ensure number
+      floorArea: values.floorArea
+        ? typeof values.floorArea === "string"
+          ? parseFloat(values.floorArea)
+          : values.floorArea
+        : null, // Handle optional floor area
     };
-    
+
     if (activeTab === "modify" && selectedProperty) {
-      updatePropertyMutation.mutate({ 
-        id: selectedProperty.id, 
-        values: formattedValues as any
+      updatePropertyMutation.mutate({
+        id: selectedProperty.id,
+        values: formattedValues as any,
       });
     } else if (activeTab === "add") {
       createPropertyMutation.mutate(formattedValues as any);
@@ -253,7 +270,7 @@ export default function PropertiesPage() {
   const handlePropertySelect = (flatNumber: string) => {
     setSelectedFlatNumber(flatNumber);
     const property = properties.find((p) => p.flatNumber === flatNumber);
-    
+
     if (property) {
       form.reset({
         flatNumber: property.flatNumber,
@@ -268,7 +285,7 @@ export default function PropertiesPage() {
         currentTenant: property.currentTenant || "",
         floorArea: property.floorArea || 0,
         notes: property.notes || "",
-        nestawayId: property.nestawayId || ""
+        nestawayId: property.nestawayId || "",
       });
     }
   };
@@ -279,7 +296,11 @@ export default function PropertiesPage() {
         <h1 className="text-2xl font-bold">Properties Management</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="view">View Property</TabsTrigger>
           <TabsTrigger value="modify">Modify Property</TabsTrigger>
@@ -297,18 +318,25 @@ export default function PropertiesPage() {
             </CardHeader>
             <CardContent>
               <div className="mb-6">
-                <Select onValueChange={handlePropertySelect} value={selectedFlatNumber}>
+                <Select
+                  onValueChange={handlePropertySelect}
+                  value={selectedFlatNumber}
+                >
                   <SelectTrigger className="w-full sm:w-1/2">
                     <SelectValue placeholder="Select a flat number" />
                   </SelectTrigger>
                   <SelectContent>
                     {isLoading ? (
                       <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />{" "}
+                        Loading...
                       </div>
                     ) : Array.isArray(properties) && properties.length > 0 ? (
                       properties.map((property: Property) => (
-                        <SelectItem key={property.id} value={property.flatNumber}>
+                        <SelectItem
+                          key={property.id}
+                          value={property.flatNumber}
+                        >
                           {property.flatNumber}
                         </SelectItem>
                       ))
@@ -338,7 +366,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="nestawayId"
@@ -352,7 +380,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="flatType"
@@ -366,7 +394,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="ownerName"
@@ -380,7 +408,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="expectedRent"
@@ -394,7 +422,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="maintenanceFee"
@@ -408,7 +436,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="isRented"
@@ -416,8 +444,8 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Occupancy Status</FormLabel>
                             <FormControl>
-                              <Input 
-                                readOnly={true} 
+                              <Input
+                                readOnly={true}
                                 value={field.value ? "Occupied" : "Vacant"}
                               />
                             </FormControl>
@@ -433,7 +461,10 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Current Tenant</FormLabel>
                             <FormControl>
-                              <Input readOnly={true} value={field.value || "None"} />
+                              <Input
+                                readOnly={true}
+                                value={field.value || "None"}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -454,7 +485,7 @@ export default function PropertiesPage() {
                         )}
                       />
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="notes"
@@ -489,18 +520,25 @@ export default function PropertiesPage() {
             </CardHeader>
             <CardContent>
               <div className="mb-6">
-                <Select onValueChange={handlePropertySelect} value={selectedFlatNumber}>
+                <Select
+                  onValueChange={handlePropertySelect}
+                  value={selectedFlatNumber}
+                >
                   <SelectTrigger className="w-full sm:w-1/2">
                     <SelectValue placeholder="Select a flat number" />
                   </SelectTrigger>
                   <SelectContent>
                     {isLoading ? (
                       <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Loading...
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />{" "}
+                        Loading...
                       </div>
                     ) : Array.isArray(properties) && properties.length > 0 ? (
                       properties.map((property: Property) => (
-                        <SelectItem key={property.id} value={property.flatNumber}>
+                        <SelectItem
+                          key={property.id}
+                          value={property.flatNumber}
+                        >
                           {property.flatNumber}
                         </SelectItem>
                       ))
@@ -515,7 +553,10 @@ export default function PropertiesPage() {
 
               {selectedFlatNumber && (
                 <Form {...form}>
-                  <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+                  <form
+                    className="space-y-6"
+                    onSubmit={form.handleSubmit(onSubmit)}
+                  >
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <FormField
                         control={form.control}
@@ -530,7 +571,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="nestawayId"
@@ -544,7 +585,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="flatType"
@@ -564,7 +605,9 @@ export default function PropertiesPage() {
                                   <SelectItem value="1BHK">1BHK</SelectItem>
                                   <SelectItem value="2BHK">2BHK</SelectItem>
                                   <SelectItem value="3BHK">3BHK</SelectItem>
-                                  <SelectItem value="penthouse">Penthouse</SelectItem>
+                                  <SelectItem value="penthouse">
+                                    Penthouse
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </FormControl>
@@ -572,7 +615,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="ownerName"
@@ -601,7 +644,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="expectedRent"
@@ -619,7 +662,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="maintenanceFee"
@@ -637,7 +680,7 @@ export default function PropertiesPage() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="isRented"
@@ -697,7 +740,7 @@ export default function PropertiesPage() {
                         )}
                       />
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="notes"
@@ -716,9 +759,14 @@ export default function PropertiesPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <div className="flex justify-end">
-                      <Button type="submit" disabled={isReadOnly || updatePropertyMutation.isPending}>
+                      <Button
+                        type="submit"
+                        disabled={
+                          isReadOnly || updatePropertyMutation.isPending
+                        }
+                      >
                         {updatePropertyMutation.isPending ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -749,7 +797,10 @@ export default function PropertiesPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+                <form
+                  className="space-y-6"
+                  onSubmit={form.handleSubmit(onSubmit)}
+                >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -764,7 +815,7 @@ export default function PropertiesPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="nestawayId"
@@ -778,7 +829,7 @@ export default function PropertiesPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="flatType"
@@ -790,10 +841,15 @@ export default function PropertiesPage() {
                               value={field.value}
                               onValueChange={(value) => {
                                 field.onChange(value);
-                                const maintenanceFee = value === '1BHK' ? 1000 : 
-                                                       value === '2BHK' ? 1500 : 
-                                                       value === '3BHK' ? 2000 : 2500;
-                                form.setValue('maintenanceFee', maintenanceFee);
+                                const maintenanceFee =
+                                  value === "1BHK"
+                                    ? 1000
+                                    : value === "2BHK"
+                                      ? 1500
+                                      : value === "3BHK"
+                                        ? 2000
+                                        : 2500;
+                                form.setValue("maintenanceFee", maintenanceFee);
                               }}
                             >
                               <SelectTrigger>
@@ -803,7 +859,9 @@ export default function PropertiesPage() {
                                 <SelectItem value="1BHK">1BHK</SelectItem>
                                 <SelectItem value="2BHK">2BHK</SelectItem>
                                 <SelectItem value="3BHK">3BHK</SelectItem>
-                                <SelectItem value="penthouse">Penthouse</SelectItem>
+                                <SelectItem value="penthouse">
+                                  Penthouse
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </FormControl>
@@ -811,7 +869,7 @@ export default function PropertiesPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="ownerName"
@@ -839,7 +897,7 @@ export default function PropertiesPage() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="expectedRent"
@@ -847,16 +905,13 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Monthly Rent (₹)</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                            />
+                            <Input type="number" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="maintenanceFee"
@@ -864,16 +919,13 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Maintenance Fee (₹)</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                            />
+                            <Input type="number" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="isRented"
@@ -902,10 +954,7 @@ export default function PropertiesPage() {
                         <FormItem>
                           <FormLabel>Current Tenant</FormLabel>
                           <FormControl>
-                            <Input
-                              {...field}
-                              value={field.value || ""}
-                            />
+                            <Input {...field} value={field.value || ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -930,7 +979,7 @@ export default function PropertiesPage() {
                       )}
                     />
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="notes"
@@ -948,9 +997,12 @@ export default function PropertiesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={createPropertyMutation.isPending}>
+                    <Button
+                      type="submit"
+                      disabled={createPropertyMutation.isPending}
+                    >
                       {createPropertyMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -999,25 +1051,23 @@ function PropertyChargesTab() {
     chargeType: "rent",
     amount: 0,
     effectiveFrom: new Date().toISOString().slice(0, 10),
-    nestawayId: ""
+    nestawayId: "",
   });
 
   // Load all property charges
-  const { 
-    data: propertyCharges, 
-    isLoading: isLoadingCharges 
-  } = useQuery<PropertyCharge[]>({
-    queryKey: ['/api/property-charges'],
-    enabled: true,
+  const { data: propertyCharges = [], isLoading: isLoadingCharges } = useQuery<
+    PropertyCharge[]
+  >({
+    queryKey: ["/api/property-charges"],
+    queryFn: () =>
+      apiRequest("GET", "/api/property-charges").then((res) => res.json()),
   });
 
   // Load all properties to populate the dropdown
-  const { 
-    data: properties, 
-    isLoading: isLoadingProperties 
-  } = useQuery({
-    queryKey: ['/api/properties'],
-    enabled: true,
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery({
+    queryKey: ["/api/properties"],
+    queryFn: () =>
+      apiRequest("GET", "/api/properties").then((res) => res.json()),
   });
 
   // Create mutation for adding a new property charge
@@ -1037,34 +1087,38 @@ function PropertyChargesTab() {
         chargeType: "rent",
         amount: 0,
         effectiveFrom: new Date().toISOString().slice(0, 10),
-        nestawayId: ""
+        nestawayId: "",
       });
       // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['/api/property-charges'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/property-charges"] });
     },
     onError: (error: Error) => {
       toast({
         title: "Error adding charge",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
 
   // Helper function to convert charge type to display name
   const getChargeTypeName = (chargeType: string) => {
     switch (chargeType) {
-      case "rent": return "Rent";
-      case "maint_fee": return "Maintenance Fee";
-      case "water_fee": return "Water Fee";
-      default: return chargeType;
+      case "rent":
+        return "Rent";
+      case "maint_fee":
+        return "Maintenance Fee";
+      case "water_fee":
+        return "Water Fee";
+      default:
+        return chargeType;
     }
   };
 
   // Extract unique flat numbers
   const uniqueFlatNumbers: string[] = [];
   if (Array.isArray(properties)) {
-    properties.forEach(p => {
+    properties.forEach((p) => {
       if (p.flatNumber && !uniqueFlatNumbers.includes(p.flatNumber)) {
         uniqueFlatNumbers.push(p.flatNumber);
       }
@@ -1072,11 +1126,15 @@ function PropertyChargesTab() {
   }
 
   // Filter charges based on selections
-  const filteredCharges = Array.isArray(propertyCharges) 
-    ? propertyCharges.filter(charge => {
+  const filteredCharges = Array.isArray(propertyCharges)
+    ? propertyCharges.filter((charge) => {
         return (
-          (selectedFlatNumber === "all" || selectedFlatNumber === "" || charge.flatNumber === selectedFlatNumber) &&
-          (selectedChargeType === "all" || selectedChargeType === "" || charge.chargeType === selectedChargeType)
+          (selectedFlatNumber === "all" ||
+            selectedFlatNumber === "" ||
+            charge.flatNumber === selectedFlatNumber) &&
+          (selectedChargeType === "all" ||
+            selectedChargeType === "" ||
+            charge.chargeType === selectedChargeType)
         );
       })
     : [];
@@ -1090,12 +1148,13 @@ function PropertyChargesTab() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between">
-        <div>
+        {/*<div>
           <h2 className="text-xl font-bold">Property Charges Management</h2>
           <p className="text-muted-foreground">
-            View and manage property charges including rent, maintenance fees, and water fees
+            View and manage property charges including rent, maintenance fees,
+            and water fees
           </p>
-        </div>
+        </div>*/}
 
         <Button onClick={() => setIsAddChargeOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Charge
@@ -1122,7 +1181,7 @@ function PropertyChargesTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Flats</SelectItem>
-                  {uniqueFlatNumbers.map(flatNumber => (
+                  {uniqueFlatNumbers.map((flatNumber) => (
                     <SelectItem key={flatNumber} value={flatNumber}>
                       Flat {flatNumber}
                     </SelectItem>
@@ -1130,7 +1189,7 @@ function PropertyChargesTab() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex-1">
               <Label htmlFor="chargeTypeFilter">Filter by Charge Type</Label>
               <Select
@@ -1148,10 +1207,10 @@ function PropertyChargesTab() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex items-end">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setSelectedFlatNumber("");
                   setSelectedChargeType("");
@@ -1161,7 +1220,7 @@ function PropertyChargesTab() {
               </Button>
             </div>
           </div>
-          
+
           {isLoadingCharges ? (
             <div className="flex justify-center items-center h-32">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1180,20 +1239,28 @@ function PropertyChargesTab() {
                 </TableHeader>
                 <TableBody>
                   {filteredCharges && filteredCharges.length > 0 ? (
-                    filteredCharges.map(charge => (
+                    filteredCharges.map((charge) => (
                       <TableRow key={charge.id}>
-                        <TableCell className="font-medium">{charge.flatNumber}</TableCell>
+                        <TableCell className="font-medium">
+                          {charge.flatNumber}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={
-                            charge.chargeType === "rent" ? "default" : 
-                            charge.chargeType === "maint_fee" ? "secondary" : 
-                            "outline"
-                          }>
+                          <Badge
+                            variant={
+                              charge.chargeType === "rent"
+                                ? "default"
+                                : charge.chargeType === "maint_fee"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
                             {getChargeTypeName(charge.chargeType)}
                           </Badge>
                         </TableCell>
                         <TableCell>{formatCurrency(charge.amount)}</TableCell>
-                        <TableCell>{formatDate(new Date(charge.effectiveFrom))}</TableCell>
+                        <TableCell>
+                          {formatDate(new Date(charge.effectiveFrom))}
+                        </TableCell>
                         <TableCell>
                           {charge.effectiveTo ? (
                             <Badge variant="outline">Historical</Badge>
@@ -1206,9 +1273,9 @@ function PropertyChargesTab() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-4">
-                        {filteredCharges?.length === 0 ? 
-                          "No charges found with the selected filters." : 
-                          "No property charges found."}
+                        {filteredCharges?.length === 0
+                          ? "No charges found with the selected filters."
+                          : "No property charges found."}
                       </TableCell>
                     </TableRow>
                   )}
@@ -1225,10 +1292,11 @@ function PropertyChargesTab() {
           <DialogHeader>
             <DialogTitle>Add New Property Charge</DialogTitle>
             <DialogDescription>
-              Set a new rate for rent, maintenance fee, or water charge for a property.
+              Set a new rate for rent, maintenance fee, or water charge for a
+              property.
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1238,14 +1306,16 @@ function PropertyChargesTab() {
                 <div className="col-span-3">
                   <Select
                     value={formData.flatNumber}
-                    onValueChange={(value) => setFormData({...formData, flatNumber: value})}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, flatNumber: value })
+                    }
                     required
                   >
                     <SelectTrigger id="flatNumber">
                       <SelectValue placeholder="Select flat number" />
                     </SelectTrigger>
                     <SelectContent>
-                      {uniqueFlatNumbers.map(flatNumber => (
+                      {uniqueFlatNumbers.map((flatNumber) => (
                         <SelectItem key={flatNumber} value={flatNumber}>
                           Flat {flatNumber}
                         </SelectItem>
@@ -1254,7 +1324,7 @@ function PropertyChargesTab() {
                   </Select>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="chargeType" className="text-right">
                   Charge Type
@@ -1262,7 +1332,9 @@ function PropertyChargesTab() {
                 <div className="col-span-3">
                   <Select
                     value={formData.chargeType}
-                    onValueChange={(value) => setFormData({...formData, chargeType: value})}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, chargeType: value })
+                    }
                     required
                   >
                     <SelectTrigger id="chargeType">
@@ -1276,7 +1348,7 @@ function PropertyChargesTab() {
                   </Select>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="amount" className="text-right">
                   Amount (₹)
@@ -1288,12 +1360,17 @@ function PropertyChargesTab() {
                     step="0.01"
                     min="0"
                     value={formData.amount}
-                    onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value) || 0})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        amount: parseFloat(e.target.value) || 0,
+                      })
+                    }
                     required
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="effectiveFrom" className="text-right">
                   Effective From
@@ -1303,12 +1380,17 @@ function PropertyChargesTab() {
                     id="effectiveFrom"
                     type="date"
                     value={formData.effectiveFrom}
-                    onChange={(e) => setFormData({...formData, effectiveFrom: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        effectiveFrom: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="nestawayId" className="text-right">
                   Nestaway ID
@@ -1318,17 +1400,19 @@ function PropertyChargesTab() {
                     id="nestawayId"
                     type="text"
                     value={formData.nestawayId}
-                    onChange={(e) => setFormData({...formData, nestawayId: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nestawayId: e.target.value })
+                    }
                     placeholder="Optional"
                   />
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="secondary" 
+              <Button
+                type="button"
+                variant="secondary"
                 onClick={() => setIsAddChargeOpen(false)}
               >
                 Cancel
