@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Plus, Save, Filter } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -1085,6 +1086,7 @@ export default function PropertiesPage() {
 // Property Charges Tab Component
 function PropertyChargesTab() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("all");
   const [selectedChargeType, setSelectedChargeType] = useState<string>("all");
   const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
@@ -1204,7 +1206,7 @@ function PropertyChargesTab() {
       ...formData,
       effectiveFrom: formattedDate,
       effectiveTo: null,
-      createdBy: 1 // Use admin user ID as default
+      createdBy: user?.id // Use current user's ID
     };
     
     console.log("Submitting formatted charge data:", chargeData);
