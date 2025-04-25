@@ -76,12 +76,22 @@ const propertyFormSchema = insertPropertySchema.extend({
   flatNumber: z.string().min(3, "Flat number is required"),
   ownerName: z.string().min(2, "Owner name is required"),
   flatType: z.enum(["1BHK", "2BHK", "3BHK", "penthouse"]),
-  expectedRent: z.coerce
+  
+  // These fields are not in the properties table anymore but needed for the form
+  // Will be stored in property_charges table instead
+  rentAmount: z.coerce
     .number()
-    .min(0, "Expected rent must be a positive number"),
+    .min(0, "Expected rent must be a positive number")
+    .optional(),
   maintenanceFee: z.coerce
     .number()
-    .min(0, "Maintenance fee must be a positive number"),
+    .min(0, "Maintenance fee must be a positive number")
+    .optional(),
+  waterFee: z.coerce
+    .number()
+    .min(0, "Water fee must be a positive number")
+    .optional(),
+    
   isRented: z.boolean().default(false),
   floorArea: z.coerce.number().optional(),
   createdBy: z.number().optional(),
@@ -210,12 +220,15 @@ export default function PropertiesPage() {
       flatNumber: "",
       ownerName: "",
       flatType: "1BHK",
-      expectedRent: 0,
+      apartmentFloor: "1",
+      leaseStatus: "Leasable",
+      rentAmount: 0,
       maintenanceFee: 0,
+      waterFee: 0,
       isRented: false,
-      currentTenant: "",
       floorArea: 0,
       notes: "",
+      nestawayId: "",
       createdBy: 0,
     },
   } as any);
@@ -228,14 +241,18 @@ export default function PropertiesPage() {
     const formattedValues = {
       ...values,
       isRented: !!values.isRented, // Ensure boolean
-      expectedRent:
-        typeof values.expectedRent === "string"
-          ? parseFloat(values.expectedRent)
-          : values.expectedRent, // Ensure number
+      rentAmount:
+        typeof values.rentAmount === "string"
+          ? parseFloat(values.rentAmount)
+          : values.rentAmount, // Ensure number
       maintenanceFee:
         typeof values.maintenanceFee === "string"
           ? parseFloat(values.maintenanceFee)
           : values.maintenanceFee, // Ensure number
+      waterFee:
+        typeof values.waterFee === "string"
+          ? parseFloat(values.waterFee)
+          : values.waterFee, // Ensure number
       floorArea: values.floorArea
         ? typeof values.floorArea === "string"
           ? parseFloat(values.floorArea)
@@ -266,23 +283,39 @@ export default function PropertiesPage() {
     return properties.find((p) => p.flatNumber === selectedFlatNumber);
   }
 
+  // Fetch current charges for the selected property
+  const { data: propertyCharges = [] } = useQuery<PropertyCharge[]>({
+    queryKey: ["/api/properties/charges", selectedFlatNumber], 
+    queryFn: async () => {
+      if (!selectedFlatNumber) return [];
+      const res = await fetch(`/api/properties/charges?flatNumber=${selectedFlatNumber}&currentOnly=true`);
+      if (!res.ok) throw new Error("Failed to fetch property charges");
+      return res.json();
+    },
+    enabled: !!selectedFlatNumber,
+  });
+
   // Handle property selection
   const handlePropertySelect = (flatNumber: string) => {
     setSelectedFlatNumber(flatNumber);
     const property = properties.find((p) => p.flatNumber === flatNumber);
 
     if (property) {
+      // Get the current charges for this property
+      const currentRent = propertyCharges.find(c => c.chargeType === 'rent')?.amount || 0;
+      const currentMaintenanceFee = propertyCharges.find(c => c.chargeType === 'maint_fee')?.amount || 0;
+      const currentWaterFee = propertyCharges.find(c => c.chargeType === 'water_fee')?.amount || 0;
+      
       form.reset({
         flatNumber: property.flatNumber,
         flatType: property.flatType as any,
         apartmentFloor: property.apartmentFloor as any,
         leaseStatus: property.leaseStatus as any,
         ownerName: property.ownerName,
-        expectedRent: property.expectedRent,
-        maintenanceFee: property.maintenanceFee,
-        waterCost: property.waterCost || undefined,
+        rentAmount: currentRent,
+        maintenanceFee: currentMaintenanceFee,
+        waterFee: currentWaterFee,
         isRented: property.isRented,
-        currentTenant: property.currentTenant || "",
         floorArea: property.floorArea || 0,
         notes: property.notes || "",
         nestawayId: property.nestawayId || "",
@@ -411,7 +444,7 @@ export default function PropertiesPage() {
 
                       <FormField
                         control={form.control}
-                        name="expectedRent"
+                        name="rentAmount"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Monthly Rent (₹)</FormLabel>
@@ -429,6 +462,20 @@ export default function PropertiesPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Maintenance Fee (₹)</FormLabel>
+                            <FormControl>
+                              <Input readOnly={true} type="number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="waterFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Water Fee (₹)</FormLabel>
                             <FormControl>
                               <Input readOnly={true} type="number" {...field} />
                             </FormControl>
@@ -647,7 +694,7 @@ export default function PropertiesPage() {
 
                       <FormField
                         control={form.control}
-                        name="expectedRent"
+                        name="rentAmount"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Monthly Rent (₹)</FormLabel>
@@ -669,6 +716,24 @@ export default function PropertiesPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Maintenance Fee (₹)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                readOnly={isReadOnly}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="waterFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Water Fee (₹)</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
