@@ -669,17 +669,17 @@ export class DatabaseStorage implements IStorage {
   async createPropertyCharge(charge: InsertPropertyCharge): Promise<PropertyCharge> {
     console.log("Creating property charge with data:", charge);
     try {
-      // First, check if there's an existing active charge for this flat and charge type
+      // First, check if there's an existing active charge for this flat and SPECIFIC charge type
       const currentCharges = await db.select().from(propertyCharges)
         .where(eq(propertyCharges.flatNumber, charge.flatNumber))
         .where(eq(propertyCharges.chargeType, charge.chargeType))
         .where(sql`${propertyCharges.effectiveTo} IS NULL`);
   
-      console.log("Found current charges:", currentCharges.length);
+      console.log(`Found ${currentCharges.length} current charges for flat ${charge.flatNumber} and charge type ${charge.chargeType}`);
   
-      // If there's an existing charge, update its effectiveTo date to today
+      // If there are existing charges of this specific type, update their effectiveTo dates
       if (currentCharges.length > 0) {
-        // Make sure to set the effectiveTo date for ALL current charges of this type
+        // Update only the charges that match this specific flat + charge type combination
         for (const currentCharge of currentCharges) {
           const today = new Date();
           
@@ -788,12 +788,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tenantCharges.chargeType, charge.chargeType))
       .where(sql`${tenantCharges.effectiveTo} IS NULL`);
 
-    // If there's an existing charge, update its effectiveTo date to today
+    console.log(`Found ${currentCharges.length} current tenant charges for tenant ${charge.tenantId} with charge type ${charge.chargeType}`);
+    
+    // If there are existing charges, update ALL of their effectiveTo dates
     if (currentCharges.length > 0) {
-      const today = new Date();
-      await db.update(tenantCharges)
-        .set({ effectiveTo: today.toISOString() })
-        .where(eq(tenantCharges.id, currentCharges[0].id));
+      // Update only the charges that match this specific tenant + charge type combination
+      for (const currentCharge of currentCharges) {
+        const today = new Date();
+        
+        console.log(`Updating tenant charge ID ${currentCharge.id} to set effectiveTo to ${today.toISOString()}`);
+        
+        await db.update(tenantCharges)
+          .set({ effectiveTo: today.toISOString() })
+          .where(eq(tenantCharges.id, currentCharge.id));
+        
+        console.log(`Updated existing tenant charge with effectiveTo: ${today.toISOString()}`);
+      }
     }
 
     // Create the new charge record with proper date formatting

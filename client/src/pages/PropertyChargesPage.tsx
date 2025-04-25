@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   PropertyCharge, 
-  chargeTypeEnum 
+  charge_typeEnum 
 } from "@shared/schema";
 import { Loader2, Filter, Plus } from "lucide-react";
 import { 
@@ -49,8 +49,8 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 
 // Types for our form
 interface PropertyChargeFormData {
-  flatNumber: string;
-  chargeType: string;
+  flat_number: string;
+  charge_type: string;
   amount: number;
   effectiveFrom: string;
   nestawayId?: string;
@@ -58,12 +58,12 @@ interface PropertyChargeFormData {
 
 export default function PropertyChargesPage() {
   const { toast } = useToast();
-  const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("");
-  const [selectedChargeType, setSelectedChargeType] = useState<string>("");
+  const [selectedflat_number, setSelectedflat_number] = useState<string>("");
+  const [selectedcharge_type, setSelectedcharge_type] = useState<string>("");
   const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
   const [formData, setFormData] = useState<PropertyChargeFormData>({
-    flatNumber: "",
-    chargeType: "rent",
+    flat_number: "",
+    charge_type: "rent",
     amount: 0,
     effectiveFrom: new Date().toISOString().slice(0, 10)
   });
@@ -102,8 +102,8 @@ export default function PropertyChargesPage() {
       
       // Reset form data
       setFormData({
-        flatNumber: "",
-        chargeType: "rent",
+        flat_number: "",
+        charge_type: "rent",
         amount: 0,
         effectiveFrom: new Date().toISOString().slice(0, 10)
       });
@@ -121,12 +121,12 @@ export default function PropertyChargesPage() {
   const filteredCharges = propertyCharges?.filter(charge => {
     let match = true;
     
-    if (selectedFlatNumber) {
-      match = match && charge.flatNumber === selectedFlatNumber;
+    if (selectedflat_number) {
+      match = match && charge.flat_number === selectedflat_number;
     }
     
-    if (selectedChargeType) {
-      match = match && charge.chargeType === selectedChargeType;
+    if (selectedcharge_type) {
+      match = match && charge.charge_type === selectedcharge_type;
     }
     
     return match;
@@ -142,11 +142,11 @@ export default function PropertyChargesPage() {
   };
 
   // Unique flat numbers for the filter dropdown
-  const uniqueFlatNumbers = properties ? 
-    [...new Set(properties.map(p => p.flatNumber))].sort() : 
+  const uniqueflat_numbers = properties ? 
+    [...new Set(properties.map(p => p.flat_number))].sort() : 
     [];
 
-  const getChargeTypeName = (type: string) => {
+  const getcharge_typeName = (type: string) => {
     switch(type) {
       case "rent": return "Rent";
       case "maint_fee": return "Maintenance Fee";
@@ -161,7 +161,7 @@ export default function PropertyChargesPage() {
     
     // Get the current (most recent) charges for each flat/type combination
     const currentCharges = propertyCharges.reduce<Record<string, PropertyCharge>>((acc, charge) => {
-      const key = `${charge.flatNumber}-${charge.chargeType}`;
+      const key = `${charge.flat_number}-${charge.charge_type}`;
       if (!acc[key] || new Date(charge.effectiveFrom) > new Date(acc[key].effectiveFrom)) {
         acc[key] = charge;
       }
@@ -171,9 +171,9 @@ export default function PropertyChargesPage() {
     // Calculate totals by type
     const totals = Object.values(currentCharges).reduce(
       (totals, charge) => {
-        if (charge.chargeType === "rent") totals.totalRent += charge.amount;
-        if (charge.chargeType === "maint_fee") totals.totalMaint += charge.amount;
-        if (charge.chargeType === "water_fee") totals.totalWater += charge.amount;
+        if (charge.charge_type === "rent") totals.totalRent += charge.amount;
+        if (charge.charge_type === "maint_fee") totals.totalMaint += charge.amount;
+        if (charge.charge_type === "water_fee") totals.totalWater += charge.amount;
         return totals;
       },
       { totalRent: 0, totalMaint: 0, totalWater: 0 }
@@ -240,17 +240,17 @@ export default function PropertyChargesPage() {
             <div className="flex-1">
               <Label htmlFor="flatFilter">Filter by Flat</Label>
               <Select
-                value={selectedFlatNumber}
-                onValueChange={setSelectedFlatNumber}
+                value={selectedflat_number}
+                onValueChange={setSelectedflat_number}
               >
                 <SelectTrigger id="flatFilter">
                   <SelectValue placeholder="All Flats" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Flats</SelectItem>
-                  {uniqueFlatNumbers.map(flatNumber => (
-                    <SelectItem key={flatNumber} value={flatNumber}>
-                      Flat {flatNumber}
+                  {uniqueflat_numbers.map(flat_number => (
+                    <SelectItem key={flat_number} value={flat_number}>
+                      Flat {flat_number}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -258,12 +258,12 @@ export default function PropertyChargesPage() {
             </div>
             
             <div className="flex-1">
-              <Label htmlFor="chargeTypeFilter">Filter by Charge Type</Label>
+              <Label htmlFor="charge_typeFilter">Filter by Charge Type</Label>
               <Select
-                value={selectedChargeType}
-                onValueChange={setSelectedChargeType}
+                value={selectedcharge_type}
+                onValueChange={setSelectedcharge_type}
               >
-                <SelectTrigger id="chargeTypeFilter">
+                <SelectTrigger id="charge_typeFilter">
                   <SelectValue placeholder="All Charge Types" />
                 </SelectTrigger>
                 <SelectContent>
@@ -279,8 +279,8 @@ export default function PropertyChargesPage() {
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setSelectedFlatNumber("");
-                  setSelectedChargeType("");
+                  setSelectedflat_number("");
+                  setSelectedcharge_type("");
                 }}
               >
                 Clear Filters
@@ -308,20 +308,20 @@ export default function PropertyChargesPage() {
                   {filteredCharges && filteredCharges.length > 0 ? (
                     filteredCharges.map(charge => (
                       <TableRow key={charge.id}>
-                        <TableCell className="font-medium">{charge.flatNumber}</TableCell>
+                        <TableCell className="font-medium">{charge.flat_number}</TableCell>
                         <TableCell>
                           <Badge variant={
-                            charge.chargeType === "rent" ? "default" : 
-                            charge.chargeType === "maint_fee" ? "secondary" : 
+                            charge.charge_type === "rent" ? "default" : 
+                            charge.charge_type === "maint_fee" ? "secondary" : 
                             "outline"
                           }>
-                            {getChargeTypeName(charge.chargeType)}
+                            {getcharge_typeName(charge.charge_type)}
                           </Badge>
                         </TableCell>
                         <TableCell>{formatCurrency(charge.amount)}</TableCell>
                         <TableCell>{formatDate(new Date(charge.effectiveFrom))}</TableCell>
                         <TableCell>
-                          {charge.effectiveTo ? (
+                          {charge.effective_to ? (
                             <Badge variant="outline">Historical</Badge>
                           ) : (
                             <Badge variant="success">Current</Badge>
@@ -358,22 +358,22 @@ export default function PropertyChargesPage() {
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="flatNumber" className="text-right">
+                <Label htmlFor="flat_number" className="text-right">
                   Flat Number
                 </Label>
                 <div className="col-span-3">
                   <Select
-                    value={formData.flatNumber}
-                    onValueChange={(value) => setFormData({...formData, flatNumber: value})}
+                    value={formData.flat_number}
+                    onValueChange={(value) => setFormData({...formData, flat_number: value})}
                     required
                   >
-                    <SelectTrigger id="flatNumber">
+                    <SelectTrigger id="flat_number">
                       <SelectValue placeholder="Select flat number" />
                     </SelectTrigger>
                     <SelectContent>
-                      {uniqueFlatNumbers.map(flatNumber => (
-                        <SelectItem key={flatNumber} value={flatNumber}>
-                          Flat {flatNumber}
+                      {uniqueflat_numbers.map(flat_number => (
+                        <SelectItem key={flat_number} value={flat_number}>
+                          Flat {flat_number}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -382,16 +382,16 @@ export default function PropertyChargesPage() {
               </div>
               
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="chargeType" className="text-right">
+                <Label htmlFor="charge_type" className="text-right">
                   Charge Type
                 </Label>
                 <div className="col-span-3">
                   <Select
-                    value={formData.chargeType}
-                    onValueChange={(value) => setFormData({...formData, chargeType: value})}
+                    value={formData.charge_type}
+                    onValueChange={(value) => setFormData({...formData, charge_type: value})}
                     required
                   >
-                    <SelectTrigger id="chargeType">
+                    <SelectTrigger id="charge_type">
                       <SelectValue placeholder="Select charge type" />
                     </SelectTrigger>
                     <SelectContent>
