@@ -292,10 +292,10 @@ export default function PropertiesPage() {
 
   // Fetch current charges for the selected property
   const { data: propertyCharges = [] } = useQuery<PropertyCharge[]>({
-    queryKey: ["/api/properties/charges", selectedFlatNumber], 
+    queryKey: ["/api/properties/current-charges", selectedFlatNumber], 
     queryFn: async () => {
       if (!selectedFlatNumber) return [];
-      const res = await fetch(`/api/properties/charges?flatNumber=${selectedFlatNumber}&currentOnly=true`);
+      const res = await fetch(`/api/properties/${selectedFlatNumber}/current-charges`);
       if (!res.ok) throw new Error("Failed to fetch property charges");
       return res.json();
     },
@@ -1103,8 +1103,14 @@ function PropertyChargesTab() {
     PropertyCharge[]
   >({
     queryKey: ["/api/property-charges"],
-    queryFn: () =>
-      apiRequest("GET", "/api/property-charges").then((res) => res.json()),
+    queryFn: async () => {
+      // Use the same endpoint as in the main component
+      const res = await apiRequest("GET", "/api/property-charges");
+      if (!res.ok) throw new Error("Failed to fetch property charges");
+      const data = await res.json();
+      console.log("Fetched property charges:", data.length);
+      return data;
+    },
   });
 
   // Load all properties to populate the dropdown
