@@ -1072,18 +1072,20 @@ export class DatabaseStorage implements IStorage {
 
   // Helper method to find the current tenant(s for a flat
   async getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]> {
-    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    return await db
+    const currentTenants = await db
       .select()
       .from(tenants)
-      .where(
-        and(
-          eq(tenants.flatNumber, flatNumber),
-          gte(tenants.leaseEndDate, today),
-        ),
-      )
-      .execute();
+      .where(eq(tenants.flatNumber, flatNumber));
+
+    // Filter tenants whose lease end date is today or in the future
+    return currentTenants.filter(tenant => {
+      const leaseEndDate = new Date(tenant.leaseEndDate);
+      leaseEndDate.setHours(0, 0, 0, 0);
+      return leaseEndDate >= today;
+    });
   }
 
   // Check if a flat has active tenants (for property occupancy status)
