@@ -101,10 +101,12 @@ export default function TenantsPage() {
 
   // Fetch tenant charges when dialog is open
   const { data: tenantCharges = [], isLoading: loadingCharges } = useQuery({
-    queryKey: ['/api/tenant-charges', selectedTenant?.id],
-    queryFn: () => 
-      selectedTenant?.id 
-        ? apiRequest("GET", `/api/tenants/${selectedTenant.id}/charges`).then(res => res.json())
+    queryKey: ["/api/tenant-charges", selectedTenant?.id],
+    queryFn: () =>
+      selectedTenant?.id
+        ? apiRequest("GET", `/api/tenants/${selectedTenant.id}/charges`).then(
+            (res) => res.json(),
+          )
         : Promise.resolve([]),
     enabled: isChargesDialogOpen && !!selectedTenant?.id,
   });
@@ -436,9 +438,6 @@ export default function TenantsPage() {
                                   getPropertyFlatNumber(tenant.propertyId)}
                               </TableCell>
                               <TableCell>
-                                ₹{tenant.rentAmount.toLocaleString()}
-                              </TableCell>
-                              <TableCell>
                                 <Badge
                                   className={getStatusColor(tenant.status)}
                                 >
@@ -516,9 +515,6 @@ export default function TenantsPage() {
                                     )}
                                   </span>
                                 </div>
-                              </TableCell>
-                              <TableCell>
-                                ₹{tenant.rentAmount.toLocaleString()}
                               </TableCell>
                               <TableCell>
                                 <Badge
@@ -1218,14 +1214,16 @@ export default function TenantsPage() {
                   {tenantCharges.map((charge: any) => (
                     <TableRow key={charge.id}>
                       <TableCell className="capitalize">
-                        {charge.chargeType.replace('_', ' ')}
+                        {charge.chargeType.replace("_", " ")}
                       </TableCell>
                       <TableCell>₹{charge.amount.toLocaleString()}</TableCell>
                       <TableCell>
-                        {format(new Date(charge.effectiveFrom), 'dd MMM yyyy')}
+                        {format(new Date(charge.effectiveFrom), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell>
-                        {charge.effectiveTo ? format(new Date(charge.effectiveTo), 'dd MMM yyyy') : 'Current'}
+                        {charge.effectiveTo
+                          ? format(new Date(charge.effectiveTo), "dd MMM yyyy")
+                          : "Current"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1241,7 +1239,10 @@ export default function TenantsPage() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsChargesDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsChargesDialogOpen(false)}
+            >
               Close
             </Button>
           </DialogFooter>
