@@ -76,7 +76,7 @@ import {
 const propertyFormSchema = insertPropertySchema.extend({
   flatNumber: z.string().min(3, "Flat number is required"),
   ownerName: z.string().min(2, "Owner name is required"),
-  flatType: z.enum(["1BHK", "2BHK", "3BHK", "Pent-house"]),
+  flatType: z.enum(["1BHK", "2BHK", "3BHK", "Penthouse"]),
 
   // These fields are not in the properties table anymore but needed for the form
   // Will be stored in property_charges table instead
@@ -113,31 +113,40 @@ export default function PropertiesPage() {
   const [propertyData, setPropertyData] = useState<Property[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
 
-  function normalizeCharges(rawCharges: any[]) {
+  {
+    /*function normalizeCharges(rawCharges: any[]) {
     return rawCharges.map((c) => ({
       chargeType: c.chargeType,
       flatNumber: c.flat_number,
       effectiveTo: c.effective_to,
       amount: c.amount,
     }));
+  }*/
   }
 
   // Fetch all property charges history for the selected flat
   const fetchAllPropertyCharges = async (flatNumber: string) => {
     if (!flatNumber) return;
-    
+
     try {
       setLoadingChargeHistory(true);
       console.log(`Fetching all charge history for flat: ${flatNumber}`);
-      
-      const response = await apiRequest("GET", `/api/properties/${flatNumber}/charges`);
-      
+
+      const response = await apiRequest(
+        "GET",
+        `/api/properties/${flatNumber}/charges`,
+      );
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch property charge history: ${response.status}`);
+        throw new Error(
+          `Failed to fetch property charge history: ${response.status}`,
+        );
       }
-      
+
       const data = await response.json();
-      console.log(`Found ${data.length} charge history records for flat ${flatNumber}`);
+      console.log(
+        `Found ${data.length} charge history records for flat ${flatNumber}`,
+      );
       setAllChargesData(data);
     } catch (error) {
       console.error("Error fetching property charge history:", error);
@@ -150,7 +159,7 @@ export default function PropertiesPage() {
       setLoadingChargeHistory(false);
     }
   };
-  
+
   const fetchProperties = async () => {
     try {
       setLoadingProperties(true);
@@ -221,7 +230,7 @@ export default function PropertiesPage() {
           flatNumber: createdProperty.flatNumber,
           nestawayId: createdProperty.nestawayId || "",
           chargeType: "rent",
-          amount: formValues.rentAmount,
+          amount: Number(formValues.rentAmount) || 0,
           effectiveFrom: today,
           effectiveTo: null,
           createdBy: 1, // Assuming admin user
@@ -232,7 +241,7 @@ export default function PropertiesPage() {
           flatNumber: createdProperty.flatNumber,
           nestawayId: createdProperty.nestawayId || "",
           chargeType: "maint_fee",
-          amount: formValues.maintenanceFee,
+          amount: Number(formValues.maintenanceFee) || 0,
           effectiveFrom: today,
           effectiveTo: null,
           createdBy: 1, // Assuming admin user
@@ -243,12 +252,12 @@ export default function PropertiesPage() {
           flatNumber: createdProperty.flatNumber,
           nestawayId: createdProperty.nestawayId || "",
           chargeType: "water_fee",
-          amount: formValues.waterFee,
+          amount: Number(formValues.waterFee) || 0,
           effectiveFrom: today,
           effectiveTo: null,
           createdBy: 1, // Assuming admin user
         };
-
+        console.log("Creating initial property charges ..");
         // Create all three charges
         await apiRequest("POST", "/api/property-charges", rentCharge);
         await apiRequest("POST", "/api/property-charges", maintenanceCharge);
@@ -263,6 +272,7 @@ export default function PropertiesPage() {
         });
       } catch (error) {
         console.error("Error creating initial property charges:", error);
+        console.error("Full error:", error);
         toast({
           title: "Property added but charge creation failed",
           description:
@@ -534,7 +544,7 @@ export default function PropertiesPage() {
     console.log("Selected Flat:", flatNumber);
     if (property) {
       // Get the current charges for this property
-
+      console.log("Found flat match");
       const currentRent =
         propertyCharges.find(
           (c) =>
@@ -1379,11 +1389,16 @@ function PropertyChargesTab() {
   const [selectedFlatNumber, setSelectedFlatNumber] = useState<string>("all");
   const [selectedchargeType, setSelectedchargeType] = useState<string>("all");
   const [isAddChargeOpen, setIsAddChargeOpen] = useState(false);
-  const [showChargesHistoryDialog, setShowChargesHistoryDialog] = useState(false);
-  const [chargeHistoryData, setChargeHistoryData] = useState<PropertyCharge[]>([]);
+  const [showChargesHistoryDialog, setShowChargesHistoryDialog] =
+    useState(false);
+  const [chargeHistoryData, setChargeHistoryData] = useState<PropertyCharge[]>(
+    [],
+  );
   const [loadingChargeHistory, setLoadingChargeHistory] = useState(false);
-  const [selectedHistoryFlatNumber, setSelectedHistoryFlatNumber] = useState<string>("");
-  const [selectedHistoryChargeType, setSelectedHistoryChargeType] = useState<string>("");
+  const [selectedHistoryFlatNumber, setSelectedHistoryFlatNumber] =
+    useState<string>("");
+  const [selectedHistoryChargeType, setSelectedHistoryChargeType] =
+    useState<string>("");
   const [formData, setFormData] = useState({
     flatNumber: "",
     chargeType: "rent",
@@ -1462,21 +1477,26 @@ function PropertyChargesTab() {
   };
 
   // Function to fetch property charge history
-  const fetchPropertyChargeHistory = async (flatNumber: string, chargeType?: string) => {
+  const fetchPropertyChargeHistory = async (
+    flatNumber: string,
+    chargeType?: string,
+  ) => {
     if (!flatNumber) return;
-    
+
     try {
       setLoadingChargeHistory(true);
-      console.log(`Fetching charge history for flat: ${flatNumber}, type: ${chargeType || 'all'}`);
-      
+      console.log(
+        `Fetching charge history for flat: ${flatNumber}, type: ${chargeType || "all"}`,
+      );
+
       let endpoint = `/api/properties/${flatNumber}/charges`;
       if (chargeType) {
         endpoint += `?chargeType=${chargeType}`;
       }
-      
-      const res = await apiRequest('GET', endpoint);
+
+      const res = await apiRequest("GET", endpoint);
       if (!res.ok) throw new Error("Failed to fetch property charge history");
-      
+
       const data = await res.json();
       console.log(`Found ${data.length} charge history records`);
       setChargeHistoryData(data);
@@ -1690,15 +1710,19 @@ function PropertyChargesTab() {
 
       {/* Add View History Button */}
       <div className="flex justify-end mt-4">
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => {
             if (selectedFlatNumber && selectedFlatNumber !== "all") {
-              fetchPropertyChargeHistory(selectedFlatNumber, selectedchargeType !== "all" ? selectedchargeType : undefined);
+              fetchPropertyChargeHistory(
+                selectedFlatNumber,
+                selectedchargeType !== "all" ? selectedchargeType : undefined,
+              );
             } else {
               toast({
                 title: "Select a Property",
-                description: "Please select a specific property to view its charge history",
+                description:
+                  "Please select a specific property to view its charge history",
                 variant: "destructive",
               });
             }
@@ -1709,18 +1733,20 @@ function PropertyChargesTab() {
       </div>
 
       {/* Property Charge History Dialog */}
-      <Dialog open={showChargesHistoryDialog} onOpenChange={setShowChargesHistoryDialog}>
+      <Dialog
+        open={showChargesHistoryDialog}
+        onOpenChange={setShowChargesHistoryDialog}
+      >
         <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Property Charge History</DialogTitle>
             <DialogDescription>
-              {selectedHistoryFlatNumber ? 
-                `Historical charges for Flat ${selectedHistoryFlatNumber}${selectedHistoryChargeType ? ` (${getchargeTypeName(selectedHistoryChargeType)})` : ''}`
-                : 'Select a property to view charge history'
-              }
+              {selectedHistoryFlatNumber
+                ? `Historical charges for Flat ${selectedHistoryFlatNumber}${selectedHistoryChargeType ? ` (${getchargeTypeName(selectedHistoryChargeType)})` : ""}`
+                : "Select a property to view charge history"}
             </DialogDescription>
           </DialogHeader>
-          
+
           {loadingChargeHistory ? (
             <div className="flex justify-center items-center h-32">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1759,10 +1785,9 @@ function PropertyChargesTab() {
                           {formatDate(new Date(charge.effectiveFrom))}
                         </TableCell>
                         <TableCell>
-                          {charge.effectiveTo ? 
-                            formatDate(new Date(charge.effectiveTo)) : 
-                            "Present"
-                          }
+                          {charge.effectiveTo
+                            ? formatDate(new Date(charge.effectiveTo))
+                            : "Present"}
                         </TableCell>
                         <TableCell>
                           {charge.effectiveTo ? (
@@ -1784,9 +1809,12 @@ function PropertyChargesTab() {
               </Table>
             </div>
           )}
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowChargesHistoryDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowChargesHistoryDialog(false)}
+            >
               Close
             </Button>
           </DialogFooter>
