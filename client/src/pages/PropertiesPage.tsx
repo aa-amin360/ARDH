@@ -536,7 +536,7 @@ export default function PropertiesPage() {
     },
     enabled: !!selectedFlatNumber,
   });
-  
+
   // Get active tenant status (occupancy) for the selected property
   const { data: occupancyData, isLoading: isLoadingOccupancy } = useQuery<{ hasActiveTenants: boolean }>({
     queryKey: ["/api/properties/has-active-tenants", selectedFlatNumber],
@@ -999,76 +999,6 @@ export default function PropertiesPage() {
                       />
                     </div>
 
-                    {/* Property Charges Section */}
-                    {/*<div className="border p-4 rounded-lg space-y-4 mt-4 bg-slate-50">
-                      <div className="flex items-center">
-                        <h3 className="text-lg font-medium">
-                          Property Charges
-                        </h3>
-                        <Badge variant="outline" className="ml-2">
-                          Stored in charge history
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Changing these values will update the property charge
-                        records with new entries effective from today.
-                      </p>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <FormField
-                          control={form.control}
-                          name="rentAmount"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Monthly Rent (₹)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  readOnly={isReadOnly}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="maintenanceFee"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Maintenance Fee (₹)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  readOnly={isReadOnly}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="waterFee"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Water Fee (₹)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  readOnly={isReadOnly}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>*/}
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
@@ -1093,13 +1023,13 @@ export default function PropertiesPage() {
                           )}
                           <FormField
                             control={form.control}
-                            name="isRented"
+                            name="leaseStatus"
                             render={({ field }) => (
                               <FormControl>
                                 <Switch
-                                  disabled={isReadOnly || occupancyData?.hasActiveTenants}
-                                  checked={occupancyData?.hasActiveTenants || field.value}
-                                  onCheckedChange={field.onChange}
+                                  disabled={`isReadOnly || occupancyData?.hasActiveTenants}
+                                  checked={occupancyData?.hasActiveTenants || field.value === 'Leasable'}
+                                  onCheckedChange={(checked) => field.onChange(checked ? 'Leasable' : 'Non-Leasable')}
                                 />
                               </FormControl>
                             )}
@@ -1332,19 +1262,19 @@ export default function PropertiesPage() {
 
                     <FormField
                       control={form.control}
-                      name="isRented"
+                      name="leaseStatus"
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                           <div className="space-y-0.5">
-                            <FormLabel>Manual Occupancy Status</FormLabel>
+                            <FormLabel>Lease Status</FormLabel>
                             <FormDescription>
-                              Note: Active tenants will automatically set occupancy status regardless of this setting
+                              Can this property be leased to tenants?
                             </FormDescription>
                           </div>
                           <FormControl>
                             <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
+                              checked={field.value === 'Leasable'}
+                              onCheckedChange={(checked) => field.onChange(checked ? 'Leasable' : 'Non-Leasable')}
                             />
                           </FormControl>
                         </FormItem>
