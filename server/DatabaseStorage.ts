@@ -691,16 +691,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTenant(tenant: InsertTenant): Promise<Tenant> {
-    const now = new Date();
-    const [newTenant] = await db
-      .insert(tenants)
-      .values({
-        ...tenant,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-    return newTenant;
+    console.log("Creating tenant:", tenant);
+
+    // Create the tenant first
+    const newTenant = await db.insert(tenants).values(tenant).returning();
+    const createdTenant = newTenant[0];
+
+    // Get current property charges for the flat
+    const currentCharges = await db
+      .select()
+      .from(propertyCharges)
+      .where(eq(propertyCharges.flatNumber, tenant.flatNumber))
+      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+
+    console.log(`Found ${currentCharges.length} current charges for flat ${tenant.flatNumber}`);
+
+    // Create tenant charges for each charge type
+    for (const chargeType of ["rent", "maint_fee", "water_fee"]) {
+      const propertyCharge = currentCharges.find(
+        (c) => c.chargeType === chargeType,
+      );
+
+      if (propertyCharge) {
+        console.log(`Creating tenant charge for ${chargeType}`);
+        await db.insert(tenantCharges).values({
+          tenantId: createdTenant.id,
+          flatNumber: tenant.flatNumber,
+          chargeType: chargeType as any,
+          amount: propertyCharge.amount,
+          effectiveFrom: tenant.leaseStartDate,
+          effectiveTo: null,
+          createdBy: tenant.createdBy,
+        });
+      }
+    }
+
+    return createdTenant;
   }
 
   async updateTenant(
@@ -780,82 +806,47 @@ export class DatabaseStorage implements IStorage {
   async createPropertyCharge(
     charge: InsertPropertyCharge,
   ): Promise<PropertyCharge> {
-    console.log("Creating property charge with data:", charge);
-    try {
-      // First, check if there's an existing active charge for this flat and SPECIFIC charge type
-      const currentCharges = await db
-        .select()
-        .from(propertyCharges)
-        .where(eq(propertyCharges.flatNumber, charge.flatNumber))
-        .where(eq(propertyCharges.chargeType, charge.chargeType))
-        .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+    // Create the property charge
+    const newCharge = await db
+      .insert(propertyCharges)
+      .values(charge)
+      .returning();
+    const createdCharge = newCharge[0];
 
+    // Check if property is occupied
+    const currentTenants = await this.getCurrentTenantsForFlat(
+      charge.flatNumber,
+    );
+
+    if (currentTenants.length > 0) {
       console.log(
-        `Found ${currentCharges.length} current charges for flat ${charge.flatNumber} and charge type ${charge.chargeType}`,
+        `Property ${charge.flatNumber} is occupied. Syncing with tenant charges.`,
       );
 
-      // If there are existing charges of this specific type, update their effectiveTo dates
-      if (currentCharges.length > 0) {
-        // Update only the charges that match this specific flat + charge type combination
-        for (const currentCharge of currentCharges) {
-          const today = new Date();
+      // For each current tenant, update their charges
+      for (const tenant of currentTenants) {
+        // First close any existing tenant charges of this type
+        await db
+          .update(tenantCharges)
+          .set({ effectiveTo: charge.effectiveFrom })
+          .where(eq(tenantCharges.tenantId, tenant.id))
+          .where(eq(tenantCharges.chargeType, charge.chargeType))
+          .where(sql`${tenantCharges.effectiveTo} IS NULL`);
 
-          console.log(
-            `Updating charge ID ${currentCharge.id} to set effectiveTo to ${today.toISOString()}`,
-          );
-
-          await db
-            .update(propertyCharges)
-            .set({ effectiveTo: today.toISOString() })
-            .where(eq(propertyCharges.id, currentCharge.id));
-
-          console.log(
-            `Updated existing charge with effectiveTo: ${today.toISOString()}`,
-          );
-        }
-
-        // Also sync with tenant charges if flat is occupied
-        try {
-          const today = new Date();
-          const user = await this.getUser(charge.createdBy || 1); // Use provided user ID or admin as fallback
-          await this.syncPropertyChargeWithTenant(
-            charge.flatNumber,
-            charge.chargeType,
-            charge.amount,
-            today,
-            user?.id || 1,
-          );
-        } catch (syncError) {
-          console.error("Error in sync with tenant charges:", syncError);
-          // Continue execution even if sync fails
-        }
+        // Create new tenant charge
+        await db.insert(tenantCharges).values({
+          tenantId: tenant.id,
+          flatNumber: charge.flatNumber,
+          chargeType: charge.chargeType,
+          amount: charge.amount,
+          effectiveFrom: charge.effectiveFrom,
+          effectiveTo: null,
+          createdBy: charge.createdBy,
+        });
       }
-
-      // Create the new charge record with proper date formatting
-      const formattedCharge = {
-        ...charge,
-        effectiveFrom:
-          typeof charge.effectiveFrom === "string"
-            ? charge.effectiveFrom
-            : charge.effectiveFrom.toISOString(),
-        effectiveTo: charge.effectiveTo
-          ? typeof charge.effectiveTo === "string"
-            ? charge.effectiveTo
-            : charge.effectiveTo.toISOString()
-          : null,
-      };
-
-      console.log("Inserting formatted charge:", formattedCharge);
-
-      const [newCharge] = await db
-        .insert(propertyCharges)
-        .values(formattedCharge)
-        .returning();
-      return newCharge;
-    } catch (error) {
-      console.error("Error creating property charge:", error);
-      throw error;
     }
+
+    return createdCharge;
   }
   async findActiveCharge(
     flatNumber: string,
@@ -1079,7 +1070,7 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  // Helper method to find the current tenant(s) for a flat
+  // Helper method to find the current tenant(s for a flat
   async getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]> {
     const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
 
