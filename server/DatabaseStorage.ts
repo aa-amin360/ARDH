@@ -30,7 +30,7 @@ import {
   propertyCharges,
   tenantCharges,
 } from "@shared/schema";
-import { and, eq, desc, sql, count, isNull } from "drizzle-orm";
+import { and, eq, desc, sql, count, isNull, gte } from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import connectPg from "connect-pg-simple";
@@ -903,7 +903,10 @@ export class DatabaseStorage implements IStorage {
     console.log("Formatted charge data:", chargeData);
 
     try {
-      const result = await db.insert(propertyCharges).values(chargeData).returning();
+      const result = await db
+        .insert(propertyCharges)
+        .values(chargeData)
+        .returning();
       console.log("Insert result:", result);
       return result[0]; // Return the first (and only) inserted row
     } catch (error) {
@@ -1078,25 +1081,36 @@ export class DatabaseStorage implements IStorage {
 
   // Helper method to find the current tenant(s) for a flat
   async getCurrentTenantsForFlat(flatNumber: string): Promise<Tenant[]> {
-    const today = new Date().toISOString().split("T")[0]; // Format as YYYY-MM-DD string
+    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+
     return await db
       .select()
       .from(tenants)
-      .where(eq(tenants.flatNumber, flatNumber))
-      .where(sql`${tenants.leaseEndDate} >= ${today}`);
+      .where(
+        and(
+          eq(tenants.flatNumber, flatNumber),
+          gte(tenants.leaseEndDate, today),
+        ),
+      )
+      .execute();
   }
-      
+
   // Check if a flat has active tenants (for property occupancy status)
   async hasActiveTenants(flatNumber: string): Promise<boolean> {
-    const today = new Date().toISOString().split("T")[0]; // Format as YYYY-MM-DD string
+    const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD" format
+
     const result = await db
       .select({ count: sql<number>`count(*)` })
       .from(tenants)
-      .where(eq(tenants.flatNumber, flatNumber))
-      .where(sql`${tenants.leaseEndDate} >= ${today}`)
+      .where(
+        and(
+          eq(tenants.flatNumber, flatNumber),
+          sql`${tenants.leaseEndDate} >= ${today}`,
+        ),
+      )
       .execute();
-    
-    return result[0].count > 0;
+
+    return result[0]?.count > 0;
   }
 
   // Helper method to sync property charges with tenant charges when a property charge is updated
