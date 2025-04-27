@@ -892,6 +892,7 @@ export class DatabaseStorage implements IStorage {
 
   // ADD a new charge (simple insert)
   async addNewCharge(data: InsertPropertyCharge) {
+    console.log("Adding new charge with data:", data);
     const chargeData = {
       ...data,
       effectiveFrom: new Date(data.effectiveFrom).toISOString(),
@@ -899,8 +900,16 @@ export class DatabaseStorage implements IStorage {
         ? new Date(data.effectiveTo).toISOString()
         : null,
     };
+    console.log("Formatted charge data:", chargeData);
 
-    return await db.insert(propertyCharges).values(chargeData).returning();
+    try {
+      const result = await db.insert(propertyCharges).values(chargeData).returning();
+      console.log("Insert result:", result);
+      return result[0]; // Return the first (and only) inserted row
+    } catch (error) {
+      console.error("Error in addNewCharge:", error);
+      throw error;
+    }
   }
 
   async updatePropertyCharge(
