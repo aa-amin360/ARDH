@@ -1027,7 +1027,7 @@ export default function PropertiesPage() {
                             render={({ field }) => (
                               <FormControl>
                                 <Switch
-                                  disabled={`isReadOnly || occupancyData?.hasActiveTenants}
+                                  disabled={isReadOnly || occupancyData?.hasActiveTenants}
                                   checked={occupancyData?.hasActiveTenants || field.value === 'Leasable'}
                                   onCheckedChange={(checked) => field.onChange(checked ? 'Leasable' : 'Non-Leasable')}
                                 />
