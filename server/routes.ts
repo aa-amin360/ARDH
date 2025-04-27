@@ -780,6 +780,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+  
+  // Check if a property has active tenants (for occupancy status)
+  app.get(
+    "/api/properties/:flatNumber/has-active-tenants",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const flatNumber = req.params.flatNumber;
+        const hasActiveTenants = await storage.hasActiveTenants(flatNumber);
+        res.json({ hasActiveTenants });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   app.get(
     "/api/properties/:flatNumber/charge-history/:chargeType",

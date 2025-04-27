@@ -1085,6 +1085,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tenants.flatNumber, flatNumber))
       .where(sql`${tenants.leaseEndDate} >= ${today}`);
   }
+      
+  // Check if a flat has active tenants (for property occupancy status)
+  async hasActiveTenants(flatNumber: string): Promise<boolean> {
+    const today = new Date().toISOString().split("T")[0]; // Format as YYYY-MM-DD string
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(tenants)
+      .where(eq(tenants.flatNumber, flatNumber))
+      .where(sql`${tenants.leaseEndDate} >= ${today}`)
+      .execute();
+    
+    return result[0].count > 0;
+  }
 
   // Helper method to sync property charges with tenant charges when a property charge is updated
   async syncPropertyChargeWithTenant(
