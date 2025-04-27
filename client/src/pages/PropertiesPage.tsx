@@ -536,6 +536,22 @@ export default function PropertiesPage() {
     },
     enabled: !!selectedFlatNumber,
   });
+  
+  // Get active tenant status (occupancy) for the selected property
+  const { data: occupancyData, isLoading: isLoadingOccupancy } = useQuery<{ hasActiveTenants: boolean }>({
+    queryKey: ["/api/properties/has-active-tenants", selectedFlatNumber],
+    queryFn: async () => {
+      if (!selectedFlatNumber) return { hasActiveTenants: false };
+      console.log(`Checking occupancy status for flat: ${selectedFlatNumber}`);
+      const res = await apiRequest(
+        "GET",
+        `/api/properties/${selectedFlatNumber}/has-active-tenants`,
+      );
+      if (!res.ok) throw new Error("Failed to fetch occupancy status");
+      return await res.json();
+    },
+    enabled: !!selectedFlatNumber,
+  });
 
   // Handle property selection
   const handlePropertySelect = (flatNumber: string) => {
@@ -780,11 +796,29 @@ export default function PropertiesPage() {
                           <FormItem>
                             <FormLabel>Occupancy Status</FormLabel>
                             <FormControl>
-                              <Input
-                                readOnly={true}
-                                value={field.value ? "Occupied" : "Vacant"}
-                              />
+                              <div className="relative">
+                                <Input
+                                  readOnly={true}
+                                  value={isLoadingOccupancy 
+                                    ? "Checking..." 
+                                    : occupancyData?.hasActiveTenants 
+                                      ? "Occupied (Active Lease)" 
+                                      : field.value 
+                                        ? "Occupied (Manual)" 
+                                        : "Vacant"}
+                                />
+                                {isLoadingOccupancy && (
+                                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                              </div>
                             </FormControl>
+                            <FormDescription className="text-xs">
+                              {occupancyData?.hasActiveTenants 
+                                ? "Property has active tenants with current lease" 
+                                : field.value 
+                                  ? "Property marked as occupied manually" 
+                                  : "No active tenant leases found"}
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1037,27 +1071,41 @@ export default function PropertiesPage() {
                     </div>*/}
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="isRented"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <div className="space-y-0.5">
-                              <FormLabel>Lease Status</FormLabel>
-                              <FormDescription>
-                                Is this property currently available for lease?
-                              </FormDescription>
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                          <FormLabel>Lease Status</FormLabel>
+                          <FormDescription>
+                            <div className="text-xs">
+                              {isLoadingOccupancy 
+                                ? "Checking tenant status..." 
+                                : occupancyData?.hasActiveTenants 
+                                  ? "Property has active tenants with current lease" 
+                                  : "Manual override - active tenants detected via database will always take precedence"}
                             </div>
-                            <FormControl>
-                              <Switch
-                                disabled={isReadOnly}
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                          </FormDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isLoadingOccupancy && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          {occupancyData?.hasActiveTenants && (
+                            <Badge className="bg-green-100 text-green-800">Active Lease</Badge>
+                          )}
+                          <FormField
+                            control={form.control}
+                            name="isRented"
+                            render={({ field }) => (
+                              <FormControl>
+                                <Switch
+                                  disabled={isReadOnly || occupancyData?.hasActiveTenants}
+                                  checked={occupancyData?.hasActiveTenants || field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            )}
+                          />
+                        </div>
+                      </FormItem>
 
                       <FormField
                         control={form.control}
@@ -1288,9 +1336,9 @@ export default function PropertiesPage() {
                       render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                           <div className="space-y-0.5">
-                            <FormLabel>Lease Status</FormLabel>
+                            <FormLabel>Manual Occupancy Status</FormLabel>
                             <FormDescription>
-                              Is this property currently available for lease?
+                              Note: Active tenants will automatically set occupancy status regardless of this setting
                             </FormDescription>
                           </div>
                           <FormControl>
