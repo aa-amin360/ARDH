@@ -80,7 +80,6 @@ type TenantFormValues = {
   flatNumber: string; // Added flat_number field
   leaseStartDate: Date;
   leaseEndDate: Date;
-  rentAmount: number;
   securityDeposit: number;
   status: "active" | "inactive" | "notice_period";
   notes?: string;
@@ -420,7 +419,6 @@ export default function TenantsPage() {
                         <TableRow>
                           <TableHead>Name</TableHead>
                           <TableHead>Property</TableHead>
-                          <TableHead>Rent</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Created At</TableHead>
                         </TableRow>
@@ -475,7 +473,6 @@ export default function TenantsPage() {
                           <TableHead>Property</TableHead>
                           <TableHead>Contact</TableHead>
                           <TableHead>Lease Period</TableHead>
-                          <TableHead>Rent</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -714,49 +711,6 @@ export default function TenantsPage() {
                         )}
                       />
 
-                      {/*<FormField
-                        control={form.control}
-                        name="rentAmount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Rent Amount (₹)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="Enter rent amount"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />*/}
-
-                      {/*<FormField
-                        control={form.control}
-                        name="securityDeposit"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Security Deposit (₹)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="Enter security deposit"
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(Number(e.target.value))
-                                }
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />*/}
 
                       <FormField
                         control={form.control}
@@ -998,46 +952,6 @@ export default function TenantsPage() {
                 />
                 <FormField
                   control={editForm.control}
-                  name="rentAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rent Amount (₹)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="securityDeposit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Security Deposit (₹)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(Number(e.target.value))
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
                   name="leaseStartDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
@@ -1124,8 +1038,7 @@ export default function TenantsPage() {
                           />
                           {field.value && (
                             <div className="text-xs text-muted-foreground">
-                              Selected file: {field.value}
-                            </div>
+                              Selected file: {field.value}                            </div>
                           )}
                         </div>
                       </FormControl>
