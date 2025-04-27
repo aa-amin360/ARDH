@@ -95,8 +95,19 @@ export default function TenantsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isChargesDialogOpen, setIsChargesDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("view");
+
+  // Fetch tenant charges when dialog is open
+  const { data: tenantCharges = [], isLoading: loadingCharges } = useQuery({
+    queryKey: ['/api/tenant-charges', selectedTenant?.id],
+    queryFn: () => 
+      selectedTenant?.id 
+        ? apiRequest("GET", `/api/tenants/${selectedTenant.id}/charges`).then(res => res.json())
+        : Promise.resolve([]),
+    enabled: isChargesDialogOpen && !!selectedTenant?.id,
+  });
 
   // Fetch tenants with console logging for debugging
   const { data: tenants = [], isLoading: loadingTenants } = useQuery({
@@ -518,6 +529,16 @@ export default function TenantsPage() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedTenant(tenant);
+                                      setIsChargesDialogOpen(true);
+                                    }}
+                                  >
+                                    Tenant Charges
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -1164,6 +1185,64 @@ export default function TenantsPage() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tenant Charges Dialog */}
+      <Dialog open={isChargesDialogOpen} onOpenChange={setIsChargesDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Tenant Charges</DialogTitle>
+            <DialogDescription>
+              Current charges for tenant {selectedTenant?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {loadingCharges ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Effective From</TableHead>
+                    <TableHead>Effective To</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tenantCharges.map((charge: any) => (
+                    <TableRow key={charge.id}>
+                      <TableCell className="capitalize">
+                        {charge.chargeType.replace('_', ' ')}
+                      </TableCell>
+                      <TableCell>₹{charge.amount.toLocaleString()}</TableCell>
+                      <TableCell>
+                        {format(new Date(charge.effectiveFrom), 'dd MMM yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        {charge.effectiveTo ? format(new Date(charge.effectiveTo), 'dd MMM yyyy') : 'Current'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {tenantCharges.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">
+                        No charges found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsChargesDialogOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
