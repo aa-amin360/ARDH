@@ -803,9 +803,7 @@ export default function PropertiesPage() {
                                     ? "Checking..." 
                                     : occupancyData?.hasActiveTenants 
                                       ? "Occupied (Active Lease)" 
-                                      : field.value 
-                                        ? "Occupied (Manual)" 
-                                        : "Vacant"}
+                                      : "Vacant"}
                                 />
                                 {isLoadingOccupancy && (
                                   <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
