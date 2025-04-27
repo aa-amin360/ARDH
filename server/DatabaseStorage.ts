@@ -697,14 +697,24 @@ export class DatabaseStorage implements IStorage {
     const newTenant = await db.insert(tenants).values(tenant).returning();
     const createdTenant = newTenant[0];
 
+    if (!createdTenant || !createdTenant.id) {
+      throw new Error("Failed to create tenant.");
+    }
+
     // Get current property charges for the flat
     const currentCharges = await db
       .select()
       .from(propertyCharges)
-      .where(eq(propertyCharges.flatNumber, tenant.flatNumber))
-      .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+      .where(
+        and(
+          eq(propertyCharges.flatNumber, tenant.flatNumber),
+          isNull(propertyCharges.effectiveTo),
+        ),
+      );
 
-    console.log(`Found ${currentCharges.length} current charges for flat ${tenant.flatNumber}`);
+    console.log(
+      `Found ${currentCharges.length} current charges for flat ${tenant.flatNumber}`,
+    );
 
     // Create tenant charges for each charge type
     for (const chargeType of ["rent", "maint_fee", "water_fee"]) {
@@ -721,7 +731,7 @@ export class DatabaseStorage implements IStorage {
           amount: propertyCharge.amount,
           effectiveFrom: tenant.leaseStartDate,
           effectiveTo: null,
-          createdBy: tenant.createdBy,
+          createdBy: tenant.createdBy ?? 1, // fallback to admin 1 if missing
         });
       }
     }
@@ -881,7 +891,7 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
-  // ADD a new charge (simple insert)
+  // ADD a new charge (simple insert) + also check if any tenant exists to add new rent for them
   async addNewCharge(data: InsertPropertyCharge) {
     console.log("Adding new charge with data:", data);
     const chargeData = {
@@ -891,7 +901,39 @@ export class DatabaseStorage implements IStorage {
         ? new Date(data.effectiveTo).toISOString()
         : null,
     };
+
+    const currentTenants = await this.getCurrentTenantsForFlat(
+      chargeData.flatNumber,
+    );
     console.log("Formatted charge data:", chargeData);
+
+    if (currentTenants.length > 0) {
+      console.log(
+        `Property ${chargeData.flatNumber} is occupied. Syncing with tenant charges.`,
+      );
+      for (const tenant of currentTenants) {
+        await db
+          .update(tenantCharges)
+          .set({ effectiveTo: chargeData.effectiveFrom })
+          .where(
+            and(
+              eq(tenantCharges.tenantId, tenant.id),
+              eq(tenantCharges.chargeType, chargeData.chargeType),
+              isNull(tenantCharges.effectiveTo),
+            ),
+          );
+
+        await db.insert(tenantCharges).values({
+          tenantId: tenant.id ?? 0, // fallback if tenant.id is null/undefined
+          flatNumber: chargeData.flatNumber,
+          chargeType: chargeData.chargeType,
+          amount: chargeData.amount,
+          effectiveFrom: chargeData.effectiveFrom,
+          effectiveTo: null,
+          createdBy: chargeData.createdBy ?? 1, // fallback to 1 if needed
+        });
+      }
+    }
 
     try {
       const result = await db
@@ -899,7 +941,7 @@ export class DatabaseStorage implements IStorage {
         .values(chargeData)
         .returning();
       console.log("Insert result:", result);
-      return result[0]; // Return the first (and only) inserted row
+      return result[0];
     } catch (error) {
       console.error("Error in addNewCharge:", error);
       throw error;
@@ -1081,7 +1123,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tenants.flatNumber, flatNumber));
 
     // Filter tenants whose lease end date is today or in the future
-    return currentTenants.filter(tenant => {
+    return currentTenants.filter((tenant) => {
       const leaseEndDate = new Date(tenant.leaseEndDate);
       leaseEndDate.setHours(0, 0, 0, 0);
       return leaseEndDate >= today;

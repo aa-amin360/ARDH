@@ -248,8 +248,6 @@ export default function TenantsPage() {
         flatNumber: z.string(),
         leaseStartDate: z.date(),
         leaseEndDate: z.date(),
-        rentAmount: z.number().min(1, "Rent must be greater than 0"),
-        securityDeposit: z.number().min(0),
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
         attachmentUrl: z.string().optional(),
@@ -266,8 +264,6 @@ export default function TenantsPage() {
       leaseEndDate: new Date(
         new Date().setFullYear(new Date().getFullYear() + 1),
       ),
-      rentAmount: 0,
-      securityDeposit: 0,
       status: "active",
       notes: "",
       attachmentUrl: "",
@@ -287,8 +283,6 @@ export default function TenantsPage() {
         flatNumber: z.string(),
         leaseStartDate: z.date(),
         leaseEndDate: z.date(),
-        rentAmount: z.number().min(1, "Rent must be greater than 0"),
-        securityDeposit: z.number().min(0),
         status: z.enum(["active", "inactive", "notice_period"]),
         notes: z.string().optional(),
         attachmentUrl: z.string().optional(),
@@ -306,8 +300,6 @@ export default function TenantsPage() {
       leaseEndDate: new Date(
         new Date().setFullYear(new Date().getFullYear() + 1),
       ),
-      rentAmount: 0,
-      securityDeposit: 0,
       status: "active",
       notes: "",
       attachmentUrl: "",
@@ -327,8 +319,6 @@ export default function TenantsPage() {
         flatNumber: selectedTenant.flatNumber || "",
         leaseStartDate: new Date(selectedTenant.leaseStartDate),
         leaseEndDate: new Date(selectedTenant.leaseEndDate),
-        rentAmount: selectedTenant.rentAmount,
-        securityDeposit: selectedTenant.securityDeposit || 0,
         status: selectedTenant.status as any,
         notes: selectedTenant.notes || "",
         attachmentUrl: selectedTenant.attachmentUrl || "",
@@ -381,7 +371,11 @@ export default function TenantsPage() {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="view" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs
+          defaultValue="view"
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="view">View Tenants</TabsTrigger>
             <TabsTrigger value="add">Add Tenant</TabsTrigger>
@@ -550,10 +544,7 @@ export default function TenantsPage() {
                           ))}
                         {filteredTenants.length === 0 && (
                           <TableRow>
-                            <TableCell
-                              colSpan={7}
-                              className="h-24 text-center"
-                            >
+                            <TableCell colSpan={7} className="h-24 text-center">
                               No tenant records found
                             </TableCell>
                           </TableRow>
@@ -589,7 +580,10 @@ export default function TenantsPage() {
                           <FormItem>
                             <FormLabel>Tenant Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter tenant name" {...field} />
+                              <Input
+                                placeholder="Enter tenant name"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -603,7 +597,10 @@ export default function TenantsPage() {
                           <FormItem>
                             <FormLabel>Phone Number</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter phone number" {...field} />
+                              <Input
+                                placeholder="Enter phone number"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -617,7 +614,10 @@ export default function TenantsPage() {
                           <FormItem>
                             <FormLabel>Email Address</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter email address" {...field} />
+                              <Input
+                                placeholder="Enter email address"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -634,9 +634,14 @@ export default function TenantsPage() {
                               onValueChange={(value) => {
                                 field.onChange(parseInt(value));
                                 // Automatically set flatNumber based on propertyId
-                                const property = properties.find(p => p.id === parseInt(value));
+                                const property = properties.find(
+                                  (p) => p.id === parseInt(value),
+                                );
                                 if (property) {
-                                  form.setValue("flatNumber", property.flatNumber);
+                                  form.setValue(
+                                    "flatNumber",
+                                    property.flatNumber,
+                                  );
                                 }
                               }}
                               value={field.value ? field.value.toString() : ""}
@@ -692,7 +697,7 @@ export default function TenantsPage() {
                         )}
                       />
 
-                      <FormField
+                      {/*<FormField
                         control={form.control}
                         name="rentAmount"
                         render={({ field }) => (
@@ -704,15 +709,17 @@ export default function TenantsPage() {
                                 min="0"
                                 placeholder="Enter rent amount"
                                 {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
+                      />*/}
 
-                      <FormField
+                      {/*<FormField
                         control={form.control}
                         name="securityDeposit"
                         render={({ field }) => (
@@ -724,13 +731,15 @@ export default function TenantsPage() {
                                 min="0"
                                 placeholder="Enter security deposit"
                                 {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
+                      />*/}
 
                       <FormField
                         control={form.control}
@@ -749,8 +758,12 @@ export default function TenantsPage() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="inactive">Inactive</SelectItem>
-                                <SelectItem value="notice_period">Notice Period</SelectItem>
+                                <SelectItem value="inactive">
+                                  Inactive
+                                </SelectItem>
+                                <SelectItem value="notice_period">
+                                  Notice Period
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -792,7 +805,8 @@ export default function TenantsPage() {
                                 onChange={(e) => {
                                   // This just stores the file name for demo purposes
                                   // In a real implementation, you would upload the file to a server
-                                  const fileName = e.target.files?.[0]?.name || "";
+                                  const fileName =
+                                    e.target.files?.[0]?.name || "";
                                   field.onChange(fileName);
                                 }}
                               />
@@ -848,12 +862,18 @@ export default function TenantsPage() {
                   </Button>
                 </div>
                 <div className="mt-6">
-                  <h3 className="text-sm font-medium mb-2">Expected CSV Format</h3>
+                  <h3 className="text-sm font-medium mb-2">
+                    Expected CSV Format
+                  </h3>
                   <p className="text-xs text-muted-foreground">
-                    Your CSV should have the following columns: name, phone, email, property_id, lease_start_date, lease_end_date, rent_amount, security_deposit, status, notes
+                    Your CSV should have the following columns: name, phone,
+                    email, property_id, lease_start_date, lease_end_date,
+                    rent_amount, security_deposit, status, notes
                   </p>
                   <div className="mt-4">
-                    <h3 className="text-sm font-medium mb-2">Download Template</h3>
+                    <h3 className="text-sm font-medium mb-2">
+                      Download Template
+                    </h3>
                     <Button variant="outline" size="sm" className="gap-2">
                       <FileSpreadsheet className="h-4 w-4" />
                       Download CSV Template
@@ -927,9 +947,14 @@ export default function TenantsPage() {
                         onValueChange={(value) => {
                           field.onChange(parseInt(value));
                           // Automatically set flatNumber based on propertyId
-                          const property = properties.find(p => p.id === parseInt(value));
+                          const property = properties.find(
+                            (p) => p.id === parseInt(value),
+                          );
                           if (property) {
-                            editForm.setValue("flatNumber", property.flatNumber);
+                            editForm.setValue(
+                              "flatNumber",
+                              property.flatNumber,
+                            );
                           }
                         }}
                         value={field.value.toString()}
@@ -965,7 +990,9 @@ export default function TenantsPage() {
                           type="number"
                           min="0"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -983,7 +1010,9 @@ export default function TenantsPage() {
                           type="number"
                           min="0"
                           {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -996,10 +1025,7 @@ export default function TenantsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Lease Start Date</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
+                      <DatePicker date={field.value} setDate={field.onChange} />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1010,10 +1036,7 @@ export default function TenantsPage() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Lease End Date</FormLabel>
-                      <DatePicker
-                        date={field.value}
-                        setDate={field.onChange}
-                      />
+                      <DatePicker date={field.value} setDate={field.onChange} />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1036,7 +1059,9 @@ export default function TenantsPage() {
                         <SelectContent>
                           <SelectItem value="active">Active</SelectItem>
                           <SelectItem value="inactive">Inactive</SelectItem>
-                          <SelectItem value="notice_period">Notice Period</SelectItem>
+                          <SelectItem value="notice_period">
+                            Notice Period
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1060,7 +1085,7 @@ export default function TenantsPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="attachmentUrl"
@@ -1096,13 +1121,13 @@ export default function TenantsPage() {
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={updateTenantMutation.isPending}
-                >
+                <Button type="submit" disabled={updateTenantMutation.isPending}>
                   {updateTenantMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
