@@ -95,7 +95,7 @@ export default function TenantsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isChargesDialogOpen, setIsChargesDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("all");
   const [activeTab, setActiveTab] = useState("view");
 
   // Fetch tenant charges when dialog is open
@@ -219,7 +219,7 @@ export default function TenantsPage() {
   // Filtered tenants based on search query
   const filteredTenants = React.useMemo(() => {
     if (!Array.isArray(tenants)) return [];
-    if (!searchQuery) return tenants;
+    if (searchQuery === "all") return tenants;
 
     const lowerCaseQuery = searchQuery.toLowerCase();
     return tenants.filter(
@@ -420,7 +420,7 @@ export default function TenantsPage() {
                         <SelectValue placeholder="Select property" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Properties</SelectItem>
+                        <SelectItem value="all">All Properties</SelectItem>
                         {properties.map((property) => (
                           <SelectItem
                             key={property.id}
