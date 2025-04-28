@@ -114,6 +114,8 @@ export default function TenantsPage() {
   const { data: tenants = [], isLoading: loadingTenants } = useQuery({
     queryKey: ["/api/tenants"],
     queryFn: () => apiRequest("GET", "/api/tenants").then((res) => res.json()),
+    refetchOnWindowFocus: true,
+    refetchInterval: 2000, // Refetch every 2 seconds
   });
 
   // Use state for properties to ensure we have control over the data
@@ -408,57 +410,27 @@ export default function TenantsPage() {
               </div>
             ) : (
               <div>
-                {/* Last Entered Records */}
+                {/* Property Filter */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">
-                    Last Entered Records
-                  </h3>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Property</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Created At</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Array.isArray(filteredTenants) &&
-                        filteredTenants.length > 0 ? (
-                          filteredTenants.slice(0, 5).map((tenant) => (
-                            <TableRow key={`tenant-${tenant.id}`}>
-                              <TableCell className="font-medium">
-                                {tenant.name}
-                              </TableCell>
-                              <TableCell>
-                                {tenant.flatNumber ||
-                                  getPropertyFlatNumber(tenant.propertyId)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  className={getStatusColor(tenant.status)}
-                                >
-                                  {tenant.status.replace("_", " ")}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {format(
-                                  new Date(tenant.createdAt || new Date()),
-                                  "dd MMM yyyy",
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
-                              No tenant records found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                  <div className="flex gap-4 items-center">
+                    <Select
+                      onValueChange={(value) => setSearchQuery(value)}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select property" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Properties</SelectItem>
+                        {properties.map((property) => (
+                          <SelectItem
+                            key={property.id}
+                            value={property.flatNumber}
+                          >
+                            {property.flatNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
