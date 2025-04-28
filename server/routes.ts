@@ -602,15 +602,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/tenants", isAuthenticated, async (req, res, next) => {
     try {
+      console.log("Creating tenant with data:", req.body);
       const tenantData = insertTenantSchema.parse({
         ...req.body,
-        createdBy: (req.user as any).id,
+        createdBy: req.body.createdBy || (req.user as any)?.id || 1, // Safe fallback
       });
 
       const newTenant = await storage.createTenant(tenantData);
       res.status(201).json(newTenant);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.log("Validation error:", error.errors);
         return res.status(400).json({ message: error.errors });
       }
       next(error);
@@ -780,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
-  
+
   // Check if a property has active tenants (for occupancy status)
   app.get(
     "/api/properties/:flatNumber/has-active-tenants",

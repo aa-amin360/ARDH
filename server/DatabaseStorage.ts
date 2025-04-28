@@ -693,7 +693,6 @@ export class DatabaseStorage implements IStorage {
   async createTenant(tenant: InsertTenant): Promise<Tenant> {
     console.log("Creating tenant:", tenant);
 
-    // Create the tenant first
     const newTenant = await db.insert(tenants).values(tenant).returning();
     const createdTenant = newTenant[0];
 
@@ -701,7 +700,6 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Failed to create tenant.");
     }
 
-    // Get current property charges for the flat
     const currentCharges = await db
       .select()
       .from(propertyCharges)
@@ -716,24 +714,16 @@ export class DatabaseStorage implements IStorage {
       `Found ${currentCharges.length} current charges for flat ${tenant.flatNumber}`,
     );
 
-    // Create tenant charges for each charge type
-    for (const chargeType of ["rent", "maint_fee", "water_fee"]) {
-      const propertyCharge = currentCharges.find(
-        (c) => c.chargeType === chargeType,
-      );
-
-      if (propertyCharge) {
-        console.log(`Creating tenant charge for ${chargeType}`);
-        await db.insert(tenantCharges).values({
-          tenantId: createdTenant.id,
-          flatNumber: tenant.flatNumber,
-          chargeType: chargeType as any,
-          amount: propertyCharge.amount,
-          effectiveFrom: tenant.leaseStartDate,
-          effectiveTo: null,
-          createdBy: tenant.createdBy ?? 1, // fallback to admin 1 if missing
-        });
-      }
+    for (const charge of currentCharges) {
+      await db.insert(tenantCharges).values({
+        tenantId: createdTenant.id,
+        flatNumber: tenant.flatNumber,
+        chargeType: charge.chargeType as any,
+        amount: charge.amount,
+        effectiveFrom: tenant.leaseStartDate,
+        effectiveTo: null,
+        createdBy: tenant.createdBy ?? 1, // Safe fallback here too
+      });
     }
 
     return createdTenant;
