@@ -689,7 +689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/vendors/service-types", isAuthenticated, async (req, res, next) => {
     try {
       const types = await storage.getDistinctVendorServiceTypes();
-      res.json(types);
+      res.json(types.map(row => row.vendor_type));
     } catch (error) {
       next(error);
     }

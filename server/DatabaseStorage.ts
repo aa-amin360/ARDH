@@ -673,6 +673,38 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
+  // Added methods for expense categories and vendor types
+  async getDistinctExpenseCategories() {
+    const result = await db.execute(sql`
+      SELECT DISTINCT category FROM expense_categories;
+    `);
+    return result.rows;
+  }
+
+  async getExpenseSubcategories(category: string) {
+    const result = await db.execute(sql`
+      SELECT DISTINCT sub_category FROM expense_categories 
+      WHERE category = ${category};
+    `);
+    return result.rows;
+  }
+
+  async getDistinctVendorServiceTypes() {
+    const result = await db.execute(sql`
+      SELECT DISTINCT vendor_type FROM vendor_categories;
+    `);
+    return result.rows;
+  }
+
+  async getVendorsByExpenseSubcategory(subcategory: string) {
+    const result = await db.execute(sql`
+      SELECT v.* FROM vendors v
+      JOIN vendor_categories vc ON v.service_type = vc.vendor_type
+      WHERE vc.expense_sub_category = ${subcategory};
+    `);
+    return result.rows;
+  }
+
   // Tenant methods
   async getTenant(id: number): Promise<Tenant | undefined> {
     const [tenant] = await db.select().from(tenants).where(eq(tenants.id, id));
