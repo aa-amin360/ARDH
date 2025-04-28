@@ -93,6 +93,14 @@ export default function VendorsPage() {
     queryFn: () => apiRequest("GET", "/api/vendors").then((res) => res.json()),
   });
 
+  const { data: serviceTypes = [] } = useQuery({
+    queryKey: ["/api/vendors/service-types"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/vendors/service-types");
+      return res.json();
+    },
+  });
+
   // Form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

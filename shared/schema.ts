@@ -26,6 +26,7 @@ export const incomeTypeEnum = pgEnum("income_type", [
   "maintenance",
   "tax_return",
   "rental_advance",
+  "water_fee",
   "other",
 ]);
 export const tenantStatusEnum = pgEnum("tenant_status", [

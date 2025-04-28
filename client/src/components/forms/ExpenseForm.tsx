@@ -41,6 +41,7 @@ const formSchema = z.object({
   date: z.date(),
   amount: z.coerce.number().positive("Amount must be a positive number"),
   category: z.string(),
+  subcategory: z.string(), // Added subcategory field
   description: z.string().min(1, "Description is required"),
   vendor: z.string().optional(),
   propertyId: z.coerce.number().nullable().optional(),
@@ -74,6 +75,33 @@ export default function ExpenseForm({
     enabled: isEditMode,
   });
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/expenses/categories"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/expenses/categories");
+      return res.json();
+    },
+  });
+
+  const { data: subcategories = [] } = useQuery({
+    queryKey: ["/api/expenses/subcategories", form.watch("category")],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/expenses/subcategories/${form.watch("category")}`);
+      return res.json();
+    },
+    enabled: !!form.watch("category"),
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors/by-subcategory", form.watch("subcategory")],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/vendors/by-subcategory/${form.watch("subcategory")}`);
+      return res.json();
+    },
+    enabled: !!form.watch("subcategory"),
+  });
+
+
   // Form definition
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -81,6 +109,7 @@ export default function ExpenseForm({
       date: new Date(),
       amount: 0,
       category: "electricity",
+      subcategory: "", // Added default value for subcategory
       description: "",
       vendor: "",
       propertyId: null,
@@ -94,6 +123,7 @@ export default function ExpenseForm({
         date: new Date(expenseData.date),
         amount: expenseData.amount,
         category: expenseData.category,
+        subcategory: expenseData.subcategory, //Added subcategory to reset
         description: expenseData.description,
         vendor: expenseData.vendor || "",
         propertyId: expenseData.propertyId || null,
@@ -250,17 +280,39 @@ export default function ExpenseForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="electricity">Electricity</SelectItem>
-                    <SelectItem value="generator_fuel">Generator Fuel</SelectItem>
-                    <SelectItem value="cctv_maintenance">CCTV Maintenance</SelectItem>
-                    <SelectItem value="internet">Internet</SelectItem>
-                    <SelectItem value="elevator_maintenance">Elevator Maintenance</SelectItem>
-                    <SelectItem value="general_building_maintenance">General Building Maintenance</SelectItem>
-                    <SelectItem value="water_tank">Water Tank</SelectItem>
-                    <SelectItem value="donation">Local Donation</SelectItem>
-                    <SelectItem value="drainage_cleaning">Drainage Cleaning</SelectItem>
-                    <SelectItem value="guest_expense">Guest Expense</SelectItem>
-                    <SelectItem value="misc">Miscellaneous</SelectItem>
+                    {categories.map((category: any) => (
+                      <SelectItem key={category.expense_category} value={category.expense_category}>
+                        {category.expense_category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="subcategory"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Expense Subcategory</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select expense subcategory" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {subcategories.map((subcategory: any) => (
+                      <SelectItem key={subcategory.expense_sub_category} value={subcategory.expense_sub_category}>
+                        {subcategory.expense_sub_category}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -274,9 +326,29 @@ export default function ExpenseForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Vendor</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter vendor name (optional)" {...field} />
-                </FormControl>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {vendors.length > 0 ? (
+                      vendors.map((vendor: any) => (
+                        <SelectItem key={vendor.id} value={vendor.name}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        No vendors found for this subcategory
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

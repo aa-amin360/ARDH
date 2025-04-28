@@ -253,6 +253,7 @@ export default function IncomeForm({
                     <SelectItem value="rent">Rent</SelectItem>
                     <SelectItem value="maintenance">Maintenance</SelectItem>
                     <SelectItem value="tax_return">Tax Return</SelectItem>
+                    <SelectItem value="water_fee">Water Fee</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
