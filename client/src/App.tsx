@@ -14,10 +14,10 @@ import DashboardPage from "@/pages/DashboardPage";
 import PropertiesPage from "@/pages/PropertiesPage";
 import TenantsPage from "@/pages/TenantsPage";
 import IncomePage from "@/pages/IncomePage";
-import ExpensesPage from "@/pages/ExpensesPage";
 import ReportsPage from "@/pages/ReportsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import VendorsPage from "@/pages/VendorsPage";
+import ExpensesPageNew from "@/pages/ExpensesPageNew";
 
 
 // Admin-only route component
@@ -69,7 +69,7 @@ function Router() {
       <ProtectedRoute path="/tenants" component={TenantsPage} />
       {/* Income page is admin-only */}
       <AdminRoute path="/income" component={IncomePage} />
-      <ProtectedRoute path="/expenses" component={ExpensesPage} />
+      <ProtectedRoute path="/expenses" component={ExpensesPageNew} />
       <ProtectedRoute path="/vendors" component={VendorsPage} />
 
       <AdminRoute path="/reports" component={ReportsPage} />

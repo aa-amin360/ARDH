@@ -64,19 +64,40 @@ const expenseFormSchema = insertExpenseSchema.extend({
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 export default function ExpensesPage() {
-  /*const { data: vendors = [] } = useQuery({
-    queryKey: ["/api/vendors/by-subcategory", form.watch("subcategory")],
-    queryFn: () => 
-      apiRequest("GET", `/api/vendors/by-subcategory/${form.watch("subcategory")}`).then((res) => res.json()),
-    enabled: !!form.watch("subcategory"),
-  });*/
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("view");
-  const [selectedCategory, setSelectedCategory] = React.useState("utility");
+  const [selectedCategory, setSelectedCategory] = React.useState("");
 
-  // Query to fetch expenses
+  // Form
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseFormSchema),
+    defaultValues: {
+      category: "",
+      subcategory: "",
+      amount: 0,
+      date: new Date().toISOString().split("T")[0],
+      description: "",
+      vendorId: 0,
+      propertyId: null,
+      attachmentUrl: "",
+      createdBy: 0,
+
+      // Water tanker specific fields
+      tankerNumber: "",
+      liters: 0,
+      personInCharge: "",
+      driverContact: "",
+      time: "",
+    },
+  });
+
+  // Watch fields to trigger dependent queries
+  const watchCategory = form.watch("category");
+  const watchSubcategory = form.watch("subcategory");
+
+  // Query to fetch expenses for the view tab
   const {
     data: expenses = [],
     isLoading,
@@ -123,13 +144,17 @@ export default function ExpensesPage() {
     queryKey: ["/api/expenses/subcategories", watchCategory],
     queryFn: async () => {
       if (!watchCategory) return [];
-      return apiRequest("GET", `/api/expenses/subcategories/${watchCategory}`).then((res) => res.json());
+      return apiRequest("GET", `/api/expenses/subcategories/${watchCategory}`)
+        .then((res) => res.json());
     },
     enabled: !!watchCategory,
   });
 
   // Query to fetch vendors based on selected subcategory
-  const { data: vendorsBySubcategory = [] } = useQuery({
+  const { 
+    data: vendorsBySubcategory = [], 
+    isLoading: isLoadingVendors 
+  } = useQuery({
     queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
     queryFn: async () => {
       if (!watchSubcategory) return [];
@@ -139,33 +164,15 @@ export default function ExpensesPage() {
     enabled: !!watchSubcategory,
   });
 
-  // Fallback to all vendors if no subcategory-specific vendors found
-  const { data: allVendors = [] } = useQuery({
-    queryKey: ["/api/vendors"],
-    queryFn: () => apiRequest("GET", "/api/vendors").then((res) => res.json()),
-  });
-
-  // Filtered vendors based on selected sub-category
-  const filteredVendors = React.useMemo(() => {
-    if (!Array.isArray(vendors)) return [];
-
-    // Map service type to category
-    const serviceToCategory: Record<string, string> = {
-      electrical: "utility",
-      plumbing: "general_maintenance",
-      construction: "capital_expense",
-      security: "operational",
-      housekeeping: "operational",
-      internet_provider: "utility",
-      general: "others",
-    };
-
-    return vendors.filter(
-      (vendor) =>
-        !selectedCategory ||
-        serviceToCategory[vendor.serviceType] === selectedCategory,
-    );
-  }, [vendors, selectedCategory]);
+  // Update subcategory when category changes
+  React.useEffect(() => {
+    if (watchCategory && subcategories && subcategories.length > 0) {
+      const firstSubcategory = subcategories[0]?.expense_sub_category;
+      if (firstSubcategory) {
+        form.setValue("subcategory", firstSubcategory);
+      }
+    }
+  }, [watchCategory, subcategories, form]);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
@@ -216,7 +223,6 @@ export default function ExpensesPage() {
         driverContact: "",
         time: "",
       });
-      setSelectedCategory("utility");
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
     onError: (error: Error) => {
@@ -227,54 +233,6 @@ export default function ExpensesPage() {
       });
     },
   });
-
-  // Form
-  const form = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseFormSchema),
-    defaultValues: {
-      category: "",
-      subcategory: "",
-      amount: 0,
-      date: new Date().toISOString().split("T")[0],
-      description: "",
-      vendorId: 0,
-      propertyId: null,
-      attachmentUrl: "",
-      createdBy: 0,
-
-      // Water tanker specific fields
-      tankerNumber: "",
-      liters: 0,
-      personInCharge: "",
-      driverContact: "",
-      time: "",
-    },
-  });
-
-  // Watch fields to update dependent dropdowns
-  const watchCategory = form.watch("category");
-  const watchSubcategory = form.watch("subcategory");
-
-  // Query to fetch vendors based on selected subcategory
-  const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } = useQuery({
-    queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
-    queryFn: async () => {
-      if (!watchSubcategory) return [];
-      return apiRequest("GET", `/api/vendors/by-subcategory/${watchSubcategory}`).then((res) => res.json());
-    },
-    enabled: !!watchSubcategory,
-  });
-
-  // Update category and subcategory state
-  React.useEffect(() => {
-    setSelectedCategory(watchCategory);
-    
-    // Reset subcategory when category changes
-    if (watchCategory && subcategories && subcategories.length > 0) {
-      const newSubcategory = subcategories.length > 0 ? subcategories[0].expense_sub_category : "";
-      form.setValue("subcategory", newSubcategory);
-    }
-  }, [watchCategory, subcategories, form]);
 
   function onSubmit(values: ExpenseFormValues) {
     // Process the values for submission
@@ -352,10 +310,11 @@ export default function ExpensesPage() {
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
+                            disabled={!watchCategory || isLoadingSubcategories}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select subcategory" />
+                                <SelectValue placeholder={isLoadingSubcategories ? "Loading..." : "Select subcategory"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -403,11 +362,6 @@ export default function ExpensesPage() {
                             <Input
                               type="date"
                               {...field}
-                              value={
-                                field.value instanceof Date
-                                  ? field.value.toISOString().split("T")[0]
-                                  : field.value
-                              }
                             />
                           </FormControl>
                           <FormMessage />
@@ -461,16 +415,17 @@ export default function ExpensesPage() {
                               field.onChange(parseInt(value))
                             }
                             value={field.value?.toString()}
+                            disabled={!watchSubcategory || isLoadingVendors}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select vendor (optional)" />
+                                <SelectValue placeholder={isLoadingVendors ? "Loading vendors..." : "Select vendor (optional)"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">No Vendor</SelectItem>
-                              {vendors.length > 0 ? (
-                                vendors.map((vendor: any) => (
+                              {vendorsBySubcategory && vendorsBySubcategory.length > 0 ? (
+                                vendorsBySubcategory.map((vendor: any) => (
                                   <SelectItem
                                     key={vendor.id}
                                     value={vendor.id.toString()}
@@ -492,8 +447,8 @@ export default function ExpensesPage() {
                   </div>
 
                   {/* Water Tanker specific fields */}
-                  {watchCategory === "utility" &&
-                    form.watch("subcategory") === "water_tank_fill" && (
+                  {watchCategory === "Utility" &&
+                    watchSubcategory === "Water Tanker" && (
                       <div className="space-y-4 border rounded-md p-4 bg-slate-50">
                         <h3 className="text-lg font-medium">
                           Water Tanker Details
@@ -539,10 +494,10 @@ export default function ExpensesPage() {
                             name="personInCharge"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Driver Name</FormLabel>
+                                <FormLabel>Person In Charge</FormLabel>
                                 <FormControl>
                                   <Input
-                                    placeholder="Enter driver name"
+                                    placeholder="Enter person in charge"
                                     {...field}
                                   />
                                 </FormControl>
@@ -573,9 +528,13 @@ export default function ExpensesPage() {
                             name="time"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Time Filled</FormLabel>
+                                <FormLabel>Time</FormLabel>
                                 <FormControl>
-                                  <Input type="time" {...field} />
+                                  <Input
+                                    type="time"
+                                    placeholder="Enter time"
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -593,41 +552,9 @@ export default function ExpensesPage() {
                         <FormLabel>Description</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Enter expense description"
+                            placeholder="Enter description"
                             {...field}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="attachmentUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Attachment (optional)</FormLabel>
-                        <FormControl>
-                          <div className="flex flex-col gap-2">
-                            <Input
-                              type="file"
-                              accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-                              className="cursor-pointer"
-                              onChange={(e) => {
-                                // This just stores the file name for demo purposes
-                                // In a real implementation, you would upload the file to a server
-                                const fileName =
-                                  e.target.files?.[0]?.name || "";
-                                field.onChange(fileName);
-                              }}
-                            />
-                            {field.value && (
-                              <div className="text-xs text-muted-foreground">
-                                Selected file: {field.value}
-                              </div>
-                            )}
-                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -637,10 +564,12 @@ export default function ExpensesPage() {
                   <Button
                     type="submit"
                     disabled={addExpenseMutation.isPending}
-                    className="w-full"
+                    className="w-full md:w-auto"
                   >
-                    {addExpenseMutation.isPending && (
+                    {addExpenseMutation.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
                     )}
                     Add Expense
                   </Button>
@@ -650,194 +579,109 @@ export default function ExpensesPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="view" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Expenses List</CardTitle>
+              <CardDescription>
+                View all expenses and their details.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-40">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : isError ? (
+                <div className="text-center text-destructive">
+                  Error loading expenses. Please try again.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Subcategory</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Property</TableHead>
+                        <TableHead>Description</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.length > 0 ? (
+                        expenses.map((expense: any) => (
+                          <TableRow key={expense.id}>
+                            <TableCell>
+                              {formatDate(expense.date)}
+                            </TableCell>
+                            <TableCell>{expense.category}</TableCell>
+                            <TableCell>{expense.subcategory}</TableCell>
+                            <TableCell>
+                              {formatCurrency(expense.amount)}
+                            </TableCell>
+                            <TableCell>
+                              {expense.propertyId
+                                ? properties.find(
+                                    (p) => p.id === expense.propertyId
+                                  )?.flatNumber || "Unknown"
+                                : "Common Areas"}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {expense.description}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-6 text-muted-foreground"
+                          >
+                            No expenses found. Add an expense to see it here.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="bulk" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle>Bulk Upload Expenses</CardTitle>
               <CardDescription>
-                Upload a CSV file with expense details for bulk adding.
+                Upload multiple expenses at once using a template.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center gap-4 p-8 border-2 border-dashed rounded-lg">
-                <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground text-center">
-                  Drop your CSV file here, or click to browse
-                </p>
-                <Button className="gap-2">
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Select File
-                </Button>
-              </div>
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">
-                  Expected CSV Format
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Your CSV should have the following columns: category,
-                  subcategory, amount, date, description, vendor_id,
-                  property_id, attachment_url
-                </p>
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">
+              <div className="space-y-6">
+                <div className="flex flex-col gap-2">
+                  <p className="text-muted-foreground">
+                    Download the template, fill it with your expense data, and
+                    upload it back to import multiple expenses at once.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full md:w-auto"
+                  >
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Download Template
-                  </h3>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    Download CSV Template
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="view" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Expense Records</CardTitle>
-                <CardDescription>View all expense records.</CardDescription>
-              </div>
-              <Button variant="outline" className="gap-1">
-                <FileSpreadsheet className="h-4 w-4" />
-                Export
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center my-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                {/* <ExpenseBulkUpload /> */}
+                <div className="border-2 border-dashed border-border rounded-md p-8 text-center">
+                  <p className="text-muted-foreground mb-2">
+                    Bulk upload feature coming soon...
+                  </p>
                 </div>
-              ) : isError ? (
-                <p className="text-center text-red-500 my-8">
-                  Error loading expense records
-                </p>
-              ) : (
-                <div>
-                  {/* Debug information */}
-                  <div className="text-sm text-muted-foreground mb-4">
-                    Total expense records:{" "}
-                    {Array.isArray(expenses) ? expenses.length : 0}
-                  </div>
-
-                  {/* Last 5 expense entries section */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">
-                      Last Entered Records
-                    </h3>
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Subcategory</TableHead>
-                            <TableHead>Property</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {Array.isArray(expenses) && expenses.length > 0 ? (
-                            expenses.slice(0, 5).map((expense: any) => (
-                              <TableRow key={`recent-${expense.id}`}>
-                                <TableCell className="whitespace-nowrap">
-                                  {formatDate(expense.date)}
-                                </TableCell>
-                                <TableCell className="capitalize">
-                                  {expense.category}
-                                </TableCell>
-                                <TableCell>
-                                  {expense.subcategory || "-"}
-                                </TableCell>
-                                <TableCell>
-                                  {expense.propertyId
-                                    ? properties?.find(
-                                        (p) => p.id === expense.propertyId,
-                                      )?.flatNumber || `#${expense.propertyId}`
-                                    : "Common Areas"}
-                                </TableCell>
-                                <TableCell>{expense.vendorId || "-"}</TableCell>
-                                <TableCell className="text-right font-medium">
-                                  {formatCurrency(expense.amount)}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          ) : (
-                            <TableRow>
-                              <TableCell
-                                colSpan={6}
-                                className="h-24 text-center"
-                              >
-                                No expense records found
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2 text-right">
-                      Showing the 5 most recent entries
-                    </p>
-                  </div>
-
-                  {/* All expenses section */}
-                  <div className="overflow-x-auto">
-                    <h3 className="text-lg font-semibold mb-2">
-                      All Expense Entries
-                    </h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Subcategory</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Property</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Array.isArray(expenses) && expenses.length > 0 ? (
-                          expenses.map((expense: any) => (
-                            <TableRow key={`all-${expense.id}`}>
-                              <TableCell className="whitespace-nowrap">
-                                {formatDate(expense.date)}
-                              </TableCell>
-                              <TableCell className="capitalize">
-                                {expense.category.replace("_", " ")}
-                              </TableCell>
-                              <TableCell>
-                                {expense.subcategory
-                                  ? expense.subcategory.replace("_", " ")
-                                  : "-"}
-                              </TableCell>
-                              <TableCell>{expense.description}</TableCell>
-                              <TableCell>
-                                {expense.propertyId
-                                  ? properties?.find(
-                                      (p) => p.id === expense.propertyId,
-                                    )?.flatNumber || `#${expense.propertyId}`
-                                  : "Common"}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatCurrency(expense.amount)}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
-                              No expense records found
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
