@@ -63,61 +63,25 @@ const expenseFormSchema = insertExpenseSchema.extend({
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-// Categories and subcategories
-{
-  const EXPENSE_CATEGORIES = [
-  { value: "utility", label: "Utility" },
-  { value: "operational", label: "Operational" },
-  { value: "general_maintenance", label: "General Maintenance" },
-  { value: "government", label: "Government" },
-  { value: "capital_expense", label: "Capital Expense" },
-  { value: "charity", label: "Charity" },
-  { value: "guest_related", label: "Guest Related" },
-  { value: "others", label: "Others" },
-];
+// Fetch categories and subcategories
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/expenses/categories"],
+    queryFn: () => apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
+  });
 
-const SUBCATEGORIES: Record<string, Array<{ value: string; label: string }>> = {
-  utility: [
-    { value: "electrical_bill", label: "Electrical Bill" },
-    { value: "sweet_water_bill", label: "Sweet Water Bill" },
-    { value: "wifi_bill", label: "WiFi Bill" },
-    { value: "water_tank_fill", label: "Water Tank Fill" },
-    { value: "others", label: "Others" },
-  ],
-  operational: [
-    { value: "security", label: "Security" },
-    { value: "housekeeping", label: "Housekeeping" },
-    { value: "salary", label: "Salary" },
-    { value: "others", label: "Others" },
-  ],
-  general_maintenance: [
-    { value: "electrical", label: "Electrical" },
-    { value: "plumbing", label: "Plumbing" },
-    { value: "painting", label: "Painting" },
-    { value: "pest_control", label: "Pest Control" },
-    { value: "lift_maintenance", label: "Lift Maintenance" },
-    { value: "others", label: "Others" },
-  ],
-  government: [
-    { value: "property_tax", label: "Property Tax" },
-    { value: "others", label: "Others" },
-  ],
-  capital_expense: [
-    { value: "renovation", label: "Renovation" },
-    { value: "new_equipment", label: "New Equipment" },
-    { value: "others", label: "Others" },
-  ],
-  charity: [
-    { value: "donation", label: "Donation" },
-    { value: "others", label: "Others" },
-  ],
-  guest_related: [
-    { value: "transportation", label: "Transportation" },
-    { value: "food", label: "Food" },
-    { value: "others", label: "Others" },
-  ],
-  others: [{ value: "others", label: "Others" }],
-};
+  const { data: subcategories = [] } = useQuery({
+    queryKey: ["/api/expenses/subcategories", form.watch("category")],
+    queryFn: () => 
+      apiRequest("GET", `/api/expenses/subcategories/${form.watch("category")}`).then((res) => res.json()),
+    enabled: !!form.watch("category"),
+  });
+
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors/by-subcategory", form.watch("subcategory")],
+    queryFn: () => 
+      apiRequest("GET", `/api/vendors/by-subcategory/${form.watch("subcategory")}`).then((res) => res.json()),
+    enabled: !!form.watch("subcategory"),
+  });
 
 export default function ExpensesPage() {
   const { toast } = useToast();
@@ -350,12 +314,12 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {EXPENSE_CATEGORIES.map((category) => (
+                              {categories.map((category: any) => (
                                 <SelectItem
-                                  key={category.value}
-                                  value={category.value}
+                                  key={category.expense_category}
+                                  value={category.expense_category}
                                 >
-                                  {category.label}
+                                  {category.expense_category}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -381,16 +345,14 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {SUBCATEGORIES[watchCategory]?.map(
-                                (subcategory) => (
-                                  <SelectItem
-                                    key={subcategory.value}
-                                    value={subcategory.value}
-                                  >
-                                    {subcategory.label}
-                                  </SelectItem>
-                                ),
-                              )}
+                              {subcategories.map((subcategory: any) => (
+                                <SelectItem
+                                  key={subcategory.expense_sub_category}
+                                  value={subcategory.expense_sub_category}
+                                >
+                                  {subcategory.expense_sub_category}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -493,15 +455,20 @@ export default function ExpensesPage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="0">No Vendor</SelectItem>
-                              {Array.isArray(filteredVendors) &&
-                                filteredVendors.map((vendor) => (
+                              {vendors.length > 0 ? (
+                                vendors.map((vendor: any) => (
                                   <SelectItem
                                     key={vendor.id}
                                     value={vendor.id.toString()}
                                   >
                                     {vendor.name}
                                   </SelectItem>
-                                ))}
+                                ))
+                              ) : (
+                                <SelectItem value="" disabled>
+                                  No vendors found for this subcategory
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
