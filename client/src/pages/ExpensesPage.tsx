@@ -64,25 +64,12 @@ const expenseFormSchema = insertExpenseSchema.extend({
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 export default function ExpensesPage() {
-  // Fetch categories and subcategories
-  const { data: categories = [] } = useQuery({
-    queryKey: ["/api/expenses/categories"],
-    queryFn: () => apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
-  });
-
-  const { data: subcategories = [] } = useQuery({
-    queryKey: ["/api/expenses/subcategories", form.watch("category")],
-    queryFn: () => 
-      apiRequest("GET", `/api/expenses/subcategories/${form.watch("category")}`).then((res) => res.json()),
-    enabled: !!form.watch("category"),
-  });
-
-  const { data: vendors = [] } = useQuery({
+  /*const { data: vendors = [] } = useQuery({
     queryKey: ["/api/vendors/by-subcategory", form.watch("subcategory")],
     queryFn: () => 
       apiRequest("GET", `/api/vendors/by-subcategory/${form.watch("subcategory")}`).then((res) => res.json()),
     enabled: !!form.watch("subcategory"),
-  });
+  });*/
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -124,16 +111,21 @@ export default function ExpensesPage() {
     { id: 21, flatNumber: "601" },
   ];
 
-  const { data: expenseCategories = [] } = useQuery({
-    queryKey: ["expense-categories"],
+  // Query to fetch expense categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/expenses/categories"],
     queryFn: () =>
-      apiRequest("GET", "/api/expense-categories").then((res) => res.json()),
+      apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
   });
 
-  const { data: subCategories = [] } = useQuery({
-    queryKey: ["expense-subcategories"],
-    queryFn: () =>
-      apiRequest("GET", "/api/expense-subcategories").then((res) => res.json()),
+  // Query to fetch subcategories based on selected category
+  const { data: subcategories = [], isLoading: isLoadingSubcategories } = useQuery({
+    queryKey: ["/api/expenses/subcategories", watchCategory],
+    queryFn: async () => {
+      if (!watchCategory) return [];
+      return apiRequest("GET", `/api/expenses/subcategories/${watchCategory}`).then((res) => res.json());
+    },
+    enabled: !!watchCategory,
   });
 
   // Query to fetch vendors for dropdown
@@ -196,8 +188,8 @@ export default function ExpensesPage() {
         description: "The expense has been added successfully.",
       });
       form.reset({
-        category: "utility",
-        subcategory: "electrical_bill",
+        category: "",
+        subcategory: "",
         amount: 0,
         date: new Date().toISOString().split("T")[0],
         description: "",
@@ -229,8 +221,8 @@ export default function ExpensesPage() {
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      category: "utility",
-      subcategory: "electrical_bill",
+      category: "",
+      subcategory: "",
       amount: 0,
       date: new Date().toISOString().split("T")[0],
       description: "",
@@ -248,18 +240,30 @@ export default function ExpensesPage() {
     },
   });
 
-  // Watch category field to update subcategory options
+  // Watch fields to update dependent dropdowns
   const watchCategory = form.watch("category");
+  const watchSubcategory = form.watch("subcategory");
 
-  // Update subcategory when category changes
+  // Query to fetch vendors based on selected subcategory
+  const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } = useQuery({
+    queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
+    queryFn: async () => {
+      if (!watchSubcategory) return [];
+      return apiRequest("GET", `/api/vendors/by-subcategory/${watchSubcategory}`).then((res) => res.json());
+    },
+    enabled: !!watchSubcategory,
+  });
+
+  // Update category and subcategory state
   React.useEffect(() => {
     setSelectedCategory(watchCategory);
-
+    
     // Reset subcategory when category changes
-    if (watchCategory !== selectedCategory) {
-      form.setValue("subcategory", SUBCATEGORIES[watchCategory][0].value);
+    if (watchCategory && subcategories && subcategories.length > 0) {
+      const newSubcategory = subcategories.length > 0 ? subcategories[0].expense_sub_category : "";
+      form.setValue("subcategory", newSubcategory);
     }
-  }, [watchCategory, selectedCategory, form]);
+  }, [watchCategory, subcategories, form]);
 
   function onSubmit(values: ExpenseFormValues) {
     // Process the values for submission
