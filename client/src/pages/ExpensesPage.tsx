@@ -119,22 +119,28 @@ export default function ExpensesPage() {
   });
 
   // Query to fetch subcategories based on selected category
-  const { data: subcategories = [], isLoading: isLoadingSubcategories } = useQuery({
-    queryKey: ["/api/expenses/subcategories", watchCategory],
-    queryFn: async () => {
-      if (!watchCategory) return [];
-      return apiRequest("GET", `/api/expenses/subcategories/${watchCategory}`).then((res) => res.json());
-    },
-    enabled: !!watchCategory,
-  });
+  const { data: subcategories = [], isLoading: isLoadingSubcategories } =
+    useQuery({
+      queryKey: ["/api/expenses/subcategories", watchCategory],
+      queryFn: async () => {
+        if (!watchCategory) return [];
+        return apiRequest(
+          "GET",
+          `/api/expenses/subcategories/${watchCategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!watchCategory,
+    });
 
   // Query to fetch vendors based on selected subcategory
-  const { data: vendorsBySubcategory = [] } = useQuery({
-    queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["/api/vendors/by-service/:serviceType", watchSubcategory],
     queryFn: async () => {
       if (!watchSubcategory) return [];
-      return apiRequest("GET", `/api/vendors/by-subcategory/${watchSubcategory}`)
-        .then((res) => res.json());
+      return apiRequest(
+        "GET",
+        `/api/vendors/by-subcategory/${watchSubcategory}`,
+      ).then((res) => res.json());
     },
     enabled: !!watchSubcategory,
   });
@@ -256,22 +262,27 @@ export default function ExpensesPage() {
   const watchSubcategory = form.watch("subcategory");
 
   // Query to fetch vendors based on selected subcategory
-  const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } = useQuery({
-    queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
-    queryFn: async () => {
-      if (!watchSubcategory) return [];
-      return apiRequest("GET", `/api/vendors/by-subcategory/${watchSubcategory}`).then((res) => res.json());
-    },
-    enabled: !!watchSubcategory,
-  });
+  const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } =
+    useQuery({
+      queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
+      queryFn: async () => {
+        if (!watchSubcategory) return [];
+        return apiRequest(
+          "GET",
+          `/api/vendors/by-subcategory/${watchSubcategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!watchSubcategory,
+    });
 
   // Update category and subcategory state
   React.useEffect(() => {
     setSelectedCategory(watchCategory);
-    
+
     // Reset subcategory when category changes
     if (watchCategory && subcategories && subcategories.length > 0) {
-      const newSubcategory = subcategories.length > 0 ? subcategories[0].expense_sub_category : "";
+      const newSubcategory =
+        subcategories.length > 0 ? subcategories[0].expense_sub_category : "";
       form.setValue("subcategory", newSubcategory);
     }
   }, [watchCategory, subcategories, form]);
@@ -468,18 +479,17 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">No Vendor</SelectItem>
                               {vendors.length > 0 ? (
                                 vendors.map((vendor: any) => (
                                   <SelectItem
                                     key={vendor.id}
-                                    value={vendor.id.toString()}
+                                    value={vendor.id.toString()} // must be non-empty string
                                   >
                                     {vendor.name}
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="" disabled>
+                                <SelectItem value="no_vendor" disabled>
                                   No vendors found for this subcategory
                                 </SelectItem>
                               )}
