@@ -483,13 +483,13 @@ export default function ExpensesPage() {
                                 vendors.map((vendor: any) => (
                                   <SelectItem
                                     key={vendor.id}
-                                    value={vendor.id.toString()} // must be non-empty string
+                                    value={vendor.id.toString()}
                                   >
                                     {vendor.name}
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="no_vendor" disabled>
+                                <SelectItem value="no_vendors" disabled>
                                   No vendors found for this subcategory
                                 </SelectItem>
                               )}
