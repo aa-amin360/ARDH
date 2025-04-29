@@ -63,7 +63,8 @@ const expenseFormSchema = insertExpenseSchema.extend({
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
-// Fetch categories and subcategories
+export default function ExpensesPage() {
+  // Fetch categories and subcategories
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/expenses/categories"],
     queryFn: () => apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
@@ -72,7 +73,7 @@ type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
   const { data: subcategories = [] } = useQuery({
     queryKey: ["/api/expenses/subcategories", form.watch("category")],
     queryFn: () => 
-      apiRequest("GET", `/api/expenses/subcategories/${Form.watch("category")}`).then((res) => res.json()),
+      apiRequest("GET", `/api/expenses/subcategories/${form.watch("category")}`).then((res) => res.json()),
     enabled: !!form.watch("category"),
   });
 
@@ -82,8 +83,6 @@ type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
       apiRequest("GET", `/api/vendors/by-subcategory/${form.watch("subcategory")}`).then((res) => res.json()),
     enabled: !!form.watch("subcategory"),
   });
-
-export default function ExpensesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
