@@ -72,7 +72,7 @@ type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
   const { data: subcategories = [] } = useQuery({
     queryKey: ["/api/expenses/subcategories", form.watch("category")],
     queryFn: () => 
-      apiRequest("GET", `/api/expenses/subcategories/${form.watch("category")}`).then((res) => res.json()),
+      apiRequest("GET", `/api/expenses/subcategories/${Form.watch("category")}`).then((res) => res.json()),
     enabled: !!form.watch("category"),
   });
 
