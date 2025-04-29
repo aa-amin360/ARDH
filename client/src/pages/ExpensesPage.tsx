@@ -52,7 +52,7 @@ const expenseFormSchema = insertExpenseSchema.extend({
     message: "Please enter a valid date",
   }),
   attachmentUrl: z.string().optional(), // Making attachmentUrl optional
-  
+
   // Water tanker specific fields
   tankerNumber: z.string().optional(),
   liters: z.coerce.number().optional(),
@@ -64,7 +64,8 @@ const expenseFormSchema = insertExpenseSchema.extend({
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
 
 // Categories and subcategories
-const EXPENSE_CATEGORIES = [
+{
+  const EXPENSE_CATEGORIES = [
   { value: "utility", label: "Utility" },
   { value: "operational", label: "Operational" },
   { value: "general_maintenance", label: "General Maintenance" },
@@ -159,12 +160,26 @@ export default function ExpensesPage() {
     { id: 20, flatNumber: "504" },
     { id: 21, flatNumber: "601" },
   ];
+
+  const { data: expenseCategories = [] } = useQuery({
+    queryKey: ["expense-categories"],
+    queryFn: () =>
+      apiRequest("GET", "/api/expense-categories").then((res) => res.json()),
+  });
+
+  const { data: subCategories = [] } = useQuery({
+    queryKey: ["expense-subcategories"],
+    queryFn: () =>
+      apiRequest("GET", "/api/expense-subcategories").then((res) => res.json()),
+  });
+
   // Query to fetch vendors for dropdown
   const { data: vendors = [] } = useQuery({
     queryKey: ["/api/vendors"],
+    queryFn: () => apiRequest("GET", "/api/vendors").then((res) => res.json()),
   });
 
-  // Filtered vendors based on selected category
+  // Filtered vendors based on selected sub-category
   const filteredVendors = React.useMemo(() => {
     if (!Array.isArray(vendors)) return [];
 
@@ -227,7 +242,7 @@ export default function ExpensesPage() {
         propertyId: null,
         attachmentUrl: "",
         createdBy: 0,
-        
+
         // Reset water tanker specific fields
         tankerNumber: "",
         liters: 0,
@@ -260,7 +275,7 @@ export default function ExpensesPage() {
       propertyId: null,
       attachmentUrl: "",
       createdBy: 0,
-      
+
       // Water tanker specific fields
       tankerNumber: "",
       liters: 0,
@@ -496,83 +511,99 @@ export default function ExpensesPage() {
                   </div>
 
                   {/* Water Tanker specific fields */}
-                  {watchCategory === "utility" && form.watch("subcategory") === "water_tank_fill" && (
-                    <div className="space-y-4 border rounded-md p-4 bg-slate-50">
-                      <h3 className="text-lg font-medium">Water Tanker Details</h3>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <FormField
-                          control={form.control}
-                          name="tankerNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tanker Number</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter tanker number" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="liters"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Liters Discharged</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="Enter liters" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="personInCharge"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Driver Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter driver name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="driverContact"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Driver Contact</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter driver contact" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="time"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Time Filled</FormLabel>
-                              <FormControl>
-                                <Input type="time" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                  {watchCategory === "utility" &&
+                    form.watch("subcategory") === "water_tank_fill" && (
+                      <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                        <h3 className="text-lg font-medium">
+                          Water Tanker Details
+                        </h3>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="tankerNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tanker Number</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter tanker number"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="liters"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Liters Discharged</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="Enter liters"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="personInCharge"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Driver Name</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter driver name"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="driverContact"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Driver Contact</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter driver contact"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="time"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Time Filled</FormLabel>
+                                <FormControl>
+                                  <Input type="time" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  
+                    )}
+
                   <FormField
                     control={form.control}
                     name="description"
@@ -605,7 +636,8 @@ export default function ExpensesPage() {
                               onChange={(e) => {
                                 // This just stores the file name for demo purposes
                                 // In a real implementation, you would upload the file to a server
-                                const fileName = e.target.files?.[0]?.name || "";
+                                const fileName =
+                                  e.target.files?.[0]?.name || "";
                                 field.onChange(fileName);
                               }}
                             />
@@ -657,12 +689,18 @@ export default function ExpensesPage() {
                 </Button>
               </div>
               <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">Expected CSV Format</h3>
+                <h3 className="text-sm font-medium mb-2">
+                  Expected CSV Format
+                </h3>
                 <p className="text-xs text-muted-foreground">
-                  Your CSV should have the following columns: category, subcategory, amount, date, description, vendor_id, property_id, attachment_url
+                  Your CSV should have the following columns: category,
+                  subcategory, amount, date, description, vendor_id,
+                  property_id, attachment_url
                 </p>
                 <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">Download Template</h3>
+                  <h3 className="text-sm font-medium mb-2">
+                    Download Template
+                  </h3>
                   <Button variant="outline" size="sm" className="gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
                     Download CSV Template
