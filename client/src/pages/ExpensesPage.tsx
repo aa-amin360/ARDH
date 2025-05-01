@@ -479,10 +479,8 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
-                            value={field.value ? field.value.toString() : "0"} // Avoid empty string
+                            onValueChange={field.onChange}
+                            value={field.value?.toString() || "none"}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -490,9 +488,10 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              <SelectItem value="none">No Vendor</SelectItem>
                               {vendors && vendors.length > 0 ? (
                                 vendors
-                                  .filter((vendor: any) => vendor?.id) // filter out empty/null vendors
+                                  .filter((vendor: any) => vendor?.id)
                                   .map((vendor: any) => (
                                     <SelectItem
                                       key={vendor.id}
@@ -502,10 +501,9 @@ export default function ExpensesPage() {
                                     </SelectItem>
                                   ))
                               ) : (
-                                // Show fallback as plain div (not SelectItem)
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                <SelectItem value="no_vendors_found" disabled>
                                   No vendors found for this subcategory
-                                </div>
+                                </SelectItem>
                               )}
                             </SelectContent>
                           </Select>
