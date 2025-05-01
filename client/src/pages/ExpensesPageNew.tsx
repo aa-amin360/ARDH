@@ -406,15 +406,13 @@ export default function ExpensesPage() {
 
                     <FormField
                       control={form.control}
-                      name="vendor"
+                      name="vendorId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
-                            value={field.value?.toString()}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value?.toString() || "none"}
                             disabled={!watchSubcategory || isLoadingVendors}
                           >
                             <FormControl>
@@ -423,7 +421,7 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">No Vendor</SelectItem>
+                              <SelectItem value="none">Select Vendor</SelectItem>
                               {vendorsBySubcategory && vendorsBySubcategory.length > 0 ? (
                                 vendorsBySubcategory.map((vendor: any) => (
                                   <SelectItem
@@ -434,8 +432,8 @@ export default function ExpensesPage() {
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="" disabled>
-                                  No vendors found for this subcategory
+                                <SelectItem value="no_vendors">
+                                  No vendors found
                                 </SelectItem>
                               )}
                             </SelectContent>
