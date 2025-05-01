@@ -691,7 +691,9 @@ export class DatabaseStorage implements IStorage {
 
   async getDistinctVendorServiceTypes() {
     const result = await db.execute(sql`
-      SELECT DISTINCT vendor_type FROM vendor_categories;
+      SELECT DISTINCT vendor_type::text as vendor_type 
+      FROM vendor_categories 
+      ORDER BY vendor_type;
     `);
     return result.rows;
   }
@@ -699,7 +701,7 @@ export class DatabaseStorage implements IStorage {
   async getVendorsByExpenseSubcategory(subcategory: string) {
     const result = await db.execute(sql`
       SELECT v.* FROM vendors v
-      JOIN vendor_categories vc ON v.service_type = vc.vendor_type
+      JOIN vendor_categories vc ON v.service_type::text = vc.vendor_type::text
       WHERE vc.expense_sub_category = ${subcategory};
     `);
     return result.rows;
