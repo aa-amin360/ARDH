@@ -261,6 +261,15 @@ export default function ExpensesPage() {
   const watchCategory = form.watch("category");
   const watchSubcategory = form.watch("subcategory");
 
+  //Log Fields
+  useEffect(() => {
+    const subscription = form.watch((values, { name }) => {
+      console.log(`[WATCH] Field changed: ${name}`, values);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   // Query to fetch vendors based on selected subcategory
   const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } =
     useQuery({

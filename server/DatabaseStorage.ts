@@ -676,14 +676,14 @@ export class DatabaseStorage implements IStorage {
   // Added methods for expense categories and vendor types
   async getDistinctExpenseCategories() {
     const result = await db.execute(sql`
-      SELECT DISTINCT category FROM expense_categories;
+      SELECT DISTINCT expense_category FROM expense_categories;
     `);
     return result.rows;
   }
 
   async getExpenseSubcategories(category: string) {
     const result = await db.execute(sql`
-      SELECT DISTINCT sub_category FROM expense_categories 
+      SELECT DISTINCT expense_sub_category FROM expense_categories 
       WHERE category = ${category};
     `);
     return result.rows;

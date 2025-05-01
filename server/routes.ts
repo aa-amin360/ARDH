@@ -337,7 +337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const categories = await storage.getDistinctExpenseCategories();
         res.json(categories);
       } catch (error) {
-        console.writeLine("Error fetching expense categories:", error);
+        console.error("Error fetching expense categories:", error);
         next(error);
       }
     },
@@ -352,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const subcategories = await storage.getExpenseSubcategories(category);
         res.json(subcategories);
       } catch (error) {
-        console.writeLine("Error fetching expense subcategories:", error);
+        console.error("Error fetching expense subcategories:", error);
         next(error);
       }
     },
