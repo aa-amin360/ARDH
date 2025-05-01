@@ -140,29 +140,32 @@ export default function ExpensesPage() {
   });
 
   // Query to fetch subcategories based on selected category
-  const { data: subcategories = [], isLoading: isLoadingSubcategories } = useQuery({
-    queryKey: ["/api/expenses/subcategories", watchCategory],
-    queryFn: async () => {
-      if (!watchCategory) return [];
-      return apiRequest("GET", `/api/expenses/subcategories/${watchCategory}`)
-        .then((res) => res.json());
-    },
-    enabled: !!watchCategory,
-  });
+  const { data: subcategories = [], isLoading: isLoadingSubcategories } =
+    useQuery({
+      queryKey: ["/api/expenses/subcategories", watchCategory],
+      queryFn: async () => {
+        if (!watchCategory) return [];
+        return apiRequest(
+          "GET",
+          `/api/expenses/subcategories/${watchCategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!watchCategory,
+    });
 
   // Query to fetch vendors based on selected subcategory
-  const { 
-    data: vendorsBySubcategory = [], 
-    isLoading: isLoadingVendors 
-  } = useQuery({
-    queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
-    queryFn: async () => {
-      if (!watchSubcategory) return [];
-      return apiRequest("GET", `/api/vendors/by-subcategory/${watchSubcategory}`)
-        .then((res) => res.json());
-    },
-    enabled: !!watchSubcategory,
-  });
+  const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } =
+    useQuery({
+      queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
+      queryFn: async () => {
+        if (!watchSubcategory) return [];
+        return apiRequest(
+          "GET",
+          `/api/vendors/by-subcategory/${watchSubcategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!watchSubcategory,
+    });
 
   // Update subcategory when category changes
   React.useEffect(() => {
@@ -309,23 +312,35 @@ export default function ExpensesPage() {
                           <FormLabel>Subcategory</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            value={field.value || ""}
                             disabled={!watchCategory || isLoadingSubcategories}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder={isLoadingSubcategories ? "Loading..." : "Select subcategory"} />
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingSubcategories
+                                      ? "Loading..."
+                                      : "Select subcategory"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {subcategories.map((subcategory: any) => (
-                                <SelectItem
-                                  key={subcategory.expense_sub_category}
-                                  value={subcategory.expense_sub_category}
-                                >
-                                  {subcategory.expense_sub_category}
-                                </SelectItem>
-                              ))}
+                              {subcategories.length > 0 ? (
+                                subcategories.map((subcategory: any) => (
+                                  <SelectItem
+                                    key={subcategory.expense_sub_category}
+                                    value={subcategory.expense_sub_category}
+                                  >
+                                    {subcategory.expense_sub_category}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                  No subcategories found
+                                </div>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -359,10 +374,7 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Date</FormLabel>
                           <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                            />
+                            <Input type="date" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -387,7 +399,9 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">Common Areas</SelectItem>
+                              <SelectItem key="common" value="0">
+                                Common Areas
+                              </SelectItem>
                               {Array.isArray(properties) &&
                                 properties.map((property) => (
                                   <SelectItem
@@ -406,23 +420,34 @@ export default function ExpensesPage() {
 
                     <FormField
                       control={form.control}
-                      name="vendorId"
+                      name="vendor"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
                             value={field.value?.toString() || "none"}
                             disabled={!watchSubcategory || isLoadingVendors}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder={isLoadingVendors ? "Loading vendors..." : "Select vendor (optional)"} />
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingVendors
+                                      ? "Loading vendors..."
+                                      : "Select vendor (optional)"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="none">Select Vendor</SelectItem>
-                              {vendorsBySubcategory && vendorsBySubcategory.length > 0 ? (
+                              <SelectItem value="none">
+                                Select Vendor
+                              </SelectItem>
+                              {vendorsBySubcategory &&
+                              vendorsBySubcategory.length > 0 ? (
                                 vendorsBySubcategory.map((vendor: any) => (
                                   <SelectItem
                                     key={vendor.id}
@@ -611,9 +636,7 @@ export default function ExpensesPage() {
                       {expenses.length > 0 ? (
                         expenses.map((expense: any) => (
                           <TableRow key={expense.id}>
-                            <TableCell>
-                              {formatDate(expense.date)}
-                            </TableCell>
+                            <TableCell>{formatDate(expense.date)}</TableCell>
                             <TableCell>{expense.category}</TableCell>
                             <TableCell>{expense.subcategory}</TableCell>
                             <TableCell>
@@ -622,7 +645,7 @@ export default function ExpensesPage() {
                             <TableCell>
                               {expense.propertyId
                                 ? properties.find(
-                                    (p) => p.id === expense.propertyId
+                                    (p) => p.id === expense.propertyId,
                                   )?.flatNumber || "Unknown"
                                 : "Common Areas"}
                             </TableCell>
@@ -664,10 +687,7 @@ export default function ExpensesPage() {
                     Download the template, fill it with your expense data, and
                     upload it back to import multiple expenses at once.
                   </p>
-                  <Button
-                    variant="outline"
-                    className="w-full md:w-auto"
-                  >
+                  <Button variant="outline" className="w-full md:w-auto">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Download Template
                   </Button>
