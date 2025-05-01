@@ -69,7 +69,8 @@ export default function ExpensesPage() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ["/api/expenses/categories"],
-    queryFn: () => apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
+    queryFn: () =>
+      apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
   });
 
   const form = useForm<ExpenseFormValues>({
@@ -90,9 +91,12 @@ export default function ExpensesPage() {
 
   const { data: subcategories = [] } = useQuery({
     queryKey: ["/api/expenses/subcategories", watchCategory],
-    queryFn: () => 
-      watchCategory 
-        ? apiRequest("GET", `/api/expenses/subcategories/${watchCategory}`).then((res) => res.json())
+    queryFn: () =>
+      watchCategory
+        ? apiRequest(
+            "GET",
+            `/api/expenses/subcategories/${watchCategory}`,
+          ).then((res) => res.json())
         : Promise.resolve([]),
     enabled: !!watchCategory,
   });
@@ -101,7 +105,10 @@ export default function ExpensesPage() {
     queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
     queryFn: () =>
       watchSubcategory
-        ? apiRequest("GET", `/api/vendors/by-subcategory/${watchSubcategory}`).then((res) => res.json())
+        ? apiRequest(
+            "GET",
+            `/api/vendors/by-subcategory/${watchSubcategory}`,
+          ).then((res) => res.json())
         : Promise.resolve([]),
     enabled: !!watchSubcategory,
   });
@@ -163,7 +170,10 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-4"
+                >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -171,7 +181,10 @@ export default function ExpensesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Category</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select category" />
@@ -199,7 +212,10 @@ export default function ExpensesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Subcategory</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select subcategory" />
@@ -227,7 +243,7 @@ export default function ExpensesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
-                          <Select 
+                          <Select
                             onValueChange={field.onChange}
                             value={field.value || "none"}
                           >
@@ -369,7 +385,9 @@ export default function ExpensesPage() {
                 <TableBody>
                   {expenses.map((expense: any) => (
                     <TableRow key={expense.id}>
-                      <TableCell>{new Date(expense.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {new Date(expense.date).toLocaleDateString()}
+                      </TableCell>
                       <TableCell>{expense.category}</TableCell>
                       <TableCell>₹{expense.amount}</TableCell>
                       <TableCell>{expense.description}</TableCell>

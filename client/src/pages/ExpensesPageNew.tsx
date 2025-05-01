@@ -406,7 +406,7 @@ export default function ExpensesPage() {
 
                     <FormField
                       control={form.control}
-                      name="vendorId"
+                      name="vendor"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
