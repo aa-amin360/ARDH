@@ -342,9 +342,9 @@ export default function ExpensesPage() {
                               {categories.map((category: any) => (
                                 <SelectItem
                                   key={category.expense_category}
-                                  value={category.expense_category}
+                                  value={category.expense_category || "unknown"}
                                 >
-                                  {category.expense_category}
+                                  {category.expense_category || "Unknown"}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -373,9 +373,13 @@ export default function ExpensesPage() {
                               {subcategories.map((subcategory: any) => (
                                 <SelectItem
                                   key={subcategory.expense_sub_category}
-                                  value={subcategory.expense_sub_category}
+                                  value={
+                                    subcategory.expense_sub_category ||
+                                    "unknown"
+                                  }
                                 >
-                                  {subcategory.expense_sub_category}
+                                  {subcategory.expense_sub_category ||
+                                    "Unknown"}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -433,10 +437,15 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Property</FormLabel>
                           <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
+                            onValueChange={(value) => {
+                              const parsed = parseInt(value);
+                              if (!isNaN(parsed)) field.onChange(parsed);
+                            }}
+                            value={
+                              field.value !== null && field.value !== undefined
+                                ? field.value.toString()
+                                : undefined
                             }
-                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -446,14 +455,16 @@ export default function ExpensesPage() {
                             <SelectContent>
                               <SelectItem value="0">Common Areas</SelectItem>
                               {Array.isArray(properties) &&
-                                properties.map((property) => (
-                                  <SelectItem
-                                    key={property.id}
-                                    value={property.id.toString()}
-                                  >
-                                    {property.flatNumber}
-                                  </SelectItem>
-                                ))}
+                                properties
+                                  .filter((property) => property.id) // Avoid nulls/undefined
+                                  .map((property) => (
+                                    <SelectItem
+                                      key={property.id}
+                                      value={property.id.toString()}
+                                    >
+                                      {property.flatNumber}
+                                    </SelectItem>
+                                  ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -463,7 +474,7 @@ export default function ExpensesPage() {
 
                     <FormField
                       control={form.control}
-                      name="vendorId"
+                      name="vendor"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
@@ -471,7 +482,7 @@ export default function ExpensesPage() {
                             onValueChange={(value) =>
                               field.onChange(parseInt(value))
                             }
-                            value={field.value?.toString()}
+                            value={field.value ? field.value.toString() : "0"} // Avoid empty string
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -479,19 +490,22 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {vendors.length > 0 ? (
-                                vendors.map((vendor: any) => (
-                                  <SelectItem
-                                    key={vendor.id}
-                                    value={vendor.id.toString()}
-                                  >
-                                    {vendor.name}
-                                  </SelectItem>
-                                ))
+                              {vendors && vendors.length > 0 ? (
+                                vendors
+                                  .filter((vendor: any) => vendor?.id) // filter out empty/null vendors
+                                  .map((vendor: any) => (
+                                    <SelectItem
+                                      key={vendor.id}
+                                      value={vendor.id.toString()}
+                                    >
+                                      {vendor.name}
+                                    </SelectItem>
+                                  ))
                               ) : (
-                                <SelectItem value="no_vendors" disabled>
+                                // Show fallback as plain div (not SelectItem)
+                                <div className="px-3 py-2 text-sm text-muted-foreground">
                                   No vendors found for this subcategory
-                                </SelectItem>
+                                </div>
                               )}
                             </SelectContent>
                           </Select>

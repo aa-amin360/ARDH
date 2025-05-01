@@ -327,37 +327,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(error);
     }
   });
-  
+
   // Expense categories and subcategories
-  app.get("/api/expenses/categories", isAuthenticated, async (req, res, next) => {
-    try {
-      const categories = await storage.getDistinctExpenseCategories();
-      res.json(categories);
-    } catch (error) {
-      next(error);
-    }
-  });
-  
-  app.get("/api/expenses/subcategories/:category", isAuthenticated, async (req, res, next) => {
-    try {
-      const category = req.params.category;
-      const subcategories = await storage.getExpenseSubcategories(category);
-      res.json(subcategories);
-    } catch (error) {
-      next(error);
-    }
-  });
-  
+  app.get(
+    "/api/expenses/categories",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const categories = await storage.getDistinctExpenseCategories();
+        res.json(categories);
+      } catch (error) {
+        console.writeLine("Error fetching expense categories:", error);
+        next(error);
+      }
+    },
+  );
+
+  app.get(
+    "/api/expenses/subcategories/:category",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const category = req.params.category;
+        const subcategories = await storage.getExpenseSubcategories(category);
+        res.json(subcategories);
+      } catch (error) {
+        console.writeLine("Error fetching expense subcategories:", error);
+        next(error);
+      }
+    },
+  );
+
   // Vendor endpoints
-  app.get("/api/vendors/by-subcategory/:subcategory", isAuthenticated, async (req, res, next) => {
-    try {
-      const subcategory = req.params.subcategory;
-      const vendors = await storage.getVendorsByExpenseSubcategory(subcategory);
-      res.json(vendors);
-    } catch (error) {
-      next(error);
-    }
-  });
+  app.get(
+    "/api/vendors/by-subcategory/:subcategory",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const subcategory = req.params.subcategory;
+        const vendors =
+          await storage.getVendorsByExpenseSubcategory(subcategory);
+        res.json(vendors);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   // Bulk upload for expenses
   app.post(
@@ -688,14 +703,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Vendor routes
 
   // Get distinct vendor service types
-  app.get("/api/vendors/service-types", isAuthenticated, async (req, res, next) => {
-    try {
-      const types = await storage.getDistinctVendorServiceTypes();
-      res.json(types.map(row => row.vendor_type));
-    } catch (error) {
-      next(error);
-    }
-  });
+  app.get(
+    "/api/vendors/service-types",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const types = await storage.getDistinctVendorServiceTypes();
+        res.json(types.map((row) => row.vendor_type));
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   app.get("/api/vendors", isAuthenticated, async (req, res, next) => {
     try {
