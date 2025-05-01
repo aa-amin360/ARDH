@@ -66,7 +66,7 @@ const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  serviceType: z.enum(vendorServiceTypeEnum.enumValues),
+  //serviceType: z.enum(vendorServiceTypeEnum.enumValues),
   provisionType: z.enum(vendorProvisionTypeEnum.enumValues),
   contactPerson: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
@@ -108,7 +108,7 @@ export default function VendorsPage() {
       name: "",
       phone: "",
       email: "",
-      serviceType: "plumbing", // Valid enum value from vendorServiceTypeEnum - lowercase is crucial
+      serviceType: "", // Valid enum value from vendorServiceTypeEnum - lowercase is crucial
       provisionType: "service", // Default provision type
       contactPerson: "",
       address: "",
@@ -569,9 +569,12 @@ export default function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {vendorServiceTypeEnum.enumValues.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {getServiceTypeName(type)}
+                          {serviceTypes.map((serviceType: any) => (
+                            <SelectItem
+                              key={serviceType.vendor_type}
+                              value={serviceType.vendor_type}
+                            >
+                              {serviceType.vendor_type}
                             </SelectItem>
                           ))}
                         </SelectContent>
