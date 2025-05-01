@@ -787,9 +787,9 @@ export default function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {vendorServiceTypeEnum.enumValues.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {getServiceTypeName(type)}
+                          {serviceTypes.map((type: string) => (
+                            <SelectItem key={type} value={type.toLowerCase()}>
+                              {type}
                             </SelectItem>
                           ))}
                         </SelectContent>
