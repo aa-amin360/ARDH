@@ -684,7 +684,7 @@ export class DatabaseStorage implements IStorage {
   async getExpenseSubcategories(category: string) {
     const result = await db.execute(sql`
       SELECT DISTINCT expense_sub_category FROM expense_categories 
-      WHERE category = ${category};
+      WHERE expense_category = ${category};
     `);
     return result.rows;
   }
