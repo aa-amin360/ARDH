@@ -112,9 +112,9 @@ export const expenseSubcategoryEnum = pgEnum("expense_subcategory", [
   "Guest Hospitality Exp / Meal",
   "Other",
 ]);
-export const vendorServiceTypeEnum = pgEnum("vendor_service_type", [
+export const vendorServiceTypeEnum = pgEnum("service_type", [
   "CCTV",
-  "Carpenter", 
+  "Carpenter",
   "Cleaner",
   "Electrical",
   "Generator",
@@ -126,12 +126,13 @@ export const vendorServiceTypeEnum = pgEnum("vendor_service_type", [
   "Security",
   "Water",
   "WiFi",
-  "Other"
+  "Water Tanker",
+  "Other",
 ]);
 export const vendorProvisionTypeEnum = pgEnum("vendor_provision_type", [
-  "service",
-  "product",
-  "both",
+  "Service Provider",
+  "Product Supplier",
+  "Service & Product",
 ]);
 
 // Users table
@@ -244,10 +245,8 @@ export const vendors = pgTable("vendors", {
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   email: text("email"),
-  serviceType: vendorServiceTypeEnum("service_type").notNull(),
-  provisionType: vendorProvisionTypeEnum("provision_type")
-    .notNull()
-    .default("service"),
+  serviceType: text("service_type").notNull(),
+  provisionType: text("provision_type").notNull().default("service"),
   address: text("address"),
   notes: text("notes"),
   contactPerson: text("contact_person"),

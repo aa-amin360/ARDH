@@ -57,7 +57,7 @@ import { Loader2, PlusCircle, PencilLine, Trash2, Search } from "lucide-react";
 
 import {
   Vendor,
-  vendorServiceTypeEnum,
+  //vendorservice_typeEnum,
   vendorProvisionTypeEnum,
 } from "@shared/schema";
 
@@ -66,13 +66,14 @@ const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   phone: z.string().min(10, "Phone number must be at least 10 characters"),
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  //serviceType: z.enum(vendorServiceTypeEnum.enumValues),
-  provisionType: z.enum(vendorProvisionTypeEnum.enumValues),
-  contactPerson: z.string().optional().or(z.literal("")),
+  //service_type: z.enum(vendorservice_typeEnum.enumValues),
+  service_type: z.string().min(1, "Service Type is required"),
+  provision_type: z.enum(vendorProvisionTypeEnum.enumValues),
+  contact_person: z.string().optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
   notes: z.string().optional().or(z.literal("")),
-  isActive: z.boolean(),
-  createdBy: z.number(),
+  is_active: z.boolean(),
+  created_by: z.number(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -93,7 +94,8 @@ export default function VendorsPage() {
     queryFn: () => apiRequest("GET", "/api/vendors").then((res) => res.json()),
   });
 
-  const { data: serviceTypes = [] } = useQuery({
+  //Fetch vendor types
+  const { data: service_types = [] } = useQuery({
     queryKey: ["/api/vendors/service-types"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/vendors/service-types");
@@ -108,13 +110,13 @@ export default function VendorsPage() {
       name: "",
       phone: "",
       email: "",
-      serviceType: "", // Valid enum value from vendorServiceTypeEnum - lowercase is crucial
-      provisionType: "service", // Default provision type
-      contactPerson: "",
+      service_type: "", // Valid enum value from vendorservice_typeEnum - lowercase is crucial
+      provision_type: "service", // Default provision type
+      contact_person: "",
       address: "",
       notes: "",
-      isActive: true,
-      createdBy: user?.id || 0,
+      is_active: true,
+      created_by: user?.id || 0,
     },
   });
 
@@ -198,13 +200,14 @@ export default function VendorsPage() {
   // Handler for form submission
   function onSubmit(data: FormValues) {
     console.log("Form data:", data);
-    // Set createdBy field
+    // Set created_by field
     const submitData = {
       ...data,
-      createdBy: user?.id || 1,
+      created_by: user?.id || 1,
       // Convert empty strings to undefined (not null) for optional fields
       email: data.email === "" ? undefined : data.email,
-      contactPerson: data.contactPerson === "" ? undefined : data.contactPerson,
+      contact_person:
+        data.contact_person === "" ? undefined : data.contact_person,
       address: data.address === "" ? undefined : data.address,
       notes: data.notes === "" ? undefined : data.notes,
     };
@@ -223,13 +226,13 @@ export default function VendorsPage() {
       name: vendor.name,
       phone: vendor.phone,
       email: vendor.email || "",
-      serviceType: vendor.serviceType,
-      provisionType: vendor.provisionType,
-      contactPerson: vendor.contactPerson || "",
+      service_type: vendor.service_type,
+      provision_type: vendor.provision_type,
+      contact_person: vendor.contact_person || "",
       address: vendor.address || "",
       notes: vendor.notes || "",
-      isActive: vendor.isActive,
-      createdBy: vendor.createdBy,
+      is_active: vendor.is_active,
+      created_by: vendor.created_by,
     });
     setIsEditDialogOpen(true);
   }
@@ -247,19 +250,23 @@ export default function VendorsPage() {
     const query = searchQuery.toLowerCase();
     return (
       vendor.name.toLowerCase().includes(query) ||
-      vendor.serviceType.toLowerCase().includes(query) ||
+      vendor.service_type.toLowerCase().includes(query) ||
       vendor.phone.toLowerCase().includes(query) ||
       (vendor.email?.toLowerCase() || "").includes(query)
     );
   });
 
   // Get service type display name
-  function getServiceTypeName(type: string): string {
+  function getserviceTypeName(type?: string): string {
+    if (!type) {
+      console.warn("getserviceTypeName called with undefined type");
+      return "";
+    }
     return type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
   // Get provision type display name
-  function getProvisionTypeName(type: string): string {
+  function getprovisionTypeName(type: string): string {
     if (type === "service") return "Service Provider";
     if (type === "product") return "Product Supplier";
     if (type === "both") return "Both Services & Products";
@@ -338,11 +345,12 @@ export default function VendorsPage() {
                               {vendor.name}
                             </TableCell>
                             <TableCell>
-                              {getServiceTypeName(vendor.serviceType)}
+                              {getserviceTypeName(vendor.service_type)}
                               <div className="text-xs text-muted-foreground">
-                                {vendor.provisionType === "service"
-                                  ? "Service Provider"
-                                  : "Supplier"}
+                                {vendor.provision_type}
+                                {console.log(
+                                  "ProvType is: " + vendor.provision_type,
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -352,9 +360,9 @@ export default function VendorsPage() {
                                   {vendor.email}
                                 </div>
                               )}
-                              {vendor.contactPerson && (
+                              {vendor.contact_person && (
                                 <div className="text-xs">
-                                  Contact: {vendor.contactPerson}
+                                  Contact: {vendor.contact_person}
                                 </div>
                               )}
                             </TableCell>
@@ -364,12 +372,12 @@ export default function VendorsPage() {
                             <TableCell>
                               <span
                                 className={`inline-block px-2 py-1 rounded-full text-xs ${
-                                  vendor.isActive
+                                  vendor.is_active
                                     ? "bg-green-100 text-green-800"
                                     : "bg-red-100 text-red-800"
                                 }`}
                               >
-                                {vendor.isActive ? "Active" : "Inactive"}
+                                {vendor.is_active ? "Active" : "Inactive"}
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
@@ -430,7 +438,7 @@ export default function VendorsPage() {
                                   "water",
                                   "wifi",
                                   "trash_collection",
-                                ].includes(vendor.serviceType);
+                                ].includes(vendor.service_type);
                               } else if (category === "maintenance") {
                                 return [
                                   "paint_job",
@@ -440,9 +448,9 @@ export default function VendorsPage() {
                                   "hvac",
                                   "security",
                                   "landscaping",
-                                ].includes(vendor.serviceType);
+                                ].includes(vendor.service_type);
                               } else if (category === "other") {
-                                return vendor.serviceType === "other";
+                                return vendor.service_type === "other";
                               }
                               return false;
                             })
@@ -452,9 +460,9 @@ export default function VendorsPage() {
                                   {vendor.name}
                                 </TableCell>
                                 <TableCell>
-                                  {getServiceTypeName(vendor.serviceType)}
+                                  {getserviceTypeName(vendor.service_type)}
                                   <div className="text-xs text-muted-foreground">
-                                    {vendor.provisionType === "service"
+                                    {vendor.provision_type === "service"
                                       ? "Service Provider"
                                       : "Supplier"}
                                   </div>
@@ -473,12 +481,12 @@ export default function VendorsPage() {
                                 <TableCell>
                                   <span
                                     className={`inline-block px-2 py-1 rounded-full text-xs ${
-                                      vendor.isActive
+                                      vendor.is_active
                                         ? "bg-green-100 text-green-800"
                                         : "bg-red-100 text-red-800"
                                     }`}
                                   >
-                                    {vendor.isActive ? "Active" : "Inactive"}
+                                    {vendor.is_active ? "Active" : "Inactive"}
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -555,7 +563,7 @@ export default function VendorsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="serviceType"
+                  name="service_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Service Type *</FormLabel>
@@ -569,8 +577,8 @@ export default function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {serviceTypes.map((type: string) => (
-                            <SelectItem key={type} value={type.toLowerCase()}>
+                          {service_types.map((type: string) => (
+                            <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
                           ))}
@@ -582,7 +590,7 @@ export default function VendorsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="provisionType"
+                  name="provision_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Provision Type *</FormLabel>
@@ -631,7 +639,7 @@ export default function VendorsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="contactPerson"
+                  name="contact_person"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Contact Person (Optional)</FormLabel>
@@ -770,7 +778,7 @@ export default function VendorsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="serviceType"
+                  name="service_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Service Type *</FormLabel>
@@ -784,8 +792,8 @@ export default function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {serviceTypes.map((type: string) => (
-                            <SelectItem key={type} value={type.toLowerCase()}>
+                          {service_types.map((type: string) => (
+                            <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
                           ))}
@@ -797,7 +805,7 @@ export default function VendorsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="provisionType"
+                  name="provision_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Provision Type *</FormLabel>
@@ -813,9 +821,7 @@ export default function VendorsPage() {
                         <SelectContent>
                           {vendorProvisionTypeEnum.enumValues.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === "service"
-                                ? "Service Provider"
-                                : "Product Supplier"}
+                              {type}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -846,7 +852,7 @@ export default function VendorsPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="contactPerson"
+                  name="contact_person"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Contact Person (Optional)</FormLabel>
@@ -961,7 +967,7 @@ export default function VendorsPage() {
                 </p>
                 <p>
                   <span className="font-semibold">Service Type:</span>{" "}
-                  {getServiceTypeName(selectedVendor.serviceType)}
+                  {getserviceTypeName(selectedVendor.service_type)}
                 </p>
                 <p>
                   <span className="font-semibold">Phone:</span>{" "}

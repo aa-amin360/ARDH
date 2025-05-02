@@ -711,6 +711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const types = await storage.getDistinctVendorServiceTypes();
         res.json(types.map((row) => row.vendor_type));
       } catch (error) {
+        console.error("Error fetching vendor service types:", error);
         next(error);
       }
     },
