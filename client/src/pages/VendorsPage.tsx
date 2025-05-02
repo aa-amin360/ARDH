@@ -569,12 +569,9 @@ export default function VendorsPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {serviceTypes.map((serviceType: any) => (
-                            <SelectItem
-                              key={serviceType.vendor_type}
-                              value={serviceType.vendor_type}
-                            >
-                              {serviceType.vendor_type}
+                          {serviceTypes.map((type: string) => (
+                            <SelectItem key={type} value={type.toLowerCase()}>
+                              {type}
                             </SelectItem>
                           ))}
                         </SelectContent>
