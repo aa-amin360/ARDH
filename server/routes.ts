@@ -13,6 +13,7 @@ import {
   insertVendorSchema,
   insertPropertyChargeSchema,
   insertTenantChargeSchema,
+  insertPropertyOwnerSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
