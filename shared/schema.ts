@@ -8,6 +8,7 @@ import {
   real,
   pgEnum,
   date,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -122,7 +123,7 @@ export const vendorServiceTypeEnum = pgEnum("service_type", [
   "Landscaping",
   "Paint",
   "Pest Control",
-  "Plumbing",
+  "Plumber",
   "Security",
   "Water",
   "WiFi",
@@ -239,23 +240,23 @@ export const tenants = pgTable("tenants", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Vendors table for service providers
+// Vendors table for managing vendor information
 export const vendors = pgTable("vendors", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   email: text("email"),
-  serviceType: text("service_type").notNull(),
-  provisionType: text("provision_type").notNull().default("service"),
+  service_type: text("service_type").notNull(),
+  provision_type: text("provision_type").notNull().default("service"),
   address: text("address"),
   notes: text("notes"),
-  contactPerson: text("contact_person"),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdBy: integer("created_by")
+  contact_person: text("contact_person"),
+  is_active: boolean("is_active").default(true).notNull(),
+  created_by: integer("created_by")
     .references(() => users.id)
     .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Property Charges table for tracking historical changes to property charges
@@ -286,6 +287,19 @@ export const tenantCharges = pgTable("tenant_charges", {
     .references(() => users.id)
     .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Property Owners table for managing property owner information
+export const propertyOwners = pgTable("property_owners", {
+  id: varchar("id").primaryKey(), // Will be generated as full_name_phone
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull(),
+  altPhone: text("alt_phone"),
+  aadhar: text("aadhar"),
+  bankAccount: text("bank_account"),
+  bankIfsc: text("bank_ifsc"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  modifiedAt: timestamp("modified_at").defaultNow().notNull(),
 });
 
 // Create insert schemas
@@ -331,8 +345,8 @@ export const insertTenantSchema = createInsertSchema(tenants).omit({
 
 export const insertVendorSchema = createInsertSchema(vendors).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  created_at: true,
+  updated_at: true,
 });
 
 export const insertPropertyChargeSchema = createInsertSchema(propertyCharges, {
@@ -349,6 +363,12 @@ export const insertTenantChargeSchema = createInsertSchema(tenantCharges, {
 }).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertPropertyOwnerSchema = createInsertSchema(propertyOwners).omit({
+  id: true, // ID will be generated on the server
+  createdAt: true,
+  modifiedAt: true,
 });
 
 // Create extended schemas for login
@@ -376,6 +396,8 @@ export type PropertyCharge = typeof propertyCharges.$inferSelect;
 export type InsertPropertyCharge = z.infer<typeof insertPropertyChargeSchema>;
 export type TenantCharge = typeof tenantCharges.$inferSelect;
 export type InsertTenantCharge = z.infer<typeof insertTenantChargeSchema>;
+export type PropertyOwner = typeof propertyOwners.$inferSelect;
+export type InsertPropertyOwner = z.infer<typeof insertPropertyOwnerSchema>;
 export type Login = z.infer<typeof loginSchema>;
 
 // Summary types for dashboard

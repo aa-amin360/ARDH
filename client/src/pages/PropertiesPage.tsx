@@ -538,7 +538,9 @@ export default function PropertiesPage() {
   });
 
   // Get active tenant status (occupancy) for the selected property
-  const { data: occupancyData, isLoading: isLoadingOccupancy } = useQuery<{ hasActiveTenants: boolean }>({
+  const { data: occupancyData, isLoading: isLoadingOccupancy } = useQuery<{
+    hasActiveTenants: boolean;
+  }>({
     queryKey: ["/api/properties/has-active-tenants", selectedFlatNumber],
     queryFn: async () => {
       if (!selectedFlatNumber) return { hasActiveTenants: false };
@@ -556,52 +558,62 @@ export default function PropertiesPage() {
   // Handle property selection
   const handlePropertySelect = (flatNumber: string) => {
     setSelectedFlatNumber(flatNumber);
-    const property = properties.find((p) => p.flatNumber === flatNumber);
-    console.log("Selected Flat:", flatNumber);
-    if (property) {
-      // Get the current charges for this property
-      console.log("Found flat match");
-      const currentRent =
-        propertyCharges.find(
-          (c) =>
-            c.chargeType?.trim().toLowerCase() === "rent" &&
-            c.flatNumber?.trim() === flatNumber?.trim() &&
-            c.effectiveTo === null,
-        )?.amount || 0;
-      const currentMaintenanceFee =
-        propertyCharges.find(
-          (c) =>
-            c.chargeType?.trim().toLowerCase() === "maint_fee" &&
-            c.flatNumber?.trim() === flatNumber?.trim() &&
-            c.effectiveTo === null,
-        )?.amount || 0;
-      const currentWaterFee =
-        propertyCharges.find(
-          (c) =>
-            c.chargeType?.trim().toLowerCase() === "water_fee" &&
-            c.flatNumber?.trim() === flatNumber?.trim() &&
-            c.effectiveTo === null,
-        )?.amount || 0;
-      console.log("CurrentRent:", currentRent);
-      console.log("CurrentMaintenanceFee:", currentMaintenanceFee);
-      console.log("CurrentWaterFee:", currentWaterFee);
-
-      form.reset({
-        flatNumber: property.flatNumber,
-        flatType: property.flatType as any,
-        apartmentFloor: property.apartmentFloor as any,
-        leaseStatus: property.leaseStatus as any,
-        ownerName: property.ownerName,
-        rentAmount: currentRent,
-        maintenanceFee: currentMaintenanceFee,
-        waterFee: currentWaterFee,
-        isRented: property.isRented,
-        floorArea: property.floorArea || 0,
-        notes: property.notes || "",
-        nestawayId: property.nestawayId || "",
-      });
-    }
   };
+
+  useEffect(() => {
+    if (!selectedFlatNumber || !propertyCharges || propertyCharges.length === 0)
+      return;
+
+    const property = properties.find(
+      (p) => p.flatNumber === selectedFlatNumber,
+    );
+    if (!property) return;
+
+    const currentRent =
+      propertyCharges.find(
+        (c) =>
+          c.chargeType?.trim().toLowerCase() === "rent" &&
+          c.flatNumber?.trim() === selectedFlatNumber?.trim() &&
+          c.effectiveTo === null,
+      )?.amount || 0;
+
+    const currentMaintenanceFee =
+      propertyCharges.find(
+        (c) =>
+          c.chargeType?.trim().toLowerCase() === "maint_fee" &&
+          c.flatNumber?.trim() === selectedFlatNumber?.trim() &&
+          c.effectiveTo === null,
+      )?.amount || 0;
+
+    const currentWaterFee =
+      propertyCharges.find(
+        (c) =>
+          c.chargeType?.trim().toLowerCase() === "water_fee" &&
+          c.flatNumber?.trim() === selectedFlatNumber?.trim() &&
+          c.effectiveTo === null,
+      )?.amount || 0;
+
+    console.log("Updating form with latest charges:", {
+      currentRent,
+      currentMaintenanceFee,
+      currentWaterFee,
+    });
+
+    form.reset({
+      flatNumber: property.flatNumber,
+      flatType: property.flatType as any,
+      apartmentFloor: property.apartmentFloor as any,
+      leaseStatus: property.leaseStatus as any,
+      ownerName: property.ownerName,
+      rentAmount: currentRent,
+      maintenanceFee: currentMaintenanceFee,
+      waterFee: currentWaterFee,
+      isRented: property.isRented,
+      floorArea: property.floorArea || 0,
+      notes: property.notes || "",
+      nestawayId: property.nestawayId || "",
+    });
+  }, [selectedFlatNumber, propertyCharges]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -645,14 +657,20 @@ export default function PropertiesPage() {
                         Loading...
                       </div>
                     ) : Array.isArray(properties) && properties.length > 0 ? (
-                      properties.map((property: Property) => (
-                        <SelectItem
-                          key={property.id}
-                          value={property.flatNumber}
-                        >
-                          {property.flatNumber}
-                        </SelectItem>
-                      ))
+                      [...properties]
+                        .sort((a, b) =>
+                          a.flatNumber.localeCompare(b.flatNumber, undefined, {
+                            numeric: true,
+                          }),
+                        )
+                        .map((property: Property) => (
+                          <SelectItem
+                            key={property.id}
+                            value={property.flatNumber}
+                          >
+                            {property.flatNumber}
+                          </SelectItem>
+                        ))
                     ) : (
                       <div className="p-2 text-center text-muted-foreground">
                         No properties found. Add some properties first.
@@ -799,11 +817,13 @@ export default function PropertiesPage() {
                               <div className="relative">
                                 <Input
                                   readOnly={true}
-                                  value={isLoadingOccupancy 
-                                    ? "Checking..." 
-                                    : occupancyData?.hasActiveTenants 
-                                      ? "Occupied (Active Lease)" 
-                                      : "Vacant"}
+                                  value={
+                                    isLoadingOccupancy
+                                      ? "Checking..."
+                                      : occupancyData?.hasActiveTenants
+                                        ? "Occupied (Active Lease)"
+                                        : "Vacant"
+                                  }
                                 />
                                 {isLoadingOccupancy && (
                                   <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -811,10 +831,10 @@ export default function PropertiesPage() {
                               </div>
                             </FormControl>
                             <FormDescription className="text-xs">
-                              {occupancyData?.hasActiveTenants 
-                                ? "Property has active tenants with current lease" 
-                                : field.value 
-                                  ? "Property marked as occupied manually" 
+                              {occupancyData?.hasActiveTenants
+                                ? "Property has active tenants with current lease"
+                                : field.value
+                                  ? "Property marked as occupied manually"
                                   : "No active tenant leases found"}
                             </FormDescription>
                             <FormMessage />
@@ -885,14 +905,20 @@ export default function PropertiesPage() {
                         Loading...
                       </div>
                     ) : Array.isArray(properties) && properties.length > 0 ? (
-                      properties.map((property: Property) => (
-                        <SelectItem
-                          key={property.id}
-                          value={property.flatNumber}
-                        >
-                          {property.flatNumber}
-                        </SelectItem>
-                      ))
+                      [...properties]
+                        .sort((a, b) =>
+                          a.flatNumber.localeCompare(b.flatNumber, undefined, {
+                            numeric: true,
+                          }),
+                        )
+                        .map((property: Property) => (
+                          <SelectItem
+                            key={property.id}
+                            value={property.flatNumber}
+                          >
+                            {property.flatNumber}
+                          </SelectItem>
+                        ))
                     ) : (
                       <div className="p-2 text-center text-muted-foreground">
                         No properties found. Add some properties first.
@@ -997,17 +1023,16 @@ export default function PropertiesPage() {
                       />
                     </div>
 
-
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div className="space-y-0.5">
                           <FormLabel>Lease Status</FormLabel>
                           <FormDescription>
                             <div className="text-xs">
-                              {isLoadingOccupancy 
-                                ? "Checking tenant status..." 
-                                : occupancyData?.hasActiveTenants 
-                                  ? "Property has active tenants with current lease" 
+                              {isLoadingOccupancy
+                                ? "Checking tenant status..."
+                                : occupancyData?.hasActiveTenants
+                                  ? "Property has active tenants with current lease"
                                   : "Manual override - active tenants detected via database will always take precedence"}
                             </div>
                           </FormDescription>
@@ -1017,7 +1042,9 @@ export default function PropertiesPage() {
                             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                           )}
                           {occupancyData?.hasActiveTenants && (
-                            <Badge className="bg-green-100 text-green-800">Active Lease</Badge>
+                            <Badge className="bg-green-100 text-green-800">
+                              Active Lease
+                            </Badge>
                           )}
                           <FormField
                             control={form.control}
@@ -1025,9 +1052,19 @@ export default function PropertiesPage() {
                             render={({ field }) => (
                               <FormControl>
                                 <Switch
-                                  disabled={isReadOnly || occupancyData?.hasActiveTenants}
-                                  checked={occupancyData?.hasActiveTenants || field.value === 'Leasable'}
-                                  onCheckedChange={(checked) => field.onChange(checked ? 'Leasable' : 'Non-Leasable')}
+                                  disabled={
+                                    isReadOnly ||
+                                    occupancyData?.hasActiveTenants
+                                  }
+                                  checked={
+                                    occupancyData?.hasActiveTenants ||
+                                    field.value === "Leasable"
+                                  }
+                                  onCheckedChange={(checked) =>
+                                    field.onChange(
+                                      checked ? "Leasable" : "Non-Leasable",
+                                    )
+                                  }
                                 />
                               </FormControl>
                             )}
@@ -1271,8 +1308,12 @@ export default function PropertiesPage() {
                           </div>
                           <FormControl>
                             <Switch
-                              checked={field.value === 'Leasable'}
-                              onCheckedChange={(checked) => field.onChange(checked ? 'Leasable' : 'Non-Leasable')}
+                              checked={field.value === "Leasable"}
+                              onCheckedChange={(checked) =>
+                                field.onChange(
+                                  checked ? "Leasable" : "Non-Leasable",
+                                )
+                              }
                             />
                           </FormControl>
                         </FormItem>

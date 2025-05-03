@@ -94,6 +94,9 @@ export default function VendorsPage() {
     queryFn: () => apiRequest("GET", "/api/vendors").then((res) => res.json()),
   });
 
+  {
+    console.log("Vendors: ", vendors);
+  }
   //Fetch vendor types
   const { data: service_types = [] } = useQuery({
     queryKey: ["/api/vendors/service-types"],
@@ -111,7 +114,7 @@ export default function VendorsPage() {
       phone: "",
       email: "",
       service_type: "", // Valid enum value from vendorservice_typeEnum - lowercase is crucial
-      provision_type: "service", // Default provision type
+      provision_type: "Service Provider", // Default provision type
       contact_person: "",
       address: "",
       notes: "",
@@ -345,12 +348,9 @@ export default function VendorsPage() {
                               {vendor.name}
                             </TableCell>
                             <TableCell>
-                              {getserviceTypeName(vendor.service_type)}
+                              {vendor.service_type}
                               <div className="text-xs text-muted-foreground">
                                 {vendor.provision_type}
-                                {console.log(
-                                  "ProvType is: " + vendor.provision_type,
-                                )}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -606,9 +606,7 @@ export default function VendorsPage() {
                         <SelectContent>
                           {vendorProvisionTypeEnum.enumValues.map((type) => (
                             <SelectItem key={type} value={type}>
-                              {type === "service"
-                                ? "Service Provider"
-                                : "Product Supplier"}
+                              {type}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -694,7 +692,7 @@ export default function VendorsPage() {
 
               <FormField
                 control={form.control}
-                name="isActive"
+                name="is_active"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
@@ -907,7 +905,7 @@ export default function VendorsPage() {
 
               <FormField
                 control={form.control}
-                name="isActive"
+                name="is_active"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>

@@ -17,6 +17,8 @@ import {
   InsertPropertyCharge,
   TenantCharge,
   InsertTenantCharge,
+  PropertyOwner,
+  InsertPropertyOwner,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
@@ -29,6 +31,7 @@ import {
   tenants,
   propertyCharges,
   tenantCharges,
+  propertyOwners,
 } from "@shared/schema";
 import { and, eq, desc, sql, count, isNull, gte } from "drizzle-orm";
 import { db, pool } from "./db";
@@ -637,7 +640,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(vendors)
-      .where(eq(vendors.serviceType, serviceType as any));
+      .where(eq(vendors.service_type, serviceType as any));
   }
 
   async createVendor(vendor: InsertVendor): Promise<Vendor> {
@@ -646,8 +649,8 @@ export class DatabaseStorage implements IStorage {
       .insert(vendors)
       .values({
         ...vendor,
-        createdAt: now,
-        updatedAt: now,
+        created_at: now,
+        updated_at: now,
       })
       .returning();
     return newVendor;
@@ -661,7 +664,7 @@ export class DatabaseStorage implements IStorage {
       .update(vendors)
       .set({
         ...updates,
-        updatedAt: new Date(),
+        updated_at: new Date(),
       })
       .where(eq(vendors.id, id))
       .returning();

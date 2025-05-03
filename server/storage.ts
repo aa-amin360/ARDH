@@ -17,6 +17,8 @@ import {
   InsertPropertyCharge,
   TenantCharge,
   InsertTenantCharge,
+  PropertyOwner,
+  InsertPropertyOwner,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
@@ -138,6 +140,19 @@ export interface IStorage {
     effectiveFrom: Date,
     createdBy: number,
   ): Promise<void>;
+
+  // Property Owner management
+  getPropertyOwner(id: string): Promise<PropertyOwner | undefined>;
+  getPropertyOwners(): Promise<PropertyOwner[]>;
+  searchPropertyOwners(searchTerm: string): Promise<PropertyOwner[]>;
+  createPropertyOwner(owner: InsertPropertyOwner): Promise<PropertyOwner>;
+  updatePropertyOwner(
+    id: string,
+    owner: Partial<InsertPropertyOwner>,
+  ): Promise<PropertyOwner | undefined>;
+  deletePropertyOwner(id: string): Promise<boolean>;
+  getPropertyOwnerLinkedFlats(ownerName: string): Promise<Property[]>;
+  isPropertyOwnerLinked(id: string): Promise<boolean>;
 
   // Summary/Dashboard data
   getIncomeSummary(): Promise<IncomeSummary>;
@@ -743,7 +758,7 @@ export class MemStorage implements IStorage {
 
   async getVendorsByServiceType(serviceType: string): Promise<Vendor[]> {
     return Array.from(this.vendors.values()).filter(
-      (vendor) => vendor.serviceType === serviceType,
+      (vendor) => vendor.service_type === serviceType,
     );
   }
 

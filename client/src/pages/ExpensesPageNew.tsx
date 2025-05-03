@@ -59,6 +59,8 @@ const expenseFormSchema = insertExpenseSchema.extend({
   personInCharge: z.string().optional(),
   driverContact: z.string().optional(),
   time: z.string().optional(),
+
+  //
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -425,9 +427,7 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={(value) =>
-                              field.onChange(parseInt(value))
-                            }
+                            onValueChange={field.onChange}
                             value={field.value?.toString() || "none"}
                             disabled={!watchSubcategory || isLoadingVendors}
                           >
