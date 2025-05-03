@@ -52,6 +52,8 @@ const incomeFormSchema = insertIncomeSchema.extend({
     message: "Please enter a valid date",
   }),
   propertyId: z.coerce.number().optional(),
+  expectedIncome: z.number().optional(), // Added expectedIncome field
+  difference: z.number().optional(),     // Added difference field
 });
 
 type IncomeFormValues = z.infer<typeof incomeFormSchema>;
@@ -159,6 +161,8 @@ export default function IncomePage() {
         receivedFrom: "",
         propertyId: 0,
         createdBy: 0,
+        expectedIncome: 0, // Added default values for new fields
+        difference: 0,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
     },
@@ -182,8 +186,20 @@ export default function IncomePage() {
       receivedFrom: "",
       propertyId: 0, // Set default to common areas
       createdBy: 0, // Will be set on the server
+      expectedIncome: 0, // Added default values for new fields
+      difference: 0,
     },
   });
+
+  const [expectedIncome, setExpectedIncome] = React.useState(0);
+  const [difference, setDifference] = React.useState(0);
+
+  React.useEffect(() => {
+    // Placeholder calculation - replace with actual logic
+    setExpectedIncome(1000); // Replace with actual expected income calculation
+    setDifference(form.getValues("amount") - expectedIncome);
+  }, [form.getValues("amount")]);
+
 
   function onSubmit(values: IncomeFormValues) {
     // Process the values for submission
@@ -224,6 +240,42 @@ export default function IncomePage() {
                   className="space-y-6"
                 >
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="expectedIncome"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>Expected Income (₹)</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={expectedIncome}
+                              type="number"
+                              disabled
+                              readOnly
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="difference"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>Difference (₹)</FormLabel>
+                          <FormControl>
+                            <Input
+                              value={difference}
+                              type="number"
+                              disabled
+                              readOnly
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="type"
