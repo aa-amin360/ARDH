@@ -244,6 +244,9 @@ export default function IncomePage() {
                               <SelectItem value="maintenance">
                                 Maintenance
                               </SelectItem>
+                              <SelectItem value="water_fee">
+                                Water Fee
+                              </SelectItem>
                               <SelectItem value="tax_return">
                                 Tax Return
                               </SelectItem>
@@ -396,12 +399,17 @@ export default function IncomePage() {
                 </Button>
               </div>
               <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">Expected CSV Format</h3>
+                <h3 className="text-sm font-medium mb-2">
+                  Expected CSV Format
+                </h3>
                 <p className="text-xs text-muted-foreground">
-                  Your CSV should have the following columns: date, amount, type, description, flatNumber, receivedFrom, notes
+                  Your CSV should have the following columns: date, amount,
+                  type, description, flatNumber, receivedFrom, notes
                 </p>
                 <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">Download Template</h3>
+                  <h3 className="text-sm font-medium mb-2">
+                    Download Template
+                  </h3>
                   <Button variant="outline" size="sm" className="gap-2">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Download CSV Template
@@ -452,7 +460,7 @@ export default function IncomePage() {
                         </TableHeader>
                         <TableBody>
                           {/* Show only last 5 entries */}
-                          {incomes.slice(0, 5).map((income) => (
+                          {incomes.slice(-5).map((income) => (
                             <TableRow key={income.id}>
                               <TableCell className="whitespace-nowrap">
                                 {formatDate(income.date)}

@@ -268,14 +268,6 @@ export default function VendorsPage() {
     return type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
-  // Get provision type display name
-  function getprovisionTypeName(type: string): string {
-    if (type === "service") return "Service Provider";
-    if (type === "product") return "Product Supplier";
-    if (type === "both") return "Both Services & Products";
-    return type;
-  }
-
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -311,12 +303,12 @@ export default function VendorsPage() {
         <CardContent>
           <div className="space-y-4">
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              {/*<TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="all">All Vendors</TabsTrigger>
                 <TabsTrigger value="utility">Utility</TabsTrigger>
                 <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
                 <TabsTrigger value="other">Others</TabsTrigger>
-              </TabsList>
+              </TabsList>*/}
               <TabsContent value="all">
                 {isLoading ? (
                   <div className="flex justify-center py-8">
@@ -407,7 +399,7 @@ export default function VendorsPage() {
               </TabsContent>
 
               {/* Other tabs with filtered lists */}
-              {["utility", "maintenance", "other"].map((category) => (
+              {/*["utility", "maintenance", "other"].map((category) => (
                 <TabsContent key={category} value={category}>
                   {isLoading ? (
                     <div className="flex justify-center py-8">
@@ -514,7 +506,7 @@ export default function VendorsPage() {
                     </div>
                   )}
                 </TabsContent>
-              ))}
+              ))}*/}
             </Tabs>
           </div>
         </CardContent>

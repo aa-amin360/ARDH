@@ -173,7 +173,7 @@ export default function TenantsPage() {
   const updateTenantMutation = useMutation({
     mutationFn: async (values: TenantFormValues & { id: number }) => {
       const { id, ...updateData } = values;
-      const res = await apiRequest("PATCH", `/api/tenants/${id}`, updateData);
+      const res = await apiRequest("PUT", `/api/tenants/${id}`, updateData);
       return res.json();
     },
     onSuccess: () => {
@@ -413,9 +413,7 @@ export default function TenantsPage() {
                 {/* Property Filter */}
                 <div className="mb-6">
                   <div className="flex gap-4 items-center">
-                    <Select
-                      onValueChange={(value) => setSearchQuery(value)}
-                    >
+                    <Select onValueChange={(value) => setSearchQuery(value)}>
                       <SelectTrigger className="w-[200px]">
                         <SelectValue placeholder="Select property" />
                       </SelectTrigger>
@@ -682,7 +680,6 @@ export default function TenantsPage() {
                           </FormItem>
                         )}
                       />
-
 
                       <FormField
                         control={form.control}
@@ -1010,7 +1007,8 @@ export default function TenantsPage() {
                           />
                           {field.value && (
                             <div className="text-xs text-muted-foreground">
-                              Selected file: {field.value}                            </div>
+                              Selected file: {field.value}{" "}
+                            </div>
                           )}
                         </div>
                       </FormControl>

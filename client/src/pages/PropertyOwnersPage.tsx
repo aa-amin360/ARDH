@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,11 +55,10 @@ type PropertyOwner = {
   phone: string;
   altPhone: string | null;
   email: string | null;
-  address: string | null;
+  adhar: string | null;
   bankName: string | null;
   bankAccount: string | null;
   bankIFSC: string | null;
-  notes: string | null;
   createdAt: string;
   modifiedAt: string;
   createdBy: number;
@@ -68,11 +73,10 @@ const ownerFormSchema = z.object({
   }),
   altPhone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
-  address: z.string().optional(),
+  adhar: z.string().optional(),
   bankName: z.string().optional(),
   bankAccount: z.string().optional(),
   bankIFSC: z.string().optional(),
-  notes: z.string().optional(),
 });
 
 type OwnerFormValues = z.infer<typeof ownerFormSchema>;
@@ -81,7 +85,9 @@ export default function PropertyOwnersPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("view");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedOwner, setSelectedOwner] = useState<PropertyOwner | null>(null);
+  const [selectedOwner, setSelectedOwner] = useState<PropertyOwner | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch all property owners
@@ -100,10 +106,7 @@ export default function PropertyOwnersPage() {
   });
 
   // Fetch linked flats for the selected owner
-  const {
-    data: linkedFlats = [],
-    isLoading: isLoadingFlats,
-  } = useQuery({
+  const { data: linkedFlats = [], isLoading: isLoadingFlats } = useQuery({
     queryKey: ["/api/property-owners", selectedOwner?.id, "linked-flats"],
     queryFn: ({ signal }) =>
       selectedOwner
@@ -120,7 +123,11 @@ export default function PropertyOwnersPage() {
   // Create owner mutation
   const createOwnerMutation = useMutation({
     mutationFn: async (newOwner: OwnerFormValues) => {
-      const response = await apiRequest("POST", "/api/property-owners", newOwner);
+      const response = await apiRequest(
+        "POST",
+        "/api/property-owners",
+        newOwner,
+      );
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to create property owner");
@@ -154,7 +161,11 @@ export default function PropertyOwnersPage() {
       id: string;
       data: Partial<OwnerFormValues>;
     }) => {
-      const response = await apiRequest("PUT", `/api/property-owners/${id}`, data);
+      const response = await apiRequest(
+        "PUT",
+        `/api/property-owners/${id}`,
+        data,
+      );
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update property owner");
@@ -217,11 +228,10 @@ export default function PropertyOwnersPage() {
       phone: "",
       altPhone: "",
       email: "",
-      address: "",
+      adhar: "",
       bankName: "",
       bankAccount: "",
       bankIFSC: "",
-      notes: "",
     },
   });
 
@@ -233,11 +243,10 @@ export default function PropertyOwnersPage() {
       phone: "",
       altPhone: "",
       email: "",
-      address: "",
+      adhar: "",
       bankName: "",
       bankAccount: "",
       bankIFSC: "",
-      notes: "",
     },
   });
 
@@ -257,11 +266,10 @@ export default function PropertyOwnersPage() {
       phone: owner.phone,
       altPhone: owner.altPhone || "",
       email: owner.email || "",
-      address: owner.address || "",
+      adhar: owner.adhar || "",
       bankName: owner.bankName || "",
       bankAccount: owner.bankAccount || "",
       bankIFSC: owner.bankIFSC || "",
-      notes: owner.notes || "",
     });
     setActiveTab("modify");
   }
@@ -280,7 +288,9 @@ export default function PropertyOwnersPage() {
     queryClient.fetchQuery({
       queryKey: ["/api/property-owners/search", searchTerm],
       queryFn: () =>
-        fetch(`/api/property-owners/search?term=${encodeURIComponent(searchTerm)}`)
+        fetch(
+          `/api/property-owners/search?term=${encodeURIComponent(searchTerm)}`,
+        )
           .then((res) => {
             if (!res.ok) throw new Error("Search failed");
             return res.json();
@@ -306,8 +316,8 @@ export default function PropertyOwnersPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="view">View Owners</TabsTrigger>
-          <TabsTrigger 
-            value="modify" 
+          <TabsTrigger
+            value="modify"
             disabled={!selectedOwner}
           >
             Modify Owner
@@ -375,7 +385,8 @@ export default function PropertyOwnersPage() {
                             <TableCell>{owner.phone}</TableCell>
                             <TableCell>{owner.email || "—"}</TableCell>
                             <TableCell>
-                              {linkedFlats.length > 0 && selectedOwner?.id === owner.id ? (
+                              {linkedFlats.length > 0 &&
+                              selectedOwner?.id === owner.id ? (
                                 <Badge className="bg-green-600">
                                   Linked to {linkedFlats.length} flat(s)
                                 </Badge>
@@ -391,7 +402,7 @@ export default function PropertyOwnersPage() {
                             </TableCell>
                             <TableCell>
                               {owner.bankName && owner.bankAccount
-                                ? `${owner.bankName} - ${owner.bankAccount.slice(-4).padStart(owner.bankAccount.length, '*')}`
+                                ? `${owner.bankName} - ${owner.bankAccount.slice(-4).padStart(owner.bankAccount.length, "*")}`
                                 : "No bank details"}
                             </TableCell>
                             <TableCell className="text-right">
@@ -402,7 +413,10 @@ export default function PropertyOwnersPage() {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <AlertDialog open={isDeleting} onOpenChange={setIsDeleting}>
+                              <AlertDialog
+                                open={isDeleting}
+                                onOpenChange={setIsDeleting}
+                              >
                                 <AlertDialogTrigger asChild>
                                   <Button
                                     variant="ghost"
@@ -417,16 +431,22 @@ export default function PropertyOwnersPage() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogTitle>
+                                      Are you sure?
+                                    </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      This will permanently delete the property owner.
-                                      If the owner is linked to any properties, you
-                                      must first unlink them.
+                                      This will permanently delete the property
+                                      owner. If the owner is linked to any
+                                      properties, you must first unlink them.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteOwner}>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={handleDeleteOwner}
+                                    >
                                       Delete
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
@@ -447,43 +467,69 @@ export default function PropertyOwnersPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                         <div>
                           <p className="text-sm text-muted-foreground">
-                            Full Name: <span className="font-medium text-foreground">{selectedOwner.fullName}</span>
+                            Full Name:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.fullName}
+                            </span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Phone: <span className="font-medium text-foreground">{selectedOwner.phone}</span>
+                            Phone:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.phone}
+                            </span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Alt. Phone: <span className="font-medium text-foreground">{selectedOwner.altPhone || "—"}</span>
+                            Alt. Phone:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.altPhone || "—"}
+                            </span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Email: <span className="font-medium text-foreground">{selectedOwner.email || "—"}</span>
+                            Email:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.email || "—"}
+                            </span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Address: <span className="font-medium text-foreground">{selectedOwner.address || "—"}</span>
+                            Adhar:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.adhar || "—"}
+                            </span>
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">
-                            Bank Name: <span className="font-medium text-foreground">{selectedOwner.bankName || "—"}</span>
+                            Bank Name:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.bankName || "—"}
+                            </span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Account Number: <span className="font-medium text-foreground">
-                              {selectedOwner.bankAccount 
-                                ? selectedOwner.bankAccount.slice(-4).padStart(selectedOwner.bankAccount.length, '*') 
+                            Account Number:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.bankAccount
+                                ? selectedOwner.bankAccount
+                                    .slice(-4)
+                                    .padStart(
+                                      selectedOwner.bankAccount.length,
+                                      "*",
+                                    )
                                 : "—"}
                             </span>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            IFSC Code: <span className="font-medium text-foreground">{selectedOwner.bankIFSC || "—"}</span>
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Notes: <span className="font-medium text-foreground">{selectedOwner.notes || "—"}</span>
+                            IFSC Code:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedOwner.bankIFSC || "—"}
+                            </span>
                           </p>
                         </div>
                       </div>
 
                       <div className="mt-4">
-                        <h3 className="text-lg font-medium mb-3">Linked Properties</h3>
+                        <h3 className="text-lg font-medium mb-3">
+                          Linked Properties
+                        </h3>
                         {isLoadingFlats ? (
                           <p>Loading linked properties...</p>
                         ) : linkedFlats.length === 0 ? (
@@ -500,18 +546,32 @@ export default function PropertyOwnersPage() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {linkedFlats.map((flat) => (
-                                  <TableRow key={flat.id}>
-                                    <TableCell className="font-medium">{flat.flatNumber}</TableCell>
-                                    <TableCell>{flat.flatType}</TableCell>
-                                    <TableCell>{flat.apartmentFloor}</TableCell>
-                                    <TableCell>
-                                      <Badge variant={flat.isRented ? "default" : "outline"}>
-                                        {flat.isRented ? "Rented" : "Vacant"}
-                                      </Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
+                                {linkedFlats.map((flat) => {
+                                  const isLeasable =
+                                    flat.leaseStatus?.trim().toLowerCase() ===
+                                    "leasable";
+
+                                  return (
+                                    <TableRow key={flat.id}>
+                                      <TableCell className="font-medium">
+                                        {flat.flatNumber}
+                                      </TableCell>
+                                      <TableCell>{flat.flatType}</TableCell>
+                                      <TableCell>
+                                        {flat.apartmentFloor}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge
+                                          variant={
+                                            isLeasable ? "default" : "outline"
+                                          }
+                                        >
+                                          {isLeasable ? "Leased" : "Not-Leased"}
+                                        </Badge>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
                               </TableBody>
                             </Table>
                           </div>
@@ -574,7 +634,10 @@ export default function PropertyOwnersPage() {
                           <FormItem>
                             <FormLabel>Alternative Phone</FormLabel>
                             <FormControl>
-                              <Input placeholder="Alternative Phone" {...field} />
+                              <Input
+                                placeholder="Alternative Phone"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -587,7 +650,11 @@ export default function PropertyOwnersPage() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="Email" {...field} />
+                              <Input
+                                type="email"
+                                placeholder="Email"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -597,13 +664,13 @@ export default function PropertyOwnersPage() {
 
                     <FormField
                       control={editForm.control}
-                      name="address"
+                      name="adhar"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Address</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="Address"
+                              placeholder="Adhar Card Number"
                               className="resize-none"
                               {...field}
                             />
@@ -659,24 +726,6 @@ export default function PropertyOwnersPage() {
                       />
                     </div>
 
-                    <FormField
-                      control={editForm.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Additional notes about the owner"
-                              className="resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
                     <div className="flex justify-end gap-2">
                       <Button
                         type="button"
@@ -692,7 +741,9 @@ export default function PropertyOwnersPage() {
                         type="submit"
                         disabled={updateOwnerMutation.isPending}
                       >
-                        {updateOwnerMutation.isPending ? "Updating..." : "Update Owner"}
+                        {updateOwnerMutation.isPending
+                          ? "Updating..."
+                          : "Update Owner"}
                       </Button>
                     </div>
                   </form>
@@ -765,7 +816,11 @@ export default function PropertyOwnersPage() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input type="email" placeholder="Email" {...field} />
+                            <Input
+                              type="email"
+                              placeholder="Email"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -775,14 +830,14 @@ export default function PropertyOwnersPage() {
 
                   <FormField
                     control={createForm.control}
-                    name="address"
+                    name="adhar"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel>Adhar Number</FormLabel>
                         <FormControl>
-                          <Textarea
-                            placeholder="Address"
-                            className="resize-none"
+                          <Input
+                            type="adhar"
+                            placeholder="Adhar card Number"
                             {...field}
                           />
                         </FormControl>
@@ -837,24 +892,6 @@ export default function PropertyOwnersPage() {
                     />
                   </div>
 
-                  <FormField
-                    control={createForm.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Additional notes about the owner"
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <div className="flex justify-end gap-2">
                     <Button
                       type="button"
@@ -870,7 +907,9 @@ export default function PropertyOwnersPage() {
                       type="submit"
                       disabled={createOwnerMutation.isPending}
                     >
-                      {createOwnerMutation.isPending ? "Adding..." : "Add Owner"}
+                      {createOwnerMutation.isPending
+                        ? "Adding..."
+                        : "Add Owner"}
                     </Button>
                   </div>
                 </form>

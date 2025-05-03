@@ -156,7 +156,7 @@ export const properties = pgTable("properties", {
   apartmentFloor: apartmentFloorEnum("apartment_floor").notNull(),
   flatType: flatTypeEnum("flat_type").notNull(),
   ownerName: text("owner_name").notNull(),
-  isRented: boolean("is_rented").default(false).notNull(),
+  //isRented: boolean("is_rented").default(false).notNull(),
   floorArea: real("floor_area"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -168,7 +168,7 @@ export const incomes = pgTable("incomes", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
   amount: integer("amount").notNull(),
-  type: incomeTypeEnum("type").notNull(),
+  type: text("type").notNull(),
   description: text("description").notNull(),
   propertyId: integer("property_id").references(() => properties.id),
   receivedFrom: text("received_from").notNull(),
@@ -295,9 +295,11 @@ export const propertyOwners = pgTable("property_owners", {
   fullName: text("full_name").notNull(),
   phone: text("phone").notNull(),
   altPhone: text("alt_phone"),
+  email: text("email"), // Newly added
   aadhar: text("aadhar"),
   bankAccount: text("bank_account"),
   bankIfsc: text("bank_ifsc"),
+  bankName: text("bank_name"), // Newly added
   createdAt: timestamp("created_at").defaultNow().notNull(),
   modifiedAt: timestamp("modified_at").defaultNow().notNull(),
 });
@@ -365,7 +367,9 @@ export const insertTenantChargeSchema = createInsertSchema(tenantCharges, {
   createdAt: true,
 });
 
-export const insertPropertyOwnerSchema = createInsertSchema(propertyOwners).omit({
+export const insertPropertyOwnerSchema = createInsertSchema(
+  propertyOwners,
+).omit({
   id: true, // ID will be generated on the server
   createdAt: true,
   modifiedAt: true,
