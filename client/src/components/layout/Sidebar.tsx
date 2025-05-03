@@ -33,55 +33,89 @@ export default function Sidebar({
     await logoutMutation.mutateAsync();
   };
 
-  // Navigation items
-  const navItems = [
+  // Navigation categories and items
+  const navCategories = [
     {
-      label: "Dashboard",
-      href: "/",
-      icon: <Home className="w-5 h-5" />,
-      isVisible: true,
+      name: null, // No category name for dashboard
+      items: [
+        {
+          label: "Dashboard",
+          href: "/",
+          icon: <Home className="w-5 h-5" />,
+          isVisible: true,
+        },
+      ],
     },
     {
-      label: "Properties",
-      href: "/properties",
-      icon: <Building2 className="w-5 h-5" />,
-      isVisible: isAdmin,
+      name: "Master Data",
+      items: [
+        {
+          label: "Properties",
+          href: "/properties",
+          icon: <Building2 className="w-5 h-5" />,
+          isVisible: isAdmin,
+        },
+        {
+          label: "Tenants",
+          href: "/tenants",
+          icon: <Users className="w-5 h-5" />,
+          isVisible: true,
+        },
+        {
+          label: "Property Owners",
+          href: "/property-owners",
+          icon: <UsersRound className="w-5 h-5" />,
+          isVisible: isAdmin,
+        },
+        {
+          label: "Vendors",
+          href: "/vendors",
+          icon: <Hammer className="w-5 h-5" />,
+          isVisible: true,
+        },
+      ],
     },
     {
-      label: "Tenants",
-      href: "/tenants",
-      icon: <Users className="w-5 h-5" />,
-      isVisible: true,
+      name: "Transactional Data",
+      items: [
+        {
+          label: "Income",
+          href: "/income",
+          icon: <Receipt className="w-5 h-5" />,
+          isVisible: isAdmin,
+        },
+        {
+          label: "Expenses",
+          href: "/expenses",
+          icon: <CreditCard className="w-5 h-5" />,
+          isVisible: true,
+        },
+        {
+          label: "Maintenance Tracker",
+          href: "#",
+          icon: <Wrench className="w-5 h-5" />,
+          isVisible: true,
+          badge: "Coming Soon",
+          disabled: true,
+        },
+      ],
     },
     {
-      label: "Income",
-      href: "/income",
-      icon: <Receipt className="w-5 h-5" />,
-      isVisible: isAdmin,
-    },
-    {
-      label: "Expenses",
-      href: "/expenses",
-      icon: <CreditCard className="w-5 h-5" />,
-      isVisible: true,
-    },
-    {
-      label: "Vendors",
-      href: "/vendors",
-      icon: <Hammer className="w-5 h-5" />,
-      isVisible: true,
-    },
-    {
-      label: "Reports",
-      href: "/reports",
-      icon: <PieChart className="w-5 h-5" />,
-      isVisible: isAdmin,
-    },
-    {
-      label: "Settings",
-      href: "/settings",
-      icon: <Settings className="w-5 h-5" />,
-      isVisible: true,
+      name: null, // No category name for these items
+      items: [
+        {
+          label: "Reports",
+          href: "/reports",
+          icon: <PieChart className="w-5 h-5" />,
+          isVisible: isAdmin,
+        },
+        {
+          label: "Settings",
+          href: "/settings",
+          icon: <Settings className="w-5 h-5" />,
+          isVisible: true,
+        },
+      ],
     },
   ];
 

@@ -1160,6 +1160,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Property Owner routes
+  app.get("/api/property-owners", isAuthenticated, async (req, res, next) => {
+    try {
+      console.log("Fetching all property owners");
+      const owners = await storage.getPropertyOwners();
+      res.json(owners);
+    } catch (error) {
+      console.error("Error fetching property owners:", error);
+      next(error);
+    }
+  });
+
+  app.get("/api/property-owners/search", isAuthenticated, async (req, res, next) => {
+    try {
+      const { term } = req.query;
+      if (!term || typeof term !== 'string') {
+        return res.status(400).json({ message: "Search term is required" });
+      }
+      
+      console.log(`Searching property owners with term: ${term}`);
+      const owners = await storage.searchPropertyOwners(term);
+      res.json(owners);
+    } catch (error) {
+      console.error("Error searching property owners:", error);
+      next(error);
+    }
+  });
+
+  app.get("/api/property-owners/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const owner = await storage.getPropertyOwner(id);
+
+      if (!owner) {
+        return res.status(404).json({ message: "Property owner not found" });
+      }
+
+      res.json(owner);
+    } catch (error) {
+      console.error(`Error fetching property owner with ID ${req.params.id}:`, error);
+      next(error);
+    }
+  });
+
+  app.get("/api/property-owners/:id/linked-flats", isAuthenticated, async (req, res, next) => {
+    try {
+      const owner = await storage.getPropertyOwner(req.params.id);
+      
+      if (!owner) {
+        return res.status(404).json({ message: "Property owner not found" });
+      }
+
+      const linkedFlats = await storage.getPropertyOwnerLinkedFlats(owner.fullName);
+      res.json(linkedFlats);
+    } catch (error) {
+      console.error(`Error fetching linked flats for owner ${req.params.id}:`, error);
+      next(error);
+    }
+  });
+
+  app.post("/api/property-owners", isAdmin, async (req, res, next) => {
+    try {
+      console.log("Creating new property owner");
+      const ownerData = insertPropertyOwnerSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id,
+      });
+
+      const newOwner = await storage.createPropertyOwner(ownerData);
+      res.status(201).json(newOwner);
+    } catch (error) {
+      console.error("Error creating property owner:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.put("/api/property-owners/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const ownerData = insertPropertyOwnerSchema.partial().parse(req.body);
+
+      console.log(`Updating property owner ${id} with data:`, ownerData);
+
+      const updatedOwner = await storage.updatePropertyOwner(id, ownerData);
+
+      if (!updatedOwner) {
+        return res.status(404).json({ message: "Property owner not found" });
+      }
+
+      res.json(updatedOwner);
+    } catch (error) {
+      console.error(`Error updating property owner ${req.params.id}:`, error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      next(error);
+    }
+  });
+
+  app.delete("/api/property-owners/:id", isAdmin, async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      
+      // Check if owner is linked to any properties first
+      const isLinked = await storage.isPropertyOwnerLinked(id);
+      
+      if (isLinked) {
+        return res.status(400).json({ 
+          message: "Cannot delete property owner because they are linked to properties. Please unlink the properties first."
+        });
+      }
+      
+      const success = await storage.deletePropertyOwner(id);
+
+      if (!success) {
+        return res.status(404).json({ message: "Property owner not found" });
+      }
+
+      res.json({ message: "Property owner deleted successfully" });
+    } catch (error) {
+      console.error(`Error deleting property owner ${req.params.id}:`, error);
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
