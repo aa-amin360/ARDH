@@ -61,6 +61,39 @@ export default function IncomeForm({
 }: IncomeFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expectedIncome, setExpectedIncome] = useState(0);
+  const [difference, setDifference] = useState(0);
+
+  // Query to fetch expected income when property and type are selected
+  const { data: propertyCharge } = useQuery({
+    queryKey: ['/api/property-charges', form.watch('propertyId'), form.watch('type')],
+    queryFn: async () => {
+      const propertyId = form.watch('propertyId');
+      const type = form.watch('type');
+      if (!propertyId || !type) return null;
+
+      const property = properties?.find(p => p.id === propertyId);
+      if (!property) return null;
+
+      const res = await apiRequest('GET', `/api/properties/${property.flatNumber}/current-charges`);
+      if (!res.ok) return null;
+      
+      const charges = await res.json();
+      const chargeType = type === 'rent' ? 'rent' : 
+                        type === 'maintenance' ? 'maint_fee' :
+                        type === 'water_fee' ? 'water_fee' : null;
+      
+      return charges.find(c => c.chargeType === chargeType);
+    },
+    enabled: !!(form.watch('propertyId') && form.watch('type'))
+  });
+
+  // Update expected income and difference when charge data changes
+  useEffect(() => {
+    const amount = propertyCharge?.amount || 0;
+    setExpectedIncome(amount);
+    setDifference(amount - (form.watch('amount') || 0));
+  }, [propertyCharge, form.watch('amount')]);
   const isEditMode = !!incomeId;
 
   // Get properties for the dropdown
@@ -226,9 +259,50 @@ export default function IncomeForm({
                     placeholder="Enter amount"
                     type="number"
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      const amount = parseInt(e.target.value) || 0;
+                      setDifference(expectedIncome - amount);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="expectedIncome"
+            render={() => (
+              <FormItem>
+                <FormLabel>Expected Income (₹)</FormLabel>
+                <FormControl>
+                  <Input
+                    value={expectedIncome}
+                    type="number"
+                    disabled
+                    readOnly
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="difference"
+            render={() => (
+              <FormItem>
+                <FormLabel>Difference (₹)</FormLabel>
+                <FormControl>
+                  <Input
+                    value={difference}
+                    type="number"
+                    disabled
+                    readOnly
+                  />
+                </FormControl>
               </FormItem>
             )}
           />
