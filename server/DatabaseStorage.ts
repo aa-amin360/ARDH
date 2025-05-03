@@ -33,7 +33,7 @@ import {
   tenantCharges,
   propertyOwners,
 } from "@shared/schema";
-import { and, eq, desc, sql, count, isNull, gte } from "drizzle-orm";
+import { and, eq, desc, sql, count, isNull, gte, like, or } from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import connectPg from "connect-pg-simple";
@@ -1238,6 +1238,158 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       console.error("Error in syncPropertyChargeWithTenant:", error);
+      throw error;
+    }
+  }
+
+  // Property Owner methods
+  async getPropertyOwner(id: string): Promise<PropertyOwner | undefined> {
+    try {
+      console.log(`Getting property owner with ID: ${id}`);
+      const [owner] = await db
+        .select()
+        .from(propertyOwners)
+        .where(eq(propertyOwners.id, id));
+      return owner;
+    } catch (error) {
+      console.error(`Error fetching property owner: ${error}`);
+      throw error;
+    }
+  }
+
+  async getPropertyOwners(): Promise<PropertyOwner[]> {
+    try {
+      console.log("Getting all property owners");
+      const ownersList = await db.select().from(propertyOwners);
+      console.log(`Retrieved ${ownersList.length} property owners`);
+      return ownersList;
+    } catch (error) {
+      console.error(`Error fetching property owners: ${error}`);
+      throw error;
+    }
+  }
+
+  async searchPropertyOwners(searchTerm: string): Promise<PropertyOwner[]> {
+    try {
+      console.log(`Searching property owners with term: ${searchTerm}`);
+      const searchPattern = `%${searchTerm}%`;
+      const ownersList = await db
+        .select()
+        .from(propertyOwners)
+        .where(
+          or(
+            like(propertyOwners.fullName, searchPattern),
+            like(propertyOwners.phone, searchPattern),
+            like(propertyOwners.altPhone || '', searchPattern),
+            like(propertyOwners.bankAccount || '', searchPattern)
+          )
+        );
+      console.log(`Found ${ownersList.length} property owners matching search criteria`);
+      return ownersList;
+    } catch (error) {
+      console.error(`Error searching property owners: ${error}`);
+      throw error;
+    }
+  }
+
+  async createPropertyOwner(owner: InsertPropertyOwner): Promise<PropertyOwner> {
+    try {
+      console.log("Creating new property owner:", owner);
+      const now = new Date();
+      
+      // Generate ID as "fullName_phone"
+      const cleanFullName = owner.fullName.toLowerCase().replace(/\s+/g, '_');
+      const generatedId = `${cleanFullName}_${owner.phone}`;
+      
+      const [newOwner] = await db
+        .insert(propertyOwners)
+        .values({
+          ...owner,
+          id: generatedId,
+          createdAt: now,
+          modifiedAt: now
+        })
+        .returning();
+      
+      return newOwner;
+    } catch (error) {
+      console.error(`Error creating property owner: ${error}`);
+      throw error;
+    }
+  }
+
+  async updatePropertyOwner(
+    id: string,
+    updates: Partial<InsertPropertyOwner>
+  ): Promise<PropertyOwner | undefined> {
+    try {
+      console.log(`Updating property owner with ID: ${id}`, updates);
+      
+      const [updatedOwner] = await db
+        .update(propertyOwners)
+        .set({
+          ...updates,
+          modifiedAt: new Date()
+        })
+        .where(eq(propertyOwners.id, id))
+        .returning();
+      
+      return updatedOwner;
+    } catch (error) {
+      console.error(`Error updating property owner: ${error}`);
+      throw error;
+    }
+  }
+
+  async deletePropertyOwner(id: string): Promise<boolean> {
+    try {
+      // First check if this owner is linked to properties
+      const isLinked = await this.isPropertyOwnerLinked(id);
+      
+      if (isLinked) {
+        console.log(`Cannot delete property owner ${id} because they are linked to properties`);
+        return false;
+      }
+      
+      await db.delete(propertyOwners).where(eq(propertyOwners.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting property owner: ${error}`);
+      throw error;
+    }
+  }
+
+  async getPropertyOwnerLinkedFlats(ownerName: string): Promise<Property[]> {
+    try {
+      console.log(`Getting properties linked to owner: ${ownerName}`);
+      const linkedProperties = await db
+        .select()
+        .from(properties)
+        .where(eq(properties.ownerName, ownerName));
+      
+      return linkedProperties;
+    } catch (error) {
+      console.error(`Error fetching linked properties: ${error}`);
+      throw error;
+    }
+  }
+
+  async isPropertyOwnerLinked(id: string): Promise<boolean> {
+    try {
+      // Get the owner first to get their fullName
+      const owner = await this.getPropertyOwner(id);
+      
+      if (!owner) {
+        console.log(`Property owner with ID ${id} not found`);
+        return false;
+      }
+      
+      // Check if any properties are linked to this owner's name
+      const linkedProperties = await this.getPropertyOwnerLinkedFlats(owner.fullName);
+      
+      return linkedProperties.length > 0;
+    } catch (error) {
+      console.error(`Error checking if property owner is linked: ${error}`);
       throw error;
     }
   }
