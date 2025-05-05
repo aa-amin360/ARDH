@@ -59,7 +59,7 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState("view");
+  const [activeTab, setActiveTab] = React.useState("add");
 
   // Queries
   const { data: expenses = [] } = useQuery({

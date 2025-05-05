@@ -104,7 +104,7 @@ const maintenanceTypes = [
 ];
 
 export default function MaintenanceTrackerPage() {
-  const [activeTab, setActiveTab] = useState("view");
+  const [activeTab, setActiveTab] = useState("add");
   const [selectedRecord, setSelectedRecord] =
     useState<MaintenanceRecord | null>(null);
   const [filterProperty, setFilterProperty] = useState<string>("all");
@@ -130,15 +130,30 @@ export default function MaintenanceTrackerPage() {
   });
 
   // Query for properties
-  const { data: properties, isLoading: isLoadingProperties } = useQuery<
-    Property[]
-  >({
-    queryKey: ["/api/properties"],
-    queryFn: async () => {
-      const response = await apiRequest("GET", "/api/properties");
-      return await response.json();
-    },
-  });
+  const properties = [
+    { id: 0, flatNumber: "ARDH Building" },
+    { id: 1, flatNumber: "Common Areas" },
+    { id: 2, flatNumber: "101" },
+    { id: 3, flatNumber: "102" },
+    { id: 4, flatNumber: "103" },
+    { id: 5, flatNumber: "201" },
+    { id: 6, flatNumber: "202" },
+    { id: 7, flatNumber: "203" },
+    { id: 8, flatNumber: "204" },
+    { id: 9, flatNumber: "301" },
+    { id: 10, flatNumber: "302" },
+    { id: 11, flatNumber: "303" },
+    { id: 12, flatNumber: "304" },
+    { id: 13, flatNumber: "401" },
+    { id: 14, flatNumber: "402" },
+    { id: 15, flatNumber: "403" },
+    { id: 16, flatNumber: "404" },
+    { id: 17, flatNumber: "501" },
+    { id: 18, flatNumber: "502" },
+    { id: 19, flatNumber: "503" },
+    { id: 20, flatNumber: "504" },
+    { id: 21, flatNumber: "601" },
+  ];
 
   // Query for vendors
   const { data: vendors, isLoading: isLoadingVendors } = useQuery<Vendor[]>({
@@ -365,10 +380,18 @@ export default function MaintenanceTrackerPage() {
   // Filter records based on selected filters
   const filteredRecords = maintenanceRecords?.filter((record) => {
     let matches = true;
-    if (filterProperty && filterProperty !== "all" && record.propertyId.toString() !== filterProperty) {
+    if (
+      filterProperty &&
+      filterProperty !== "all" &&
+      record.propertyId.toString() !== filterProperty
+    ) {
       matches = false;
     }
-    if (filterType && filterType !== "all" && record.maintenanceType !== filterType) {
+    if (
+      filterType &&
+      filterType !== "all" &&
+      record.maintenanceType !== filterType
+    ) {
       matches = false;
     }
     return matches;
@@ -385,7 +408,7 @@ export default function MaintenanceTrackerPage() {
   }, [addForm.watch("propertyId"), addForm.watch("maintenanceType")]);
 
   // Loading state
-  if (isLoadingRecords || isLoadingProperties || isLoadingVendors) {
+  if (isLoadingRecords || isLoadingVendors) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
