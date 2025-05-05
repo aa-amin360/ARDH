@@ -307,17 +307,19 @@ export const propertyOwners = pgTable("property_owners", {
 // Maintenance records table for tracking maintenance activities
 export const maintenanceRecords = pgTable("maintenance_records", {
   id: serial("id").primaryKey(),
-  propertyId: integer("property_id").references(() => properties.id).notNull(),
-  flatNumber: text("flat_number").notNull(),
-  maintenanceType: text("maintenance_type").notNull(), // Maps to expense subcategory
-  vendorId: integer("vendor_id").references(() => vendors.id),
+  propertyId: integer("propertyid")
+    .references(() => properties.id)
+    .notNull(),
+  flatNumber: text("flatnumber").notNull(),
+  maintenanceType: text("maintenancetype").notNull(), // Maps to expense subcategory
+  vendorId: integer("vendorid").references(() => vendors.id),
   date: date("date").notNull(),
   description: text("description"),
-  createdBy: integer("created_by")
+  createdBy: integer("createdby")
     .references(() => users.id)
     .notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  modifiedAt: timestamp("modified_at").defaultNow().notNull(),
+  createdAt: timestamp("createdat").defaultNow().notNull(),
+  modifiedAt: timestamp("modifiedat").defaultNow().notNull(),
 });
 
 // Create insert schemas
@@ -391,9 +393,12 @@ export const insertPropertyOwnerSchema = createInsertSchema(
   modifiedAt: true,
 });
 
-export const insertMaintenanceRecordSchema = createInsertSchema(maintenanceRecords, {
-  date: z.coerce.date(),
-}).omit({
+export const insertMaintenanceRecordSchema = createInsertSchema(
+  maintenanceRecords,
+  {
+    date: z.coerce.date(),
+  },
+).omit({
   id: true,
   createdAt: true,
   modifiedAt: true,
@@ -427,7 +432,9 @@ export type InsertTenantCharge = z.infer<typeof insertTenantChargeSchema>;
 export type PropertyOwner = typeof propertyOwners.$inferSelect;
 export type InsertPropertyOwner = z.infer<typeof insertPropertyOwnerSchema>;
 export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
-export type InsertMaintenanceRecord = z.infer<typeof insertMaintenanceRecordSchema>;
+export type InsertMaintenanceRecord = z.infer<
+  typeof insertMaintenanceRecordSchema
+>;
 export type Login = z.infer<typeof loginSchema>;
 
 // Summary types for dashboard

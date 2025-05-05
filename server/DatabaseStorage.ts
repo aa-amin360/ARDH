@@ -694,7 +694,7 @@ export class DatabaseStorage implements IStorage {
     `);
     return result.rows;
   }
-  
+
   async getMaintenanceTypes() {
     try {
       console.log("Getting maintenance types from expense subcategories");
@@ -704,9 +704,9 @@ export class DatabaseStorage implements IStorage {
         ORDER BY expense_sub_category;
       `);
       console.log(`Found ${result.rows.length} maintenance types`);
-      
+
       // Map the result to return just the strings, not objects
-      return result.rows.map(row => row.expense_sub_category);
+      return result.rows.map((row) => row.expense_sub_category);
     } catch (error) {
       console.error(`Error getting maintenance types: ${error}`);
       return [];
@@ -730,33 +730,37 @@ export class DatabaseStorage implements IStorage {
     `);
     return result.rows;
   }
-  
+
   async getVendorsByMaintenanceType(maintenanceType: string) {
     try {
       console.log(`Getting vendors for maintenance type: ${maintenanceType}`);
-      
+
       // First, look up the vendor type for this maintenance type (which is an expense subcategory)
       const vendorCategoryResult = await db.execute(sql`
         SELECT vendor_type FROM vendor_categories 
         WHERE expense_sub_category = ${maintenanceType}
         LIMIT 1;
       `);
-      
+
       if (vendorCategoryResult.rows.length === 0) {
-        console.log(`No vendor category found for maintenance type: ${maintenanceType}`);
+        console.log(
+          `No vendor category found for maintenance type: ${maintenanceType}`,
+        );
         return [];
       }
-      
+
       const vendorType = vendorCategoryResult.rows[0].vendor_type;
-      console.log(`Found vendor type ${vendorType} for maintenance type ${maintenanceType}`);
-      
+      console.log(
+        `Found vendor type ${vendorType} for maintenance type ${maintenanceType}`,
+      );
+
       // Then, get all vendors of that type
       const vendorsResult = await db.execute(sql`
         SELECT * FROM vendors 
         WHERE service_type::text = ${vendorType}::text
         ORDER BY name;
       `);
-      
+
       return vendorsResult.rows;
     } catch (error) {
       console.error(`Error getting vendors by maintenance type: ${error}`);
@@ -1334,11 +1338,13 @@ export class DatabaseStorage implements IStorage {
           or(
             like(propertyOwners.fullName, searchPattern),
             like(propertyOwners.phone, searchPattern),
-            like(propertyOwners.altPhone || '', searchPattern),
-            like(propertyOwners.bankAccount || '', searchPattern)
-          )
+            like(propertyOwners.altPhone || "", searchPattern),
+            like(propertyOwners.bankAccount || "", searchPattern),
+          ),
         );
-      console.log(`Found ${ownersList.length} property owners matching search criteria`);
+      console.log(
+        `Found ${ownersList.length} property owners matching search criteria`,
+      );
       return ownersList;
     } catch (error) {
       console.error(`Error searching property owners: ${error}`);
@@ -1346,25 +1352,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createPropertyOwner(owner: InsertPropertyOwner): Promise<PropertyOwner> {
+  async createPropertyOwner(
+    owner: InsertPropertyOwner,
+  ): Promise<PropertyOwner> {
     try {
       console.log("Creating new property owner:", owner);
       const now = new Date();
-      
+
       // Generate ID as "fullName_phone"
-      const cleanFullName = owner.fullName.toLowerCase().replace(/\s+/g, '_');
+      const cleanFullName = owner.fullName.toLowerCase().replace(/\s+/g, "_");
       const generatedId = `${cleanFullName}_${owner.phone}`;
-      
+
       const [newOwner] = await db
         .insert(propertyOwners)
         .values({
           ...owner,
           id: generatedId,
           createdAt: now,
-          modifiedAt: now
+          modifiedAt: now,
         })
         .returning();
-      
+
       return newOwner;
     } catch (error) {
       console.error(`Error creating property owner: ${error}`);
@@ -1374,20 +1382,20 @@ export class DatabaseStorage implements IStorage {
 
   async updatePropertyOwner(
     id: string,
-    updates: Partial<InsertPropertyOwner>
+    updates: Partial<InsertPropertyOwner>,
   ): Promise<PropertyOwner | undefined> {
     try {
       console.log(`Updating property owner with ID: ${id}`, updates);
-      
+
       const [updatedOwner] = await db
         .update(propertyOwners)
         .set({
           ...updates,
-          modifiedAt: new Date()
+          modifiedAt: new Date(),
         })
         .where(eq(propertyOwners.id, id))
         .returning();
-      
+
       return updatedOwner;
     } catch (error) {
       console.error(`Error updating property owner: ${error}`);
@@ -1399,12 +1407,14 @@ export class DatabaseStorage implements IStorage {
     try {
       // First check if this owner is linked to properties
       const isLinked = await this.isPropertyOwnerLinked(id);
-      
+
       if (isLinked) {
-        console.log(`Cannot delete property owner ${id} because they are linked to properties`);
+        console.log(
+          `Cannot delete property owner ${id} because they are linked to properties`,
+        );
         return false;
       }
-      
+
       await db.delete(propertyOwners).where(eq(propertyOwners.id, id));
       return true;
     } catch (error) {
@@ -1420,7 +1430,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(properties)
         .where(eq(properties.ownerName, ownerName));
-      
+
       return linkedProperties;
     } catch (error) {
       console.error(`Error fetching linked properties: ${error}`);
@@ -1432,15 +1442,17 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get the owner first to get their fullName
       const owner = await this.getPropertyOwner(id);
-      
+
       if (!owner) {
         console.log(`Property owner with ID ${id} not found`);
         return false;
       }
-      
+
       // Check if any properties are linked to this owner's name
-      const linkedProperties = await this.getPropertyOwnerLinkedFlats(owner.fullName);
-      
+      const linkedProperties = await this.getPropertyOwnerLinkedFlats(
+        owner.fullName,
+      );
+
       return linkedProperties.length > 0;
     } catch (error) {
       console.error(`Error checking if property owner is linked: ${error}`);
@@ -1449,7 +1461,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Maintenance record methods
-  async getMaintenanceRecord(id: number): Promise<MaintenanceRecord | undefined> {
+  async getMaintenanceRecord(
+    id: number,
+  ): Promise<MaintenanceRecord | undefined> {
     try {
       console.log(`Getting maintenance record with ID: ${id}`);
       const [record] = await db
@@ -1471,21 +1485,16 @@ export class DatabaseStorage implements IStorage {
         SELECT 
           mr.id,
           mr.propertyid as "propertyId",
-          p.flat_number as "flatNumber",
+          p.flatnumber as "flatNumber",
           mr.date as "maintenanceDate", 
-          mr.maintenance_type as "maintenanceType",
+          mr.maintenancetype as "maintenanceType",
           mr.vendorid as "vendorId",
-          COALESCE(v.name, '') as "vendorName",
           mr.description,
-          mr.created_by as "createdBy",
-          mr.created_at as "createdAt",
-          mr.modified_at as "modifiedAt"
+          mr.createdby as "createdBy",
+          mr.createdat as "createdAt",
+          mr.modifiedat as "modifiedAt"
         FROM 
           maintenance_records mr
-        LEFT JOIN
-          properties p ON mr.propertyid = p.id
-        LEFT JOIN
-          vendors v ON mr.vendorid = v.id
         ORDER BY 
           mr.date DESC
       `);
@@ -1497,28 +1506,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getMaintenanceRecordsByProperty(propertyId: number): Promise<MaintenanceRecord[]> {
+  async getMaintenanceRecordsByProperty(
+    propertyId: number,
+  ): Promise<MaintenanceRecord[]> {
     try {
       console.log(`Getting maintenance records for property ID: ${propertyId}`);
       const records = await db.execute(sql`
         SELECT 
           mr.id,
           mr.propertyid as "propertyId",
-          p.flat_number as "flatNumber",
+          p.flatnumber as "flatNumber",
           mr.date as "maintenanceDate", 
-          mr.maintenance_type as "maintenanceType",
+          mr.maintenancetype as "maintenanceType",
           mr.vendorid as "vendorId",
           COALESCE(v.name, '') as "vendorName",
           mr.description,
-          mr.created_by as "createdBy",
-          mr.created_at as "createdAt",
-          mr.modified_at as "modifiedAt"
+          mr.createdby as "createdBy",
+          mr.createdat as "createdAt",
+          mr.modifiedat as "modifiedAt"
         FROM 
           maintenance_records mr
-        LEFT JOIN
-          properties p ON mr.propertyid = p.id
-        LEFT JOIN
-          vendors v ON mr.vendorid = v.id
+
         WHERE 
           mr.propertyid = ${propertyId}
         ORDER BY 
@@ -1526,35 +1534,36 @@ export class DatabaseStorage implements IStorage {
       `);
       return records.rows as any[];
     } catch (error) {
-      console.error(`Error fetching maintenance records for property: ${error}`);
+      console.error(
+        `Error fetching maintenance records for property: ${error}`,
+      );
       return [];
     }
   }
 
-  async getMaintenanceRecordsByType(type: string): Promise<MaintenanceRecord[]> {
+  async getMaintenanceRecordsByType(
+    type: string,
+  ): Promise<MaintenanceRecord[]> {
     try {
       console.log(`Getting maintenance records for type: ${type}`);
       const records = await db.execute(sql`
         SELECT 
           mr.id,
           mr.propertyid as "propertyId",
-          p.flat_number as "flatNumber",
+          p.flatnumber as "flatNumber",
           mr.date as "maintenanceDate", 
-          mr.maintenance_type as "maintenanceType",
+          mr.maintenancetype as "maintenanceType",
           mr.vendorid as "vendorId",
           COALESCE(v.name, '') as "vendorName",
           mr.description,
-          mr.created_by as "createdBy",
-          mr.created_at as "createdAt",
-          mr.modified_at as "modifiedAt"
+          mr.createdby as "createdBy",
+          mr.createdat as "createdAt",
+          mr.modifiedat as "modifiedAt"
         FROM 
           maintenance_records mr
-        LEFT JOIN
-          properties p ON mr.propertyid = p.id
-        LEFT JOIN
-          vendors v ON mr.vendorid = v.id
+
         WHERE 
-          mr.maintenance_type = ${type}
+          mr.maintenancetype = ${type}
         ORDER BY 
           mr.date DESC
       `);
@@ -1565,20 +1574,25 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getLastMaintenanceDate(propertyId: number, type: string): Promise<Date | null> {
+  async getLastMaintenanceDate(
+    propertyId: number,
+    type: string,
+  ): Promise<Date | null> {
     try {
-      console.log(`Getting last maintenance date for property ID: ${propertyId} and type: ${type}`);
+      console.log(
+        `Getting last maintenance date for property ID: ${propertyId} and type: ${type}`,
+      );
       const result = await db.execute(sql`
         SELECT date FROM maintenance_records
         WHERE propertyid = ${propertyId}
-        AND maintenance_type = ${type}
+        AND maintenancetype = ${type}
         ORDER BY date DESC
         LIMIT 1
       `);
-      
+
       if (result.rows.length > 0) {
         // Parse the date string into a Date object
-        return new Date(result.rows[0].date);
+        return new Date(result.rows[0].date as string);
       }
       return null;
     } catch (error) {
@@ -1587,26 +1601,28 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord> {
+  async createMaintenanceRecord(
+    record: InsertMaintenanceRecord,
+  ): Promise<MaintenanceRecord> {
     try {
       console.log("Creating new maintenance record:", record);
       const now = new Date().toISOString();
-      
+
       // Format the date if it's a Date object
-      const formattedDate = record.date instanceof Date ? 
-        record.date.toISOString() : record.date;
-      
+      const formattedDate =
+        record.date instanceof Date ? record.date.toISOString() : record.date;
+
       const result = await db.execute(sql`
         INSERT INTO maintenance_records (
           date, 
-          flat_number, 
+          flatnumber, 
           propertyid, 
-          maintenance_type, 
+          maintenancetype, 
           description, 
           vendorid,
-          created_by,
-          created_at,
-          modified_at
+          createdby,
+          createdat,
+          modifiedat
         ) VALUES (
           ${formattedDate},
           ${record.flatNumber},
@@ -1620,7 +1636,7 @@ export class DatabaseStorage implements IStorage {
         )
         RETURNING *
       `);
-      
+
       return result.rows[0];
     } catch (error) {
       console.error(`Error creating maintenance record: ${error}`);
@@ -1630,73 +1646,75 @@ export class DatabaseStorage implements IStorage {
 
   async updateMaintenanceRecord(
     id: number,
-    updates: Partial<InsertMaintenanceRecord>
+    updates: Partial<InsertMaintenanceRecord>,
   ): Promise<MaintenanceRecord | undefined> {
     try {
       console.log(`Updating maintenance record with ID: ${id}`, updates);
-      
+
       // Create SQL SET parts dynamically based on the updates provided
       const sets: string[] = [];
       const values: any[] = [id]; // First parameter is always the ID
       let paramIndex = 2; // Start parameter index from 2 (after id)
-      
+
       // Add modified_at by default
       const now = new Date().toISOString();
-      sets.push(`modified_at = '${now}'`);
-      
+      sets.push(`modifiedat = '${now}'`);
+
       if (updates.date) {
-        const formattedDate = updates.date instanceof Date ?
-          updates.date.toISOString() : updates.date;
+        const formattedDate =
+          updates.date instanceof Date
+            ? updates.date.toISOString()
+            : updates.date;
         sets.push(`date = $${paramIndex}`);
         values.push(formattedDate);
         paramIndex++;
       }
-      
+
       if (updates.flatNumber) {
-        sets.push(`flat_number = $${paramIndex}`);
+        sets.push(`flatnumber = $${paramIndex}`);
         values.push(updates.flatNumber);
         paramIndex++;
       }
-      
+
       if (updates.propertyId) {
         sets.push(`propertyid = $${paramIndex}`);
         values.push(updates.propertyId);
         paramIndex++;
       }
-      
+
       if (updates.maintenanceType) {
-        sets.push(`maintenance_type = $${paramIndex}`);
+        sets.push(`maintenancetype = $${paramIndex}`);
         values.push(updates.maintenanceType);
         paramIndex++;
       }
-      
+
       if (updates.description !== undefined) {
         sets.push(`description = $${paramIndex}`);
         values.push(updates.description);
         paramIndex++;
       }
-      
+
       if (updates.vendorId !== undefined) {
         sets.push(`vendorid = $${paramIndex}`);
         values.push(updates.vendorId);
         paramIndex++;
       }
-      
+
       // Build and execute the SQL
-      const setClause = sets.join(', ');
+      const setClause = sets.join(", ");
       const updateSql = `
         UPDATE maintenance_records 
         SET ${setClause}
         WHERE id = $1
         RETURNING *
       `;
-      
+
       const result = await db.execute(sql.raw(updateSql, ...values));
-      
+
       if (result.rows.length === 0) {
         return undefined;
       }
-      
+
       return result.rows[0];
     } catch (error) {
       console.error(`Error updating maintenance record: ${error}`);

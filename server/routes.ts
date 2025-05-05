@@ -359,21 +359,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
-  
+
   // Get maintenance types (from expense subcategories where category is "General Maintenance Works")
-  app.get(
-    "/api/maintenance-types",
-    isAuthenticated,
-    async (req, res, next) => {
-      try {
-        const maintenanceTypes = await storage.getMaintenanceTypes();
-        res.json(maintenanceTypes);
-      } catch (error) {
-        console.error("Error fetching maintenance types:", error);
-        next(error);
-      }
-    },
-  );
+  app.get("/api/maintenance-types", isAuthenticated, async (req, res, next) => {
+    try {
+      const maintenanceTypes = await storage.getMaintenanceTypes();
+      res.json(maintenanceTypes);
+    } catch (error) {
+      console.error("Error fetching maintenance types:", error);
+      next(error);
+    }
+  });
 
   // Vendor endpoints
   app.get(
@@ -756,7 +752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
-  
+
   // Get vendors by maintenance type (which is an expense subcategory)
   app.get(
     "/api/vendors/by-maintenance-type/:maintenanceType",
@@ -765,7 +761,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const maintenanceType = req.params.maintenanceType;
         console.log(`Getting vendors for maintenance type: ${maintenanceType}`);
-        const vendors = await storage.getVendorsByMaintenanceType(maintenanceType);
+        const vendors =
+          await storage.getVendorsByMaintenanceType(maintenanceType);
         res.json(vendors);
       } catch (error) {
         console.error("Error fetching vendors by maintenance type:", error);
@@ -1205,53 +1202,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/property-owners/search", isAuthenticated, async (req, res, next) => {
-    try {
-      const { term } = req.query;
-      if (!term || typeof term !== 'string') {
-        return res.status(400).json({ message: "Search term is required" });
+  app.get(
+    "/api/property-owners/search",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const { term } = req.query;
+        if (!term || typeof term !== "string") {
+          return res.status(400).json({ message: "Search term is required" });
+        }
+
+        console.log(`Searching property owners with term: ${term}`);
+        const owners = await storage.searchPropertyOwners(term);
+        res.json(owners);
+      } catch (error) {
+        console.error("Error searching property owners:", error);
+        next(error);
       }
-      
-      console.log(`Searching property owners with term: ${term}`);
-      const owners = await storage.searchPropertyOwners(term);
-      res.json(owners);
-    } catch (error) {
-      console.error("Error searching property owners:", error);
-      next(error);
-    }
-  });
+    },
+  );
 
-  app.get("/api/property-owners/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const id = req.params.id;
-      const owner = await storage.getPropertyOwner(id);
+  app.get(
+    "/api/property-owners/:id",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const id = req.params.id;
+        const owner = await storage.getPropertyOwner(id);
 
-      if (!owner) {
-        return res.status(404).json({ message: "Property owner not found" });
+        if (!owner) {
+          return res.status(404).json({ message: "Property owner not found" });
+        }
+
+        res.json(owner);
+      } catch (error) {
+        console.error(
+          `Error fetching property owner with ID ${req.params.id}:`,
+          error,
+        );
+        next(error);
       }
+    },
+  );
 
-      res.json(owner);
-    } catch (error) {
-      console.error(`Error fetching property owner with ID ${req.params.id}:`, error);
-      next(error);
-    }
-  });
+  app.get(
+    "/api/property-owners/:id/linked-flats",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const owner = await storage.getPropertyOwner(req.params.id);
 
-  app.get("/api/property-owners/:id/linked-flats", isAuthenticated, async (req, res, next) => {
-    try {
-      const owner = await storage.getPropertyOwner(req.params.id);
-      
-      if (!owner) {
-        return res.status(404).json({ message: "Property owner not found" });
+        if (!owner) {
+          return res.status(404).json({ message: "Property owner not found" });
+        }
+
+        const linkedFlats = await storage.getPropertyOwnerLinkedFlats(
+          owner.fullName,
+        );
+        res.json(linkedFlats);
+      } catch (error) {
+        console.error(
+          `Error fetching linked flats for owner ${req.params.id}:`,
+          error,
+        );
+        next(error);
       }
-
-      const linkedFlats = await storage.getPropertyOwnerLinkedFlats(owner.fullName);
-      res.json(linkedFlats);
-    } catch (error) {
-      console.error(`Error fetching linked flats for owner ${req.params.id}:`, error);
-      next(error);
-    }
-  });
+    },
+  );
 
   app.post("/api/property-owners", isAdmin, async (req, res, next) => {
     try {
@@ -1298,16 +1315,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/property-owners/:id", isAdmin, async (req, res, next) => {
     try {
       const id = req.params.id;
-      
+
       // Check if owner is linked to any properties first
       const isLinked = await storage.isPropertyOwnerLinked(id);
-      
+
       if (isLinked) {
-        return res.status(400).json({ 
-          message: "Cannot delete property owner because they are linked to properties. Please unlink the properties first."
+        return res.status(400).json({
+          message:
+            "Cannot delete property owner because they are linked to properties. Please unlink the properties first.",
         });
       }
-      
+
       const success = await storage.deletePropertyOwner(id);
 
       if (!success) {
@@ -1322,120 +1340,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Maintenance Record routes
-  app.get("/api/maintenance-records", isAuthenticated, async (req, res, next) => {
-    try {
-      const records = await storage.getMaintenanceRecords();
-      res.json(records);
-    } catch (error) {
-      console.error("Error fetching maintenance records:", error);
-      next(error);
-    }
-  });
-
-  app.get("/api/maintenance-records/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const record = await storage.getMaintenanceRecord(id);
-
-      if (!record) {
-        return res.status(404).json({ message: "Maintenance record not found" });
+  app.get(
+    "/api/maintenance-records",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const records = await storage.getMaintenanceRecords();
+        res.json(records);
+        console.log("Maintenance records:", records);
+      } catch (error) {
+        console.error("Error fetching maintenance records:", error);
+        next(error);
       }
+    },
+  );
 
-      res.json(record);
-    } catch (error) {
-      console.error(`Error fetching maintenance record ${req.params.id}:`, error);
-      next(error);
-    }
-  });
+  app.get(
+    "/api/maintenance-records/:id",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const id = parseInt(req.params.id);
+        const record = await storage.getMaintenanceRecord(id);
 
-  app.get("/api/maintenance-records/property/:propertyId", isAuthenticated, async (req, res, next) => {
-    try {
-      const propertyId = parseInt(req.params.propertyId);
-      const records = await storage.getMaintenanceRecordsByProperty(propertyId);
-      res.json(records);
-    } catch (error) {
-      console.error(`Error fetching maintenance records for property ${req.params.propertyId}:`, error);
-      next(error);
-    }
-  });
+        if (!record) {
+          return res
+            .status(404)
+            .json({ message: "Maintenance record not found" });
+        }
 
-  app.get("/api/maintenance-records/type/:type", isAuthenticated, async (req, res, next) => {
-    try {
-      const type = req.params.type;
-      const records = await storage.getMaintenanceRecordsByType(type);
-      res.json(records);
-    } catch (error) {
-      console.error(`Error fetching maintenance records for type ${req.params.type}:`, error);
-      next(error);
-    }
-  });
-
-  app.get("/api/maintenance-records/last-date/:propertyId/:type", isAuthenticated, async (req, res, next) => {
-    try {
-      const propertyId = parseInt(req.params.propertyId);
-      const type = req.params.type;
-      const lastDate = await storage.getLastMaintenanceDate(propertyId, type);
-      res.json({ lastMaintenanceDate: lastDate });
-    } catch (error) {
-      console.error(`Error fetching last maintenance date:`, error);
-      next(error);
-    }
-  });
-
-  app.post("/api/maintenance-records", isAuthenticated, async (req, res, next) => {
-    try {
-      const recordData = insertMaintenanceRecordSchema.parse({
-        ...req.body,
-        createdBy: (req.user as any).id
-      });
-
-      const newRecord = await storage.createMaintenanceRecord(recordData);
-      res.status(201).json(newRecord);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
+        res.json(record);
+      } catch (error) {
+        console.error(
+          `Error fetching maintenance record ${req.params.id}:`,
+          error,
+        );
+        next(error);
       }
-      console.error("Error creating maintenance record:", error);
-      next(error);
-    }
-  });
+    },
+  );
 
-  app.put("/api/maintenance-records/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const recordData = insertMaintenanceRecordSchema.partial().parse(req.body);
-
-      const updatedRecord = await storage.updateMaintenanceRecord(id, recordData);
-
-      if (!updatedRecord) {
-        return res.status(404).json({ message: "Maintenance record not found" });
+  app.get(
+    "/api/maintenance-records/property/:propertyId",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const propertyId = parseInt(req.params.propertyId);
+        const records =
+          await storage.getMaintenanceRecordsByProperty(propertyId);
+        res.json(records);
+      } catch (error) {
+        console.error(
+          `Error fetching maintenance records for property ${req.params.propertyId}:`,
+          error,
+        );
+        next(error);
       }
+    },
+  );
 
-      res.json(updatedRecord);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
+  app.get(
+    "/api/maintenance-records/type/:type",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const type = req.params.type;
+        const records = await storage.getMaintenanceRecordsByType(type);
+        res.json(records);
+      } catch (error) {
+        console.error(
+          `Error fetching maintenance records for type ${req.params.type}:`,
+          error,
+        );
+        next(error);
       }
-      console.error(`Error updating maintenance record ${req.params.id}:`, error);
-      next(error);
-    }
-  });
+    },
+  );
 
-  app.delete("/api/maintenance-records/:id", isAuthenticated, async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteMaintenanceRecord(id);
-
-      if (!success) {
-        return res.status(404).json({ message: "Maintenance record not found" });
+  app.get(
+    "/api/maintenance-records/last-date/:propertyId/:type",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const propertyId = parseInt(req.params.propertyId);
+        const type = req.params.type;
+        const lastDate = await storage.getLastMaintenanceDate(propertyId, type);
+        res.json({ lastMaintenanceDate: lastDate });
+      } catch (error) {
+        console.error(`Error fetching last maintenance date:`, error);
+        next(error);
       }
+    },
+  );
 
-      res.json({ message: "Maintenance record deleted successfully" });
-    } catch (error) {
-      console.error(`Error deleting maintenance record ${req.params.id}:`, error);
-      next(error);
-    }
-  });
+  app.post(
+    "/api/maintenance-records",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const recordData = insertMaintenanceRecordSchema.parse({
+          ...req.body,
+          createdBy: (req.user as any).id,
+        });
+
+        console.log("Creating maintenance record with data:", recordData);
+        const newRecord = await storage.createMaintenanceRecord(recordData);
+        res.status(201).json(newRecord);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ message: error.errors });
+        }
+        console.error("Error creating maintenance record:", error);
+        next(error);
+      }
+    },
+  );
+
+  app.put(
+    "/api/maintenance-records/:id",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const id = parseInt(req.params.id);
+        const recordData = insertMaintenanceRecordSchema
+          .partial()
+          .parse(req.body);
+
+        const updatedRecord = await storage.updateMaintenanceRecord(
+          id,
+          recordData,
+        );
+
+        if (!updatedRecord) {
+          return res
+            .status(404)
+            .json({ message: "Maintenance record not found" });
+        }
+
+        res.json(updatedRecord);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res.status(400).json({ message: error.errors });
+        }
+        console.error(
+          `Error updating maintenance record ${req.params.id}:`,
+          error,
+        );
+        next(error);
+      }
+    },
+  );
+
+  app.delete(
+    "/api/maintenance-records/:id",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const id = parseInt(req.params.id);
+        const success = await storage.deleteMaintenanceRecord(id);
+
+        if (!success) {
+          return res
+            .status(404)
+            .json({ message: "Maintenance record not found" });
+        }
+
+        res.json({ message: "Maintenance record deleted successfully" });
+      } catch (error) {
+        console.error(
+          `Error deleting maintenance record ${req.params.id}:`,
+          error,
+        );
+        next(error);
+      }
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;
