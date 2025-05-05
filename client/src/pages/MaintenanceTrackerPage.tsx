@@ -58,7 +58,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import AppLayout from "@/components/layout/AppLayout";
 import {
   CalendarIcon,
   Loader2,
@@ -388,284 +387,524 @@ export default function MaintenanceTrackerPage() {
   // Loading state
   if (isLoadingRecords || isLoadingProperties || isLoadingVendors) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Maintenance Tracker</h1>
-        </div>
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Maintenance Tracker</h1>
+      </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="view">View Records</TabsTrigger>
-            <TabsTrigger value="add">Add Record</TabsTrigger>
-            <TabsTrigger value="modify" disabled={!selectedRecord}>
-              Modify Record
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="view">View Records</TabsTrigger>
+          <TabsTrigger value="add">Add Record</TabsTrigger>
+          <TabsTrigger value="modify" disabled={!selectedRecord}>
+            Modify Record
+          </TabsTrigger>
+        </TabsList>
 
-          {/* View Records Tab */}
-          <TabsContent value="view">
-            <Card>
-              <CardHeader>
-                <CardTitle>Maintenance Records</CardTitle>
-                <CardDescription>
-                  View and manage property maintenance records
-                </CardDescription>
+        {/* View Records Tab */}
+        <TabsContent value="view">
+          <Card>
+            <CardHeader>
+              <CardTitle>Maintenance Records</CardTitle>
+              <CardDescription>
+                View and manage property maintenance records
+              </CardDescription>
 
-                {/* Filters */}
-                <div className="flex flex-wrap gap-4 mt-4">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="filterProperty">Property:</Label>
-                    <Select
-                      value={filterProperty}
-                      onValueChange={setFilterProperty}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="All Properties" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Properties</SelectItem>
-                        {properties?.map((property) => (
-                          <SelectItem
-                            key={property.id}
-                            value={property.id.toString()}
+              {/* Filters */}
+              <div className="flex flex-wrap gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="filterProperty">Property:</Label>
+                  <Select
+                    value={filterProperty}
+                    onValueChange={setFilterProperty}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="All Properties" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Properties</SelectItem>
+                      {properties?.map((property) => (
+                        <SelectItem
+                          key={property.id}
+                          value={property.id.toString()}
+                        >
+                          {property.flatNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="filterType">Maintenance Type:</Label>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Types</SelectItem>
+                      {maintenanceTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-1"
+                  onClick={resetFilters}
+                >
+                  <FilterX className="h-4 w-4" />
+                  Reset Filters
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableCaption>
+                  {filteredRecords?.length
+                    ? `Showing ${filteredRecords.length} maintenance records`
+                    : "No maintenance records found"}
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Property</TableHead>
+                    <TableHead>Maintenance Type</TableHead>
+                    <TableHead>Record Date</TableHead>
+                    <TableHead>Maintenance Date</TableHead>
+                    <TableHead>Vendor</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRecords?.length ? (
+                    filteredRecords.map((record) => {
+                      const property = properties?.find(
+                        (p) => p.id === record.propertyId,
+                      );
+                      return (
+                        <TableRow key={record.id}>
+                          <TableCell>
+                            {property?.flatNumber || "N/A"}
+                          </TableCell>
+                          <TableCell>{record.maintenanceType}</TableCell>
+                          <TableCell>
+                            {format(new Date(record.date), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            {format(
+                              new Date(record.date),
+                              "dd/MM/yyyy",
+                            )}
+                          </TableCell>
+                          <TableCell>{record.vendorId}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {record.description}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleEditRecord(record)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() => handleDeleteRecord(record.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center">
+                        No maintenance records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Add Record Tab */}
+        <TabsContent value="add">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Maintenance Record</CardTitle>
+              <CardDescription>
+                Create a new maintenance record for a property
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...addForm}>
+                <form
+                  onSubmit={addForm.handleSubmit(onAddSubmit)}
+                  className="space-y-6"
+                >
+                  {/* Property Selection */}
+                  <FormField
+                    control={addForm.control}
+                    name="propertyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(Number(value));
+                            const maintenanceType =
+                              addForm.getValues("maintenanceType");
+                            if (maintenanceType) {
+                              handlePropertyChange(value, maintenanceType);
+                            }
+                          }}
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a property" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {properties?.map((property) => (
+                              <SelectItem
+                                key={property.id}
+                                value={property.id.toString()}
+                              >
+                                {property.flatNumber}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Maintenance Type Selection */}
+                  <FormField
+                    control={addForm.control}
+                    name="maintenanceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Maintenance Type</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            const propertyId =
+                              addForm.getValues("propertyId");
+                            if (propertyId) {
+                              handlePropertyChange(
+                                propertyId.toString(),
+                                value,
+                              );
+                            }
+                          }}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select maintenance type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {maintenanceTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Last Maintenance Date (Read-only) */}
+                  {addForm.watch("propertyId") &&
+                    addForm.watch("maintenanceType") && (
+                      <div className="flex flex-col space-y-1.5">
+                        <Label htmlFor="lastMaintenanceDate">
+                          Last Maintenance Date
+                        </Label>
+                        <Input
+                          id="lastMaintenanceDate"
+                          value={
+                            lastMaintenanceDate
+                              ? format(lastMaintenanceDate, "dd/MM/yyyy")
+                              : "No previous record"
+                          }
+                          disabled
+                        />
+                      </div>
+                    )}
+
+                  {/* Record Date */}
+                  <FormField
+                    control={addForm.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Record Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-auto p-0"
+                            align="start"
                           >
-                            {property.flatNumber}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date > new Date() ||
+                                date < new Date("1900-01-01")
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="filterType">Maintenance Type:</Label>
-                    <Select value={filterType} onValueChange={setFilterType}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="All Types" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Types</SelectItem>
-                        {maintenanceTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Maintenance Date */}
+                  <FormField
+                    control={addForm.control}
+                    name="maintenanceDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Maintenance Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground",
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-auto p-0"
+                            align="start"
+                          >
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date > new Date() ||
+                                date < new Date("1900-01-01")
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Vendor Selection */}
+                  <FormField
+                    control={addForm.control}
+                    name="vendorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendor</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a vendor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={"0"}>No Vendor</SelectItem>
+                            {vendors?.map((vendor) => (
+                              <SelectItem
+                                key={vendor.id}
+                                value={vendor.id.toString()}
+                              >
+                                {vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Description */}
+                  <FormField
+                    control={addForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter maintenance details"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Expense Link (optional) */}
+                  <FormField
+                    control={addForm.control}
+                    name="expenseId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expense ID (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter related expense ID if applicable"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? Number(value) : null);
+                            }}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Link to an expense record if this maintenance has an
+                          associated expense.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <Button
-                    variant="outline"
-                    className="flex items-center gap-1"
-                    onClick={resetFilters}
+                    type="submit"
+                    className="w-full"
+                    disabled={createMutation.isPending}
                   >
-                    <FilterX className="h-4 w-4" />
-                    Reset Filters
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableCaption>
-                    {filteredRecords?.length
-                      ? `Showing ${filteredRecords.length} maintenance records`
-                      : "No maintenance records found"}
-                  </TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Maintenance Type</TableHead>
-                      <TableHead>Record Date</TableHead>
-                      <TableHead>Maintenance Date</TableHead>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRecords?.length ? (
-                      filteredRecords.map((record) => {
-                        const property = properties?.find(
-                          (p) => p.id === record.propertyId,
-                        );
-                        return (
-                          <TableRow key={record.id}>
-                            <TableCell>
-                              {property?.flatNumber || "N/A"}
-                            </TableCell>
-                            <TableCell>{record.maintenanceType}</TableCell>
-                            <TableCell>
-                              {format(new Date(record.date), "dd/MM/yyyy")}
-                            </TableCell>
-                            <TableCell>
-                              {format(
-                                new Date(record.date),
-                                "dd/MM/yyyy",
-                              )}
-                            </TableCell>
-                            <TableCell>{record.vendorId}</TableCell>
-                            <TableCell className="max-w-[200px] truncate">
-                              {record.description}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleEditRecord(record)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="text-destructive"
-                                  onClick={() => handleDeleteRecord(record.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                    {createMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Record...
+                      </>
                     ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center">
-                          No maintenance records found
-                        </TableCell>
-                      </TableRow>
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Maintenance Record
+                      </>
                     )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Add Record Tab */}
-          <TabsContent value="add">
-            <Card>
-              <CardHeader>
-                <CardTitle>Add Maintenance Record</CardTitle>
-                <CardDescription>
-                  Create a new maintenance record for a property
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...addForm}>
+        {/* Modify Record Tab */}
+        <TabsContent value="modify">
+          <Card>
+            <CardHeader>
+              <CardTitle>Modify Maintenance Record</CardTitle>
+              <CardDescription>
+                Update the selected maintenance record
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {selectedRecord ? (
+                <Form {...editForm}>
                   <form
-                    onSubmit={addForm.handleSubmit(onAddSubmit)}
+                    onSubmit={editForm.handleSubmit(onEditSubmit)}
                     className="space-y-6"
                   >
-                    {/* Property Selection */}
-                    <FormField
-                      control={addForm.control}
-                      name="propertyId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Property</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(Number(value));
-                              const maintenanceType =
-                                addForm.getValues("maintenanceType");
-                              if (maintenanceType) {
-                                handlePropertyChange(value, maintenanceType);
-                              }
-                            }}
-                            value={field.value?.toString()}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a property" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {properties?.map((property) => (
-                                <SelectItem
-                                  key={property.id}
-                                  value={property.id.toString()}
-                                >
-                                  {property.flatNumber}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Property Selection - Read Only */}
+                    <div className="flex flex-col space-y-1.5">
+                      <Label htmlFor="propertyId">Property</Label>
+                      <Input
+                        id="propertyId"
+                        value={
+                          properties?.find(
+                            (p) => p.id === selectedRecord.propertyId,
+                          )?.flatNumber || "Unknown Property"
+                        }
+                        disabled
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Property cannot be changed. Create a new record
+                        instead.
+                      </p>
+                    </div>
 
-                    {/* Maintenance Type Selection */}
-                    <FormField
-                      control={addForm.control}
-                      name="maintenanceType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Maintenance Type</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              const propertyId =
-                                addForm.getValues("propertyId");
-                              if (propertyId) {
-                                handlePropertyChange(
-                                  propertyId.toString(),
-                                  value,
-                                );
-                              }
-                            }}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select maintenance type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {maintenanceTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Last Maintenance Date (Read-only) */}
-                    {addForm.watch("propertyId") &&
-                      addForm.watch("maintenanceType") && (
-                        <div className="flex flex-col space-y-1.5">
-                          <Label htmlFor="lastMaintenanceDate">
-                            Last Maintenance Date
-                          </Label>
-                          <Input
-                            id="lastMaintenanceDate"
-                            value={
-                              lastMaintenanceDate
-                                ? format(lastMaintenanceDate, "dd/MM/yyyy")
-                                : "No previous record"
-                            }
-                            disabled
-                          />
-                        </div>
-                      )}
+                    {/* Maintenance Type - Read Only */}
+                    <div className="flex flex-col space-y-1.5">
+                      <Label htmlFor="maintenanceType">
+                        Maintenance Type
+                      </Label>
+                      <Input
+                        id="maintenanceType"
+                        value={selectedRecord.maintenanceType}
+                        disabled
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Maintenance type cannot be changed. Create a new
+                        record instead.
+                      </p>
+                    </div>
 
                     {/* Record Date */}
                     <FormField
-                      control={addForm.control}
+                      control={editForm.control}
                       name="date"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -712,7 +951,7 @@ export default function MaintenanceTrackerPage() {
 
                     {/* Maintenance Date */}
                     <FormField
-                      control={addForm.control}
+                      control={editForm.control}
                       name="maintenanceDate"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
@@ -759,7 +998,7 @@ export default function MaintenanceTrackerPage() {
 
                     {/* Vendor Selection */}
                     <FormField
-                      control={addForm.control}
+                      control={editForm.control}
                       name="vendorId"
                       render={({ field }) => (
                         <FormItem>
@@ -774,8 +1013,12 @@ export default function MaintenanceTrackerPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              <SelectItem value={"0"}>No Vendor</SelectItem>
                               {vendors?.map((vendor) => (
-                                <SelectItem key={vendor.id} value={vendor.name}>
+                                <SelectItem
+                                  key={vendor.id}
+                                  value={vendor.id.toString()}
+                                >
                                   {vendor.name}
                                 </SelectItem>
                               ))}
@@ -788,7 +1031,7 @@ export default function MaintenanceTrackerPage() {
 
                     {/* Description */}
                     <FormField
-                      control={addForm.control}
+                      control={editForm.control}
                       name="description"
                       render={({ field }) => (
                         <FormItem>
@@ -806,7 +1049,7 @@ export default function MaintenanceTrackerPage() {
 
                     {/* Expense Link (optional) */}
                     <FormField
-                      control={addForm.control}
+                      control={editForm.control}
                       name="expenseId"
                       render={({ field }) => (
                         <FormItem>
@@ -824,340 +1067,62 @@ export default function MaintenanceTrackerPage() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Link to an expense record if this maintenance has an
-                            associated expense.
+                            Link to an expense record if this maintenance has
+                            an associated expense.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={createMutation.isPending}
-                    >
-                      {createMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating Record...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create Maintenance Record
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex items-center justify-between gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-1/2"
+                        onClick={() => {
+                          setSelectedRecord(null);
+                          setActiveTab("view");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="w-1/2"
+                        disabled={updateMutation.isPending}
+                      >
+                        {updateMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <RotateCw className="mr-2 h-4 w-4" />
+                            Update Record
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </form>
                 </Form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Modify Record Tab */}
-          <TabsContent value="modify">
-            <Card>
-              <CardHeader>
-                <CardTitle>Modify Maintenance Record</CardTitle>
-                <CardDescription>
-                  Update the selected maintenance record
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {selectedRecord ? (
-                  <Form {...editForm}>
-                    <form
-                      onSubmit={editForm.handleSubmit(onEditSubmit)}
-                      className="space-y-6"
-                    >
-                      {/* Property Selection - Read Only */}
-                      <div className="flex flex-col space-y-1.5">
-                        <Label htmlFor="propertyId">Property</Label>
-                        <Input
-                          id="propertyId"
-                          value={
-                            properties?.find(
-                              (p) => p.id === selectedRecord.propertyId,
-                            )?.flatNumber || "Unknown Property"
-                          }
-                          disabled
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Property cannot be changed. Create a new record
-                          instead.
-                        </p>
-                      </div>
-
-                      {/* Maintenance Type - Read Only */}
-                      <div className="flex flex-col space-y-1.5">
-                        <Label htmlFor="maintenanceType">
-                          Maintenance Type
-                        </Label>
-                        <Input
-                          id="maintenanceType"
-                          value={selectedRecord.maintenanceType}
-                          disabled
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Maintenance type cannot be changed. Create a new
-                          record instead.
-                        </p>
-                      </div>
-
-                      {/* Record Date */}
-                      <FormField
-                        control={editForm.control}
-                        name="date"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Record Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground",
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
-                              >
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) =>
-                                    date > new Date() ||
-                                    date < new Date("1900-01-01")
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Maintenance Date */}
-                      <FormField
-                        control={editForm.control}
-                        name="maintenanceDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Maintenance Date</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground",
-                                    )}
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent
-                                className="w-auto p-0"
-                                align="start"
-                              >
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  disabled={(date) =>
-                                    date > new Date() ||
-                                    date < new Date("1900-01-01")
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Vendor Selection */}
-                      <FormField
-                        control={editForm.control}
-                        name="vendorId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Vendor</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a vendor" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {vendors?.map((vendor) => (
-                                  <SelectItem
-                                    key={vendor.id}
-                                    value={vendor.name}
-                                  >
-                                    {vendor.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Description */}
-                      <FormField
-                        control={editForm.control}
-                        name="description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Enter maintenance details"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Expense Link (optional) */}
-                      <FormField
-                        control={editForm.control}
-                        name="expenseId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Expense ID (Optional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="Enter related expense ID if applicable"
-                                {...field}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(value ? Number(value) : null);
-                                }}
-                                value={field.value || ""}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Link to an expense record if this maintenance has
-                              an associated expense.
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="flex items-center justify-between gap-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-1/2"
-                          onClick={() => {
-                            setSelectedRecord(null);
-                            setActiveTab("view");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          className="w-1/2"
-                          disabled={updateMutation.isPending}
-                        >
-                          {updateMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Updating...
-                            </>
-                          ) : (
-                            <>
-                              <RotateCw className="mr-2 h-4 w-4" />
-                              Update Record
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-10">
-                    <p className="text-muted-foreground">No record selected</p>
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                      onClick={() => setActiveTab("view")}
-                    >
-                      Go back to view
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              maintenance record.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground"
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
               ) : (
-                "Delete"
+                <div className="flex flex-col items-center justify-center py-10">
+                  <p className="text-muted-foreground">No record selected</p>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setActiveTab("view")}
+                  >
+                    Go back to view
+                  </Button>
+                </div>
               )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </AppLayout>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
