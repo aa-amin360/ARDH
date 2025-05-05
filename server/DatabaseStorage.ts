@@ -34,6 +34,7 @@ import {
   propertyCharges,
   tenantCharges,
   propertyOwners,
+  maintenanceRecords,
 } from "@shared/schema";
 import { and, eq, desc, sql, count, isNull, gte, like, or } from "drizzle-orm";
 import { db, pool } from "./db";
@@ -1392,6 +1393,142 @@ export class DatabaseStorage implements IStorage {
       return linkedProperties.length > 0;
     } catch (error) {
       console.error(`Error checking if property owner is linked: ${error}`);
+      throw error;
+    }
+  }
+
+  // Maintenance record methods
+  async getMaintenanceRecord(id: number): Promise<MaintenanceRecord | undefined> {
+    try {
+      console.log(`Getting maintenance record with ID: ${id}`);
+      const [record] = await db
+        .select()
+        .from(maintenanceRecords)
+        .where(eq(maintenanceRecords.id, id));
+      return record;
+    } catch (error) {
+      console.error(`Error fetching maintenance record: ${error}`);
+      throw error;
+    }
+  }
+
+  async getMaintenanceRecords(): Promise<MaintenanceRecord[]> {
+    try {
+      console.log("Getting all maintenance records");
+      const records = await db
+        .select()
+        .from(maintenanceRecords)
+        .orderBy(desc(maintenanceRecords.date));
+      console.log(`Retrieved ${records.length} maintenance records`);
+      return records;
+    } catch (error) {
+      console.error(`Error fetching maintenance records: ${error}`);
+      throw error;
+    }
+  }
+
+  async getMaintenanceRecordsByProperty(propertyId: number): Promise<MaintenanceRecord[]> {
+    try {
+      console.log(`Getting maintenance records for property ID: ${propertyId}`);
+      const records = await db
+        .select()
+        .from(maintenanceRecords)
+        .where(eq(maintenanceRecords.propertyId, propertyId))
+        .orderBy(desc(maintenanceRecords.date));
+      return records;
+    } catch (error) {
+      console.error(`Error fetching maintenance records for property: ${error}`);
+      throw error;
+    }
+  }
+
+  async getMaintenanceRecordsByType(type: string): Promise<MaintenanceRecord[]> {
+    try {
+      console.log(`Getting maintenance records for type: ${type}`);
+      const records = await db
+        .select()
+        .from(maintenanceRecords)
+        .where(eq(maintenanceRecords.maintenanceType, type))
+        .orderBy(desc(maintenanceRecords.date));
+      return records;
+    } catch (error) {
+      console.error(`Error fetching maintenance records by type: ${error}`);
+      throw error;
+    }
+  }
+
+  async getLastMaintenanceDate(propertyId: number, type: string): Promise<Date | null> {
+    try {
+      console.log(`Getting last maintenance date for property ID: ${propertyId} and type: ${type}`);
+      const [record] = await db
+        .select()
+        .from(maintenanceRecords)
+        .where(
+          and(
+            eq(maintenanceRecords.propertyId, propertyId),
+            eq(maintenanceRecords.maintenanceType, type)
+          )
+        )
+        .orderBy(desc(maintenanceRecords.date))
+        .limit(1);
+      
+      return record ? record.date : null;
+    } catch (error) {
+      console.error(`Error fetching last maintenance date: ${error}`);
+      throw error;
+    }
+  }
+
+  async createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord> {
+    try {
+      console.log("Creating new maintenance record:", record);
+      const now = new Date();
+      const [newRecord] = await db
+        .insert(maintenanceRecords)
+        .values({
+          ...record,
+          createdAt: now,
+          modifiedAt: now
+        })
+        .returning();
+      
+      return newRecord;
+    } catch (error) {
+      console.error(`Error creating maintenance record: ${error}`);
+      throw error;
+    }
+  }
+
+  async updateMaintenanceRecord(
+    id: number,
+    updates: Partial<InsertMaintenanceRecord>
+  ): Promise<MaintenanceRecord | undefined> {
+    try {
+      console.log(`Updating maintenance record with ID: ${id}`, updates);
+      
+      const [updatedRecord] = await db
+        .update(maintenanceRecords)
+        .set({
+          ...updates,
+          modifiedAt: new Date()
+        })
+        .where(eq(maintenanceRecords.id, id))
+        .returning();
+      
+      return updatedRecord;
+    } catch (error) {
+      console.error(`Error updating maintenance record: ${error}`);
+      throw error;
+    }
+  }
+
+  async deleteMaintenanceRecord(id: number): Promise<boolean> {
+    try {
+      console.log(`Deleting maintenance record with ID: ${id}`);
+      await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id));
+      return true;
+    } catch (error) {
+      console.error(`Error deleting maintenance record: ${error}`);
       throw error;
     }
   }

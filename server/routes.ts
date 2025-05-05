@@ -14,6 +14,7 @@ import {
   insertPropertyChargeSchema,
   insertTenantChargeSchema,
   insertPropertyOwnerSchema,
+  insertMaintenanceRecordSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1284,6 +1285,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Property owner deleted successfully" });
     } catch (error) {
       console.error(`Error deleting property owner ${req.params.id}:`, error);
+      next(error);
+    }
+  });
+
+  // Maintenance Record routes
+  app.get("/api/maintenance-records", isAuthenticated, async (req, res, next) => {
+    try {
+      const records = await storage.getMaintenanceRecords();
+      res.json(records);
+    } catch (error) {
+      console.error("Error fetching maintenance records:", error);
+      next(error);
+    }
+  });
+
+  app.get("/api/maintenance-records/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const record = await storage.getMaintenanceRecord(id);
+
+      if (!record) {
+        return res.status(404).json({ message: "Maintenance record not found" });
+      }
+
+      res.json(record);
+    } catch (error) {
+      console.error(`Error fetching maintenance record ${req.params.id}:`, error);
+      next(error);
+    }
+  });
+
+  app.get("/api/maintenance-records/property/:propertyId", isAuthenticated, async (req, res, next) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const records = await storage.getMaintenanceRecordsByProperty(propertyId);
+      res.json(records);
+    } catch (error) {
+      console.error(`Error fetching maintenance records for property ${req.params.propertyId}:`, error);
+      next(error);
+    }
+  });
+
+  app.get("/api/maintenance-records/type/:type", isAuthenticated, async (req, res, next) => {
+    try {
+      const type = req.params.type;
+      const records = await storage.getMaintenanceRecordsByType(type);
+      res.json(records);
+    } catch (error) {
+      console.error(`Error fetching maintenance records for type ${req.params.type}:`, error);
+      next(error);
+    }
+  });
+
+  app.get("/api/maintenance-records/last-date/:propertyId/:type", isAuthenticated, async (req, res, next) => {
+    try {
+      const propertyId = parseInt(req.params.propertyId);
+      const type = req.params.type;
+      const lastDate = await storage.getLastMaintenanceDate(propertyId, type);
+      res.json({ lastMaintenanceDate: lastDate });
+    } catch (error) {
+      console.error(`Error fetching last maintenance date:`, error);
+      next(error);
+    }
+  });
+
+  app.post("/api/maintenance-records", isAuthenticated, async (req, res, next) => {
+    try {
+      const recordData = insertMaintenanceRecordSchema.parse({
+        ...req.body,
+        createdBy: (req.user as any).id
+      });
+
+      const newRecord = await storage.createMaintenanceRecord(recordData);
+      res.status(201).json(newRecord);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      console.error("Error creating maintenance record:", error);
+      next(error);
+    }
+  });
+
+  app.put("/api/maintenance-records/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const recordData = insertMaintenanceRecordSchema.partial().parse(req.body);
+
+      const updatedRecord = await storage.updateMaintenanceRecord(id, recordData);
+
+      if (!updatedRecord) {
+        return res.status(404).json({ message: "Maintenance record not found" });
+      }
+
+      res.json(updatedRecord);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      console.error(`Error updating maintenance record ${req.params.id}:`, error);
+      next(error);
+    }
+  });
+
+  app.delete("/api/maintenance-records/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteMaintenanceRecord(id);
+
+      if (!success) {
+        return res.status(404).json({ message: "Maintenance record not found" });
+      }
+
+      res.json({ message: "Maintenance record deleted successfully" });
+    } catch (error) {
+      console.error(`Error deleting maintenance record ${req.params.id}:`, error);
       next(error);
     }
   });

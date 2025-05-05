@@ -19,6 +19,8 @@ import {
   InsertTenantCharge,
   PropertyOwner,
   InsertPropertyOwner,
+  MaintenanceRecord,
+  InsertMaintenanceRecord,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
@@ -153,6 +155,19 @@ export interface IStorage {
   deletePropertyOwner(id: string): Promise<boolean>;
   getPropertyOwnerLinkedFlats(ownerName: string): Promise<Property[]>;
   isPropertyOwnerLinked(id: string): Promise<boolean>;
+  
+  // Maintenance Record management
+  getMaintenanceRecord(id: number): Promise<MaintenanceRecord | undefined>;
+  getMaintenanceRecords(): Promise<MaintenanceRecord[]>;
+  getMaintenanceRecordsByProperty(propertyId: number): Promise<MaintenanceRecord[]>;
+  getMaintenanceRecordsByType(type: string): Promise<MaintenanceRecord[]>;
+  getLastMaintenanceDate(propertyId: number, type: string): Promise<Date | null>;
+  createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord>;
+  updateMaintenanceRecord(
+    id: number,
+    record: Partial<InsertMaintenanceRecord>,
+  ): Promise<MaintenanceRecord | undefined>;
+  deleteMaintenanceRecord(id: number): Promise<boolean>;
 
   // Summary/Dashboard data
   getIncomeSummary(): Promise<IncomeSummary>;

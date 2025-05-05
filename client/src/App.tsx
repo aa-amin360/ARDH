@@ -19,6 +19,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import VendorsPage from "@/pages/VendorsPage";
 import ExpensesPageNew from "@/pages/ExpensesPageNew";
 import PropertyOwnersPage from "@/pages/PropertyOwnersPage";
+import MaintenanceTrackerPage from "@/pages/MaintenanceTrackerPage";
 
 
 // Admin-only route component
@@ -73,6 +74,7 @@ function Router() {
       <ProtectedRoute path="/expenses" component={ExpensesPageNew} />
       <ProtectedRoute path="/vendors" component={VendorsPage} />
       <AdminRoute path="/property-owners" component={PropertyOwnersPage} />
+      <ProtectedRoute path="/maintenance-tracker" component={MaintenanceTrackerPage} />
 
       <AdminRoute path="/reports" component={ReportsPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />

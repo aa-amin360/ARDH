@@ -94,11 +94,9 @@ export default function Sidebar({
         },
         {
           label: "Maintenance Tracker",
-          href: "#",
+          href: "/maintenance-tracker",
           icon: <Wrench className="w-5 h-5" />,
           isVisible: true,
-          badge: "Coming Soon",
-          disabled: true,
         },
       ],
     },
