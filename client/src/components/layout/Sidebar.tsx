@@ -173,7 +173,7 @@ export default function Sidebar({
                   .filter((item) => item.isVisible)
                   .map((item) => (
                     <li key={item.href}>
-                      {item.disabled ? (
+                      {item.Disabled ? (
                         <div
                           className="flex items-center px-3 py-2 text-sm rounded-md text-gray-400 cursor-not-allowed"
                         >
