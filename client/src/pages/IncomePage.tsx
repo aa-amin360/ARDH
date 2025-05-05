@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,7 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
-import { insertIncomeSchema } from "@shared/schema";
+import { insertIncomeSchema, PropertyCharge } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 // Bulk upload component will be implemented later
 import {
@@ -53,7 +53,7 @@ const incomeFormSchema = insertIncomeSchema.extend({
   }),
   propertyId: z.coerce.number().optional(),
   expectedIncome: z.number().optional(), // Added expectedIncome field
-  difference: z.number().optional(),     // Added difference field
+  difference: z.number().optional(), // Added difference field
 });
 
 type IncomeFormValues = z.infer<typeof incomeFormSchema>;
@@ -191,15 +191,73 @@ export default function IncomePage() {
     },
   });
 
-  const [expectedIncome, setExpectedIncome] = React.useState(0);
-  const [difference, setDifference] = React.useState(0);
+  const selectedPropertyId = form.watch("propertyId");
+  const selectedIncomeType = form.watch("type");
+  const enteredAmount = form.watch("amount");
 
-  React.useEffect(() => {
+  const [expectedIncome, setExpectedIncome] = useState<number>(0);
+  const [difference, setDifference] = useState<number>(0);
+
+  const fetchExpectedCharge = async (
+    flatNumber: string,
+    incomeType: string,
+  ) => {
+    console.log("Fetching expected charge for flat:", flatNumber);
+    console.log("Fetching expected charge for type:", incomeType);
+    if (!flatNumber || !incomeType) return;
+
+    try {
+      const response = await apiRequest(
+        "GET",
+        `/api/properties/${flatNumber}/charges`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch charges: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid response format");
+      }
+      console.log("Fetched charges:", data);
+      const matched = data.find(
+        (item: any) =>
+          item.chargeType?.toLowerCase().trim() ===
+          incomeType?.toLowerCase().trim(),
+      );
+      setExpectedIncome(matched?.amount || 0);
+      console.log("Expected charge:", matched?.amount || 0);
+    } catch (error) {
+      console.error("Error fetching expected charges:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load expected charge",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    const selectedProperty = propertyOptions.find(
+      (p) => p.id === selectedPropertyId,
+    );
+
+    if (selectedProperty?.flatNumber && selectedIncomeType) {
+      fetchExpectedCharge(selectedProperty.flatNumber, selectedIncomeType);
+    }
+  }, [form.watch("propertyId"), selectedIncomeType]);
+  useEffect(() => {
+    setDifference(enteredAmount - expectedIncome);
+  }, [enteredAmount, expectedIncome]);
+  {
+    /*React.useEffect(() => {
     // Placeholder calculation - replace with actual logic
     setExpectedIncome(1000); // Replace with actual expected income calculation
-    setDifference(form.getValues("amount") - expectedIncome);
-  }, [form.getValues("amount")]);
-
+    setDifference(expectedIncome - enteredAmount);
+  }, [form.getValues("amount")]);*/
+  }
 
   function onSubmit(values: IncomeFormValues) {
     // Process the values for submission
@@ -220,9 +278,9 @@ export default function IncomePage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="view">View Income</TabsTrigger>
           <TabsTrigger value="add">Add Income</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
-          <TabsTrigger value="view">View Income</TabsTrigger>
         </TabsList>
 
         <TabsContent value="add" className="mt-4">
@@ -248,7 +306,7 @@ export default function IncomePage() {
                           <FormLabel>Expected Income (₹)</FormLabel>
                           <FormControl>
                             <Input
-                              value={expectedIncome}
+                              value={expectedIncome ?? ""}
                               type="number"
                               disabled
                               readOnly
@@ -266,7 +324,7 @@ export default function IncomePage() {
                           <FormLabel>Difference (₹)</FormLabel>
                           <FormControl>
                             <Input
-                              value={difference}
+                              value={difference ?? ""}
                               type="number"
                               disabled
                               readOnly
@@ -293,7 +351,7 @@ export default function IncomePage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="rent">Rent</SelectItem>
-                              <SelectItem value="maintenance">
+                              <SelectItem value="maint_fee">
                                 Maintenance
                               </SelectItem>
                               <SelectItem value="water_fee">

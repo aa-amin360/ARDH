@@ -19,6 +19,8 @@ import {
   InsertTenantCharge,
   PropertyOwner,
   InsertPropertyOwner,
+  MaintenanceRecord,
+  InsertMaintenanceRecord,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
