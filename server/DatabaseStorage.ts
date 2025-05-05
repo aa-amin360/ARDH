@@ -721,6 +721,39 @@ export class DatabaseStorage implements IStorage {
     `);
     return result.rows;
   }
+  
+  async getVendorsByMaintenanceType(maintenanceType: string) {
+    try {
+      console.log(`Getting vendors for maintenance type: ${maintenanceType}`);
+      
+      // First, look up the vendor type for this maintenance type (which is an expense subcategory)
+      const vendorCategoryResult = await db.execute(sql`
+        SELECT vendor_type FROM vendor_categories 
+        WHERE expense_sub_category = ${maintenanceType}
+        LIMIT 1;
+      `);
+      
+      if (vendorCategoryResult.rows.length === 0) {
+        console.log(`No vendor category found for maintenance type: ${maintenanceType}`);
+        return [];
+      }
+      
+      const vendorType = vendorCategoryResult.rows[0].vendor_type;
+      console.log(`Found vendor type ${vendorType} for maintenance type ${maintenanceType}`);
+      
+      // Then, get all vendors of that type
+      const vendorsResult = await db.execute(sql`
+        SELECT * FROM vendors 
+        WHERE service_type::text = ${vendorType}::text
+        ORDER BY name;
+      `);
+      
+      return vendorsResult.rows;
+    } catch (error) {
+      console.error(`Error getting vendors by maintenance type: ${error}`);
+      return [];
+    }
+  }
 
   // Tenant methods
   async getTenant(id: number): Promise<Tenant | undefined> {
@@ -1424,16 +1457,34 @@ export class DatabaseStorage implements IStorage {
   async getMaintenanceRecords(): Promise<MaintenanceRecord[]> {
     try {
       console.log("Getting all maintenance records");
-      // Use raw SQL to avoid column name issues
+      // Use raw SQL to avoid column name issues and join with properties and vendors
       const records = await db.execute(sql`
-        SELECT * FROM maintenance_records
-        ORDER BY date DESC
+        SELECT 
+          mr.id,
+          mr.propertyid as "propertyId",
+          p.flat_number as "flatNumber",
+          mr.date as "maintenanceDate", 
+          mr.maintenance_type as "maintenanceType",
+          mr.vendorid as "vendorId",
+          COALESCE(v.name, '') as "vendorName",
+          mr.description,
+          mr.created_by as "createdBy",
+          mr.created_at as "createdAt",
+          mr.modified_at as "modifiedAt"
+        FROM 
+          maintenance_records mr
+        LEFT JOIN
+          properties p ON mr.propertyid = p.id
+        LEFT JOIN
+          vendors v ON mr.vendorid = v.id
+        ORDER BY 
+          mr.date DESC
       `);
       console.log(`Retrieved ${records.rows.length} maintenance records`);
-      return records.rows;
+      return records.rows as any[];
     } catch (error) {
       console.error(`Error fetching maintenance records: ${error}`);
-      throw error;
+      return [];
     }
   }
 
@@ -1441,14 +1492,33 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Getting maintenance records for property ID: ${propertyId}`);
       const records = await db.execute(sql`
-        SELECT * FROM maintenance_records
-        WHERE propertyid = ${propertyId}
-        ORDER BY date DESC
+        SELECT 
+          mr.id,
+          mr.propertyid as "propertyId",
+          p.flat_number as "flatNumber",
+          mr.date as "maintenanceDate", 
+          mr.maintenance_type as "maintenanceType",
+          mr.vendorid as "vendorId",
+          COALESCE(v.name, '') as "vendorName",
+          mr.description,
+          mr.created_by as "createdBy",
+          mr.created_at as "createdAt",
+          mr.modified_at as "modifiedAt"
+        FROM 
+          maintenance_records mr
+        LEFT JOIN
+          properties p ON mr.propertyid = p.id
+        LEFT JOIN
+          vendors v ON mr.vendorid = v.id
+        WHERE 
+          mr.propertyid = ${propertyId}
+        ORDER BY 
+          mr.date DESC
       `);
-      return records.rows;
+      return records.rows as any[];
     } catch (error) {
       console.error(`Error fetching maintenance records for property: ${error}`);
-      throw error;
+      return [];
     }
   }
 
@@ -1456,14 +1526,33 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Getting maintenance records for type: ${type}`);
       const records = await db.execute(sql`
-        SELECT * FROM maintenance_records
-        WHERE maintenance_type = ${type}
-        ORDER BY date DESC
+        SELECT 
+          mr.id,
+          mr.propertyid as "propertyId",
+          p.flat_number as "flatNumber",
+          mr.date as "maintenanceDate", 
+          mr.maintenance_type as "maintenanceType",
+          mr.vendorid as "vendorId",
+          COALESCE(v.name, '') as "vendorName",
+          mr.description,
+          mr.created_by as "createdBy",
+          mr.created_at as "createdAt",
+          mr.modified_at as "modifiedAt"
+        FROM 
+          maintenance_records mr
+        LEFT JOIN
+          properties p ON mr.propertyid = p.id
+        LEFT JOIN
+          vendors v ON mr.vendorid = v.id
+        WHERE 
+          mr.maintenance_type = ${type}
+        ORDER BY 
+          mr.date DESC
       `);
-      return records.rows;
+      return records.rows as any[];
     } catch (error) {
       console.error(`Error fetching maintenance records by type: ${error}`);
-      throw error;
+      return [];
     }
   }
 

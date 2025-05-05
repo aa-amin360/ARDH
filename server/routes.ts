@@ -359,6 +359,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+  
+  // Get maintenance types (from expense subcategories where category is "General Maintenance Works")
+  app.get(
+    "/api/maintenance-types",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const maintenanceTypes = await storage.getMaintenanceTypes();
+        res.json(maintenanceTypes);
+      } catch (error) {
+        console.error("Error fetching maintenance types:", error);
+        next(error);
+      }
+    },
+  );
 
   // Vendor endpoints
   app.get(
@@ -737,6 +752,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const vendors = await storage.getVendorsByServiceType(serviceType);
         res.json(vendors);
       } catch (error) {
+        next(error);
+      }
+    },
+  );
+  
+  // Get vendors by maintenance type (which is an expense subcategory)
+  app.get(
+    "/api/vendors/by-maintenance-type/:maintenanceType",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const maintenanceType = req.params.maintenanceType;
+        console.log(`Getting vendors for maintenance type: ${maintenanceType}`);
+        const vendors = await storage.getVendorsByMaintenanceType(maintenanceType);
+        res.json(vendors);
+      } catch (error) {
+        console.error("Error fetching vendors by maintenance type:", error);
         next(error);
       }
     },
