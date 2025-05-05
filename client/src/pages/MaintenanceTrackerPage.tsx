@@ -107,8 +107,8 @@ export default function MaintenanceTrackerPage() {
   const [activeTab, setActiveTab] = useState("view");
   const [selectedRecord, setSelectedRecord] =
     useState<MaintenanceRecord | null>(null);
-  const [filterProperty, setFilterProperty] = useState<string>("");
-  const [filterType, setFilterType] = useState<string>("");
+  const [filterProperty, setFilterProperty] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<number | null>(null);
   const [lastMaintenanceDate, setLastMaintenanceDate] = useState<Date | null>(
@@ -358,17 +358,17 @@ export default function MaintenanceTrackerPage() {
 
   // Reset filters
   const resetFilters = () => {
-    setFilterProperty("");
-    setFilterType("");
+    setFilterProperty("all");
+    setFilterType("all");
   };
 
   // Filter records based on selected filters
   const filteredRecords = maintenanceRecords?.filter((record) => {
     let matches = true;
-    if (filterProperty && record.propertyId.toString() !== filterProperty) {
+    if (filterProperty && filterProperty !== "all" && record.propertyId.toString() !== filterProperty) {
       matches = false;
     }
-    if (filterType && record.maintenanceType !== filterType) {
+    if (filterType && filterType !== "all" && record.maintenanceType !== filterType) {
       matches = false;
     }
     return matches;
@@ -401,8 +401,8 @@ export default function MaintenanceTrackerPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="view">View Records</TabsTrigger>
           <TabsTrigger value="add">Add Record</TabsTrigger>
+          <TabsTrigger value="view">View Records</TabsTrigger>
           <TabsTrigger value="modify" disabled={!selectedRecord}>
             Modify Record
           </TabsTrigger>
@@ -429,7 +429,7 @@ export default function MaintenanceTrackerPage() {
                       <SelectValue placeholder="All Properties" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Properties</SelectItem>
+                      <SelectItem value="all">All Properties</SelectItem>
                       {properties?.map((property) => (
                         <SelectItem
                           key={property.id}
@@ -449,7 +449,7 @@ export default function MaintenanceTrackerPage() {
                       <SelectValue placeholder="All Types" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="all">All Types</SelectItem>
                       {maintenanceTypes.map((type) => (
                         <SelectItem key={type} value={type}>
                           {type}
@@ -495,18 +495,13 @@ export default function MaintenanceTrackerPage() {
                       );
                       return (
                         <TableRow key={record.id}>
-                          <TableCell>
-                            {property?.flatNumber || "N/A"}
-                          </TableCell>
+                          <TableCell>{property?.flatNumber || "N/A"}</TableCell>
                           <TableCell>{record.maintenanceType}</TableCell>
                           <TableCell>
                             {format(new Date(record.date), "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell>
-                            {format(
-                              new Date(record.date),
-                              "dd/MM/yyyy",
-                            )}
+                            {format(new Date(record.date), "dd/MM/yyyy")}
                           </TableCell>
                           <TableCell>{record.vendorId}</TableCell>
                           <TableCell className="max-w-[200px] truncate">
@@ -611,8 +606,7 @@ export default function MaintenanceTrackerPage() {
                         <Select
                           onValueChange={(value) => {
                             field.onChange(value);
-                            const propertyId =
-                              addForm.getValues("propertyId");
+                            const propertyId = addForm.getValues("propertyId");
                             if (propertyId) {
                               handlePropertyChange(
                                 propertyId.toString(),
@@ -685,10 +679,7 @@ export default function MaintenanceTrackerPage() {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent
-                            className="w-auto p-0"
-                            align="start"
-                          >
+                          <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
                               selected={field.value}
@@ -732,10 +723,7 @@ export default function MaintenanceTrackerPage() {
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent
-                            className="w-auto p-0"
-                            align="start"
-                          >
+                          <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
                               selected={field.value}
@@ -760,7 +748,10 @@ export default function MaintenanceTrackerPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Vendor</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a vendor" />
@@ -881,24 +872,21 @@ export default function MaintenanceTrackerPage() {
                         disabled
                       />
                       <p className="text-sm text-muted-foreground">
-                        Property cannot be changed. Create a new record
-                        instead.
+                        Property cannot be changed. Create a new record instead.
                       </p>
                     </div>
 
                     {/* Maintenance Type - Read Only */}
                     <div className="flex flex-col space-y-1.5">
-                      <Label htmlFor="maintenanceType">
-                        Maintenance Type
-                      </Label>
+                      <Label htmlFor="maintenanceType">Maintenance Type</Label>
                       <Input
                         id="maintenanceType"
                         value={selectedRecord.maintenanceType}
                         disabled
                       />
                       <p className="text-sm text-muted-foreground">
-                        Maintenance type cannot be changed. Create a new
-                        record instead.
+                        Maintenance type cannot be changed. Create a new record
+                        instead.
                       </p>
                     </div>
 
@@ -1067,8 +1055,8 @@ export default function MaintenanceTrackerPage() {
                             />
                           </FormControl>
                           <FormDescription>
-                            Link to an expense record if this maintenance has
-                            an associated expense.
+                            Link to an expense record if this maintenance has an
+                            associated expense.
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
