@@ -316,15 +316,17 @@ export default function MaintenanceTrackerPage() {
   };
 
   // Handle submission of the add form
-  const onAddSubmit = (data: z.infer<typeof maintenanceFormSchema>) => {
-    createMutation.mutate({
+  const onAddSubmit = async (data: z.infer<typeof maintenanceFormSchema>) => {
+    const formattedData = {
       propertyId: Number(data.propertyId),
       maintenanceType: data.maintenanceType,
       date: format(data.date, "yyyy-MM-dd"),
       maintenanceDate: format(data.maintenanceDate, "yyyy-MM-dd"),
-      vendor: data.vendorId,
+      vendorId: data.vendorId,
       description: data.description,
-    });
+      createdBy: 1, // Placeholder, should be replaced with actual user ID
+    };
+    createMutation.mutate(formattedData);
   };
 
   // Handle submission of the edit form
