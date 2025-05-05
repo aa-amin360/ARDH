@@ -1455,12 +1455,12 @@ export class DatabaseStorage implements IStorage {
   async getMaintenanceRecordsByType(type: string): Promise<MaintenanceRecord[]> {
     try {
       console.log(`Getting maintenance records for type: ${type}`);
-      const records = await db
-        .select()
-        .from(maintenanceRecords)
-        .where(eq(maintenanceRecords.maintenanceType, type))
-        .orderBy(desc(maintenanceRecords.date));
-      return records;
+      const records = await db.execute(sql`
+        SELECT * FROM maintenance_records
+        WHERE maintenance_type = ${type}
+        ORDER BY date DESC
+      `);
+      return records.rows;
     } catch (error) {
       console.error(`Error fetching maintenance records by type: ${error}`);
       throw error;
@@ -1470,19 +1470,19 @@ export class DatabaseStorage implements IStorage {
   async getLastMaintenanceDate(propertyId: number, type: string): Promise<Date | null> {
     try {
       console.log(`Getting last maintenance date for property ID: ${propertyId} and type: ${type}`);
-      const [record] = await db
-        .select()
-        .from(maintenanceRecords)
-        .where(
-          and(
-            eq(maintenanceRecords.propertyId, propertyId),
-            eq(maintenanceRecords.maintenanceType, type)
-          )
-        )
-        .orderBy(desc(maintenanceRecords.date))
-        .limit(1);
+      const result = await db.execute(sql`
+        SELECT date FROM maintenance_records
+        WHERE propertyid = ${propertyId}
+        AND maintenance_type = ${type}
+        ORDER BY date DESC
+        LIMIT 1
+      `);
       
-      return record ? record.date : null;
+      if (result.rows.length > 0) {
+        // Parse the date string into a Date object
+        return new Date(result.rows[0].date);
+      }
+      return null;
     } catch (error) {
       console.error(`Error fetching last maintenance date: ${error}`);
       throw error;
@@ -1492,17 +1492,38 @@ export class DatabaseStorage implements IStorage {
   async createMaintenanceRecord(record: InsertMaintenanceRecord): Promise<MaintenanceRecord> {
     try {
       console.log("Creating new maintenance record:", record);
-      const now = new Date();
-      const [newRecord] = await db
-        .insert(maintenanceRecords)
-        .values({
-          ...record,
-          createdAt: now,
-          modifiedAt: now
-        })
-        .returning();
+      const now = new Date().toISOString();
       
-      return newRecord;
+      // Format the date if it's a Date object
+      const formattedDate = record.date instanceof Date ? 
+        record.date.toISOString() : record.date;
+      
+      const result = await db.execute(sql`
+        INSERT INTO maintenance_records (
+          date, 
+          flat_number, 
+          propertyid, 
+          maintenance_type, 
+          description, 
+          vendorid,
+          created_by,
+          created_at,
+          modified_at
+        ) VALUES (
+          ${formattedDate},
+          ${record.flatNumber},
+          ${record.propertyId},
+          ${record.maintenanceType},
+          ${record.description},
+          ${record.vendorId},
+          ${record.createdBy},
+          ${now},
+          ${now}
+        )
+        RETURNING *
+      `);
+      
+      return result.rows[0];
     } catch (error) {
       console.error(`Error creating maintenance record: ${error}`);
       throw error;
@@ -1516,16 +1537,69 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Updating maintenance record with ID: ${id}`, updates);
       
-      const [updatedRecord] = await db
-        .update(maintenanceRecords)
-        .set({
-          ...updates,
-          modifiedAt: new Date()
-        })
-        .where(eq(maintenanceRecords.id, id))
-        .returning();
+      // Create SQL SET parts dynamically based on the updates provided
+      const sets: string[] = [];
+      const values: any[] = [id]; // First parameter is always the ID
+      let paramIndex = 2; // Start parameter index from 2 (after id)
       
-      return updatedRecord;
+      // Add modified_at by default
+      const now = new Date().toISOString();
+      sets.push(`modified_at = '${now}'`);
+      
+      if (updates.date) {
+        const formattedDate = updates.date instanceof Date ?
+          updates.date.toISOString() : updates.date;
+        sets.push(`date = $${paramIndex}`);
+        values.push(formattedDate);
+        paramIndex++;
+      }
+      
+      if (updates.flatNumber) {
+        sets.push(`flat_number = $${paramIndex}`);
+        values.push(updates.flatNumber);
+        paramIndex++;
+      }
+      
+      if (updates.propertyId) {
+        sets.push(`propertyid = $${paramIndex}`);
+        values.push(updates.propertyId);
+        paramIndex++;
+      }
+      
+      if (updates.maintenanceType) {
+        sets.push(`maintenance_type = $${paramIndex}`);
+        values.push(updates.maintenanceType);
+        paramIndex++;
+      }
+      
+      if (updates.description !== undefined) {
+        sets.push(`description = $${paramIndex}`);
+        values.push(updates.description);
+        paramIndex++;
+      }
+      
+      if (updates.vendorId !== undefined) {
+        sets.push(`vendorid = $${paramIndex}`);
+        values.push(updates.vendorId);
+        paramIndex++;
+      }
+      
+      // Build and execute the SQL
+      const setClause = sets.join(', ');
+      const updateSql = `
+        UPDATE maintenance_records 
+        SET ${setClause}
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const result = await db.execute(sql.raw(updateSql, ...values));
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      return result.rows[0];
     } catch (error) {
       console.error(`Error updating maintenance record: ${error}`);
       throw error;
@@ -1535,7 +1609,10 @@ export class DatabaseStorage implements IStorage {
   async deleteMaintenanceRecord(id: number): Promise<boolean> {
     try {
       console.log(`Deleting maintenance record with ID: ${id}`);
-      await db.delete(maintenanceRecords).where(eq(maintenanceRecords.id, id));
+      await db.execute(sql`
+        DELETE FROM maintenance_records
+        WHERE id = ${id}
+      `);
       return true;
     } catch (error) {
       console.error(`Error deleting maintenance record: ${error}`);
