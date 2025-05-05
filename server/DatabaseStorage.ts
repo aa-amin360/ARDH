@@ -696,12 +696,21 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getMaintenanceTypes() {
-    const result = await db.execute(sql`
-      SELECT DISTINCT expense_sub_category FROM expense_categories 
-      WHERE expense_category = 'General Maintenance Works'
-      ORDER BY expense_sub_category;
-    `);
-    return result.rows;
+    try {
+      console.log("Getting maintenance types from expense subcategories");
+      const result = await db.execute(sql`
+        SELECT DISTINCT expense_sub_category FROM expense_categories 
+        WHERE expense_category = 'General Maintenance Works'
+        ORDER BY expense_sub_category;
+      `);
+      console.log(`Found ${result.rows.length} maintenance types`);
+      
+      // Map the result to return just the strings, not objects
+      return result.rows.map(row => row.expense_sub_category);
+    } catch (error) {
+      console.error(`Error getting maintenance types: ${error}`);
+      return [];
+    }
   }
 
   async getDistinctVendorServiceTypes() {
