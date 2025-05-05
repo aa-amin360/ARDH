@@ -694,6 +694,15 @@ export class DatabaseStorage implements IStorage {
     `);
     return result.rows;
   }
+  
+  async getMaintenanceTypes() {
+    const result = await db.execute(sql`
+      SELECT DISTINCT expense_sub_category FROM expense_categories 
+      WHERE expense_category = 'General Maintenance Works'
+      ORDER BY expense_sub_category;
+    `);
+    return result.rows;
+  }
 
   async getDistinctVendorServiceTypes() {
     const result = await db.execute(sql`
@@ -1415,12 +1424,13 @@ export class DatabaseStorage implements IStorage {
   async getMaintenanceRecords(): Promise<MaintenanceRecord[]> {
     try {
       console.log("Getting all maintenance records");
-      const records = await db
-        .select()
-        .from(maintenanceRecords)
-        .orderBy(desc(maintenanceRecords.date));
-      console.log(`Retrieved ${records.length} maintenance records`);
-      return records;
+      // Use raw SQL to avoid column name issues
+      const records = await db.execute(sql`
+        SELECT * FROM maintenance_records
+        ORDER BY date DESC
+      `);
+      console.log(`Retrieved ${records.rows.length} maintenance records`);
+      return records.rows;
     } catch (error) {
       console.error(`Error fetching maintenance records: ${error}`);
       throw error;
@@ -1430,12 +1440,12 @@ export class DatabaseStorage implements IStorage {
   async getMaintenanceRecordsByProperty(propertyId: number): Promise<MaintenanceRecord[]> {
     try {
       console.log(`Getting maintenance records for property ID: ${propertyId}`);
-      const records = await db
-        .select()
-        .from(maintenanceRecords)
-        .where(eq(maintenanceRecords.propertyId, propertyId))
-        .orderBy(desc(maintenanceRecords.date));
-      return records;
+      const records = await db.execute(sql`
+        SELECT * FROM maintenance_records
+        WHERE propertyid = ${propertyId}
+        ORDER BY date DESC
+      `);
+      return records.rows;
     } catch (error) {
       console.error(`Error fetching maintenance records for property: ${error}`);
       throw error;
