@@ -189,12 +189,25 @@ export default function MaintenanceTrackerPage() {
         data,
       );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to create maintenance record",
-        );
+        try {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Failed to create maintenance record"
+          );
+        } catch (jsonError) {
+          // If JSON parsing fails
+          throw new Error(`Failed to create maintenance record: ${response.statusText}`);
+        }
       }
-      return await response.json();
+      
+      try {
+        // Try to parse the response body, but don't require it
+        return await response.json();
+      } catch (err) {
+        // If there's no JSON or empty response, still consider it a success
+        console.log("No JSON response, but request was successful");
+        return { success: true };
+      }
     },
     onSuccess: () => {
       toast({
@@ -222,12 +235,25 @@ export default function MaintenanceTrackerPage() {
         data,
       );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to update maintenance record",
-        );
+        try {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Failed to update maintenance record"
+          );
+        } catch (jsonError) {
+          // If JSON parsing fails
+          throw new Error(`Failed to update maintenance record: ${response.statusText}`);
+        }
       }
-      return await response.json();
+      
+      try {
+        // Try to parse the response body, but don't require it
+        return await response.json();
+      } catch (err) {
+        // If there's no JSON or empty response, still consider it a success
+        console.log("No JSON response, but update request was successful");
+        return { success: true };
+      }
     },
     onSuccess: () => {
       toast({
@@ -255,12 +281,25 @@ export default function MaintenanceTrackerPage() {
         `/api/maintenance-records/${id}`,
       );
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to delete maintenance record",
-        );
+        try {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || "Failed to delete maintenance record"
+          );
+        } catch (jsonError) {
+          // If JSON parsing fails
+          throw new Error(`Failed to delete maintenance record: ${response.statusText}`);
+        }
       }
-      return await response.json();
+      
+      try {
+        // Try to parse the response body, but don't require it
+        return await response.json();
+      } catch (err) {
+        // If there's no JSON or empty response, still consider it a success
+        console.log("No JSON response, but delete request was successful");
+        return { success: true };
+      }
     },
     onSuccess: () => {
       toast({
