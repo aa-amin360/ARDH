@@ -323,35 +323,75 @@ export default function MaintenanceTrackerPage() {
 
   // Handle submission of the add form
   const onAddSubmit = async (data: z.infer<typeof maintenanceFormSchema>) => {
-    // Match the field names with the database column names
-    const formattedData = {
-      propertyId: Number(data.propertyId),
-      maintenanceType: data.maintenanceType,
-      maintenanceDate: format(data.maintDate, "yyyy-MM-dd"), // Changed field name to match DB
-      vendorId: data.vendorId ? Number(data.vendorId) : null,
-      description: data.description || "",
-      createdBy: 1, // Will be replaced with actual user ID from auth
-      flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || ""
-    };
-    console.log("Formatted data for maintenance record:", formattedData);
-    createMutation.mutate(formattedData);
+    console.log("onAddSubmit triggered with data:", data);
+    
+    // Check if data is valid
+    if (!data.propertyId || !data.maintenanceType) {
+      console.error("Missing required fields:", { 
+        propertyId: data.propertyId, 
+        maintenanceType: data.maintenanceType 
+      });
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      // Match the field names with the database column names
+      const formattedData = {
+        propertyId: Number(data.propertyId),
+        maintenanceType: data.maintenanceType,
+        date: format(data.maintDate, "yyyy-MM-dd"), // Using the field name that matches the DB
+        vendorId: data.vendorId ? Number(data.vendorId) : null,
+        description: data.description || "",
+        createdBy: 1, // Will be replaced with actual user ID from auth
+        flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || ""
+      };
+      console.log("Formatted data for maintenance record:", formattedData);
+      createMutation.mutate(formattedData);
+    } catch (error) {
+      console.error("Error in onAddSubmit:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while submitting the form",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle submission of the edit form
   const onEditSubmit = (data: z.infer<typeof maintenanceFormSchema>) => {
     if (!selectedRecord) return;
 
-    // Match the field names with the database column names
-    updateMutation.mutate({
-      id: selectedRecord.id,
-      data: {
+    console.log("Edit form submission triggered with data:", data);
+
+    try {
+      // Match the field names with the database column names
+      const formattedData = {
         maintenanceType: data.maintenanceType,
-        maintenanceDate: format(data.maintDate, "yyyy-MM-dd"), // Changed field name to match DB
+        date: format(data.maintDate, "yyyy-MM-dd"), // Using the field name that matches the DB
         vendorId: data.vendorId ? Number(data.vendorId) : null,
         description: data.description || "",
         flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || selectedRecord.flatNumber
-      },
-    });
+      };
+      
+      console.log("Formatted edit data:", formattedData);
+      
+      updateMutation.mutate({
+        id: selectedRecord.id,
+        data: formattedData,
+      });
+    } catch (error) {
+      console.error("Error in onEditSubmit:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while updating the record",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle edit record button click
@@ -783,6 +823,11 @@ export default function MaintenanceTrackerPage() {
                     type="submit"
                     disabled={createMutation.isPending}
                     className="w-full md:w-auto"
+                    onClick={() => {
+                      console.log("Submit button clicked");
+                      console.log("Form state:", addForm.getValues());
+                      console.log("Form errors:", addForm.formState.errors);
+                    }}
                   >
                     {createMutation.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
