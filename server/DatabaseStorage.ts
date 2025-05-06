@@ -1645,16 +1645,34 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Updating maintenance record with ID: ${id}`, updates);
 
+      // Build the update object with only defined fields
+      const updateData: any = {
+        modifiedAt: new Date()
+      };
+      
+      if (updates.date !== undefined) {
+        updateData.date = updates.date;
+      }
+      
+      if (updates.flatNumber !== undefined) {
+        updateData.flatNumber = updates.flatNumber;
+      }
+      
+      if (updates.maintenanceType !== undefined) {
+        updateData.maintenanceType = updates.maintenanceType;
+      }
+      
+      if (updates.description !== undefined) {
+        updateData.description = updates.description;
+      }
+      
+      if (updates.vendorId !== undefined) {
+        updateData.vendorId = updates.vendorId;
+      }
+
       // Use Drizzle's SQL builder for safety
       const result = await db.update(maintenanceRecords)
-        .set({
-          modifiedAt: new Date(),
-          date: updates.date ? new Date(updates.date) : undefined,
-          flatNumber: updates.flatNumber,
-          maintenanceType: updates.maintenanceType,
-          description: updates.description,
-          vendorId: updates.vendorId,
-        })
+        .set(updateData)
         .where(eq(maintenanceRecords.id, id))
         .returning();
 

@@ -343,7 +343,7 @@ export default function MaintenanceTrackerPage() {
       propertyId: undefined,
       maintenanceType: "",
       maintDate: new Date(),
-      vendorId: null,
+      vendorId: "",
       description: "",
     },
   });
@@ -458,8 +458,8 @@ export default function MaintenanceTrackerPage() {
       propertyId: record.propertyId,
       maintenanceType: record.maintenanceType,
       maintDate: new Date(record.date),
-      vendorId: record.vendorId,
-      description: record.description,
+      vendorId: record.vendorId ? record.vendorId.toString() : "",
+      description: record.description || "",
     });
     setActiveTab("modify");
   };
@@ -629,7 +629,11 @@ export default function MaintenanceTrackerPage() {
                           <TableCell>
                             {format(new Date(record.date), "dd/MM/yyyy")}
                           </TableCell>
-                          <TableCell>{record.vendorId}</TableCell>
+                          <TableCell>
+                            {record.vendorId 
+                              ? vendors?.find(v => v.id === record.vendorId)?.name || `Vendor ID: ${record.vendorId}` 
+                              : 'N/A'}
+                          </TableCell>
                           <TableCell className="max-w-[200px] truncate">
                             {record.description}
                           </TableCell>
