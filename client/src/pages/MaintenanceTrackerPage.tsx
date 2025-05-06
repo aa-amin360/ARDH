@@ -81,10 +81,7 @@ import {
 
 // Create a form schema with Zod that extends the insertMaintenanceRecordSchema
 const maintenanceFormSchema = insertMaintenanceRecordSchema.extend({
-  date: z.coerce.date({
-    required_error: "A maintenance date is required",
-  }),
-  maintenanceDate: z.coerce.date({
+  maintDate: z.coerce.date({
     required_error: "A maintenance date is required",
   }),
 });
@@ -167,6 +164,7 @@ export default function MaintenanceTrackerPage() {
   // Mutation for creating a maintenance record
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
+      console.log("Data to be sent:", data);
       const response = await apiRequest(
         "POST",
         "/api/maintenance-records",
@@ -269,8 +267,7 @@ export default function MaintenanceTrackerPage() {
     defaultValues: {
       propertyId: undefined,
       maintenanceType: "",
-      date: new Date(),
-      maintenanceDate: new Date(),
+      maintDate: new Date(),
       vendorId: null,
       description: "",
     },
@@ -282,8 +279,7 @@ export default function MaintenanceTrackerPage() {
     defaultValues: {
       propertyId: undefined,
       maintenanceType: "",
-      date: new Date(),
-      maintenanceDate: new Date(),
+      maintDate: new Date(),
       vendorId: null,
       description: "",
     },
@@ -317,15 +313,17 @@ export default function MaintenanceTrackerPage() {
 
   // Handle submission of the add form
   const onAddSubmit = async (data: z.infer<typeof maintenanceFormSchema>) => {
+    // Match the field names with the database column names
     const formattedData = {
       propertyId: Number(data.propertyId),
       maintenanceType: data.maintenanceType,
-      date: format(data.date, "yyyy-MM-dd"),
-      maintenanceDate: format(data.maintenanceDate, "yyyy-MM-dd"),
-      vendorId: data.vendorId,
-      description: data.description,
-      createdBy: 1, // Placeholder, should be replaced with actual user ID
+      maintenanceDate: format(data.maintDate, "yyyy-MM-dd"), // Changed field name to match DB
+      vendorId: data.vendorId ? Number(data.vendorId) : null,
+      description: data.description || "",
+      createdBy: 1, // Will be replaced with actual user ID from auth
+      flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || ""
     };
+    console.log("Formatted data for maintenance record:", formattedData);
     createMutation.mutate(formattedData);
   };
 
@@ -333,14 +331,15 @@ export default function MaintenanceTrackerPage() {
   const onEditSubmit = (data: z.infer<typeof maintenanceFormSchema>) => {
     if (!selectedRecord) return;
 
+    // Match the field names with the database column names
     updateMutation.mutate({
       id: selectedRecord.id,
       data: {
         maintenanceType: data.maintenanceType,
-        date: format(data.date, "yyyy-MM-dd"),
-        maintenanceDate: format(data.maintenanceDate, "yyyy-MM-dd"),
-        vendor: data.vendorId,
-        description: data.description,
+        maintenanceDate: format(data.maintDate, "yyyy-MM-dd"), // Changed field name to match DB
+        vendorId: data.vendorId ? Number(data.vendorId) : null,
+        description: data.description || "",
+        flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || selectedRecord.flatNumber
       },
     });
   };
@@ -351,8 +350,7 @@ export default function MaintenanceTrackerPage() {
     editForm.reset({
       propertyId: record.propertyId,
       maintenanceType: record.maintenanceType,
-      date: new Date(record.date),
-      maintenanceDate: new Date(record.date),
+      maintDate: new Date(record.date),
       vendorId: record.vendorId,
       description: record.description,
     });
@@ -585,7 +583,7 @@ export default function MaintenanceTrackerPage() {
                       name="propertyId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Property</FormLabel>
+                          <FormLabel>Property/Entity</FormLabel>
                           <Select
                             onValueChange={(value) => {
                               field.onChange(Number(value));
@@ -599,7 +597,7 @@ export default function MaintenanceTrackerPage() {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a property" />
+                                <SelectValue placeholder="Select area" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -675,7 +673,7 @@ export default function MaintenanceTrackerPage() {
                     {/* Maintenance Date */}
                     <FormField
                       control={addForm.control}
-                      name="maintenanceDate"
+                      name="maintDate"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Maintenance Date</FormLabel>
@@ -753,7 +751,6 @@ export default function MaintenanceTrackerPage() {
                       )}
                     />{" "}
                   </div>
-
                   {/* Description */}
                   <FormField
                     control={addForm.control}
@@ -771,25 +768,19 @@ export default function MaintenanceTrackerPage() {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={createMutation.isPending}
-                    >
-                      {createMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating Record...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create Maintenance Record
-                        </>
-                      )}
-                    </Button>
-                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={createMutation.isPending}
+                    className="w-full md:w-auto"
+                  >
+                    {createMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
+                    )}
+                    Add Maintenance Record
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -843,7 +834,7 @@ export default function MaintenanceTrackerPage() {
                       {/* Maintenance Date */}
                       <FormField
                         control={editForm.control}
-                        name="maintenanceDate"
+                        name="maintDate"
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Maintenance Date</FormLabel>

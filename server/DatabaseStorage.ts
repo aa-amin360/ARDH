@@ -1633,9 +1633,7 @@ export class DatabaseStorage implements IStorage {
           ${record.createdBy},
           ${now},
           ${now}
-        )
-        RETURNING *
-      `);
+        )`);
 
       return result.rows[0];
     } catch (error) {
