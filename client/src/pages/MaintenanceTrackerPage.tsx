@@ -819,14 +819,33 @@ export default function MaintenanceTrackerPage() {
                     )}
                   />
 
+                  {/* Submit button inside form */}
                   <Button
-                    type="submit"
+                    type="button" 
                     disabled={createMutation.isPending}
                     className="w-full md:w-auto"
                     onClick={() => {
-                      console.log("Submit button clicked");
-                      console.log("Form state:", addForm.getValues());
-                      console.log("Form errors:", addForm.formState.errors);
+                      console.log("Manual submit button clicked");
+                      const formValues = addForm.getValues();
+                      console.log("Form state:", formValues);
+                      
+                      // Manually validate the form
+                      addForm.trigger().then(isValid => {
+                        console.log("Form validation result:", isValid);
+                        console.log("Form errors:", addForm.formState.errors);
+                        
+                        if (isValid) {
+                          console.log("Form is valid, calling onAddSubmit");
+                          onAddSubmit(formValues);
+                        } else {
+                          console.log("Form is not valid");
+                          toast({
+                            title: "Validation Error",
+                            description: "Please fill in all required fields correctly",
+                            variant: "destructive",
+                          });
+                        }
+                      });
                     }}
                   >
                     {createMutation.isPending ? (
