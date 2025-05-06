@@ -79,11 +79,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Create a form schema with Zod that extends the insertMaintenanceRecordSchema
-const maintenanceFormSchema = insertMaintenanceRecordSchema.extend({
+// Create a form schema with Zod that matches only what we need
+const maintenanceFormSchema = z.object({
+  propertyId: z.number({
+    required_error: "Property is required",
+  }),
+  maintenanceType: z.string({
+    required_error: "Maintenance type is required",
+  }),
   maintDate: z.coerce.date({
     required_error: "A maintenance date is required",
   }),
+  vendorId: z.string().optional(),
+  description: z.string().optional(),
 });
 
 // Define maintenance types
@@ -278,7 +286,7 @@ export default function MaintenanceTrackerPage() {
       propertyId: undefined,
       maintenanceType: "",
       maintDate: new Date(),
-      vendorId: null,
+      vendorId: "",
       description: "",
     },
   });
