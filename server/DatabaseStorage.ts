@@ -1645,71 +1645,24 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Updating maintenance record with ID: ${id}`, updates);
 
-      // Create SQL SET parts dynamically based on the updates provided
-      const sets: string[] = [];
-      const values: any[] = [id]; // First parameter is always the ID
-      let paramIndex = 2; // Start parameter index from 2 (after id)
+      // Use Drizzle's SQL builder for safety
+      const result = await db.update(maintenanceRecords)
+        .set({
+          modifiedAt: new Date(),
+          date: updates.date ? new Date(updates.date) : undefined,
+          flatNumber: updates.flatNumber,
+          maintenanceType: updates.maintenanceType,
+          description: updates.description,
+          vendorId: updates.vendorId,
+        })
+        .where(eq(maintenanceRecords.id, id))
+        .returning();
 
-      // Add modified_at by default
-      const now = new Date().toISOString();
-      sets.push(`modifiedat = '${now}'`);
-
-      if (updates.date) {
-        const formattedDate =
-          updates.date instanceof Date
-            ? updates.date.toISOString()
-            : updates.date;
-        sets.push(`date = $${paramIndex}`);
-        values.push(formattedDate);
-        paramIndex++;
-      }
-
-      if (updates.flatNumber) {
-        sets.push(`flatnumber = $${paramIndex}`);
-        values.push(updates.flatNumber);
-        paramIndex++;
-      }
-
-      if (updates.propertyId) {
-        sets.push(`propertyid = $${paramIndex}`);
-        values.push(updates.propertyId);
-        paramIndex++;
-      }
-
-      if (updates.maintenanceType) {
-        sets.push(`maintenancetype = $${paramIndex}`);
-        values.push(updates.maintenanceType);
-        paramIndex++;
-      }
-
-      if (updates.description !== undefined) {
-        sets.push(`description = $${paramIndex}`);
-        values.push(updates.description);
-        paramIndex++;
-      }
-
-      if (updates.vendorId !== undefined) {
-        sets.push(`vendorid = $${paramIndex}`);
-        values.push(updates.vendorId);
-        paramIndex++;
-      }
-
-      // Build and execute the SQL
-      const setClause = sets.join(", ");
-      const updateSql = `
-        UPDATE maintenance_records 
-        SET ${setClause}
-        WHERE id = $1
-        RETURNING *
-      `;
-
-      const result = await db.execute(sql.raw(updateSql, ...values));
-
-      if (result.rows.length === 0) {
+      if (result.length === 0) {
         return undefined;
       }
 
-      return result.rows[0];
+      return result[0];
     } catch (error) {
       console.error(`Error updating maintenance record: ${error}`);
       throw error;
@@ -1719,11 +1672,13 @@ export class DatabaseStorage implements IStorage {
   async deleteMaintenanceRecord(id: number): Promise<boolean> {
     try {
       console.log(`Deleting maintenance record with ID: ${id}`);
-      await db.execute(sql`
-        DELETE FROM maintenance_records
-        WHERE id = ${id}
-      `);
-      return true;
+      
+      // Use Drizzle's higher-level methods
+      const result = await db.delete(maintenanceRecords)
+        .where(eq(maintenanceRecords.id, id))
+        .returning({ id: maintenanceRecords.id });
+      
+      return result.length > 0;
     } catch (error) {
       console.error(`Error deleting maintenance record: ${error}`);
       throw error;

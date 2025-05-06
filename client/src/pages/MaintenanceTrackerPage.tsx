@@ -135,7 +135,7 @@ export default function MaintenanceTrackerPage() {
         // Convert date strings to Date objects for display
         return data.map((record: any) => ({
           ...record,
-          date: record.date || record.maintenanceDate 
+          date: record.date || record.maintenanceDate,
         }));
       } catch (error) {
         console.error("Error fetching maintenance records:", error);
@@ -192,14 +192,16 @@ export default function MaintenanceTrackerPage() {
         try {
           const errorData = await response.json();
           throw new Error(
-            errorData.message || "Failed to create maintenance record"
+            errorData.message || "Failed to create maintenance record",
           );
         } catch (jsonError) {
           // If JSON parsing fails
-          throw new Error(`Failed to create maintenance record: ${response.statusText}`);
+          throw new Error(
+            `Failed to create maintenance record: ${response.statusText}`,
+          );
         }
       }
-      
+
       try {
         // Try to parse the response body, but don't require it
         return await response.json();
@@ -238,14 +240,16 @@ export default function MaintenanceTrackerPage() {
         try {
           const errorData = await response.json();
           throw new Error(
-            errorData.message || "Failed to update maintenance record"
+            errorData.message || "Failed to update maintenance record",
           );
         } catch (jsonError) {
           // If JSON parsing fails
-          throw new Error(`Failed to update maintenance record: ${response.statusText}`);
+          throw new Error(
+            `Failed to update maintenance record: ${response.statusText}`,
+          );
         }
       }
-      
+
       try {
         // Try to parse the response body, but don't require it
         return await response.json();
@@ -284,14 +288,16 @@ export default function MaintenanceTrackerPage() {
         try {
           const errorData = await response.json();
           throw new Error(
-            errorData.message || "Failed to delete maintenance record"
+            errorData.message || "Failed to delete maintenance record",
           );
         } catch (jsonError) {
           // If JSON parsing fails
-          throw new Error(`Failed to delete maintenance record: ${response.statusText}`);
+          throw new Error(
+            `Failed to delete maintenance record: ${response.statusText}`,
+          );
         }
       }
-      
+
       try {
         // Try to parse the response body, but don't require it
         return await response.json();
@@ -371,12 +377,12 @@ export default function MaintenanceTrackerPage() {
   // Handle submission of the add form
   const onAddSubmit = async (data: z.infer<typeof maintenanceFormSchema>) => {
     console.log("onAddSubmit triggered with data:", data);
-    
+
     // Check if data is valid
     if (!data.propertyId || !data.maintenanceType) {
-      console.error("Missing required fields:", { 
-        propertyId: data.propertyId, 
-        maintenanceType: data.maintenanceType 
+      console.error("Missing required fields:", {
+        propertyId: data.propertyId,
+        maintenanceType: data.maintenanceType,
       });
       toast({
         title: "Validation Error",
@@ -385,7 +391,7 @@ export default function MaintenanceTrackerPage() {
       });
       return;
     }
-    
+
     try {
       // Match the field names with the database column names
       const formattedData = {
@@ -395,7 +401,9 @@ export default function MaintenanceTrackerPage() {
         vendorId: data.vendorId ? Number(data.vendorId) : null,
         description: data.description || "",
         createdBy: 1, // Will be replaced with actual user ID from auth
-        flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || ""
+        flatNumber:
+          properties?.find((p) => p.id === Number(data.propertyId))
+            ?.flatNumber || "",
       };
       console.log("Formatted data for maintenance record:", formattedData);
       createMutation.mutate(formattedData);
@@ -422,11 +430,13 @@ export default function MaintenanceTrackerPage() {
         date: format(data.maintDate, "yyyy-MM-dd"), // Using the field name that matches the DB
         vendorId: data.vendorId ? Number(data.vendorId) : null,
         description: data.description || "",
-        flatNumber: properties?.find(p => p.id === Number(data.propertyId))?.flatNumber || selectedRecord.flatNumber
+        flatNumber:
+          properties?.find((p) => p.id === Number(data.propertyId))
+            ?.flatNumber || selectedRecord.flatNumber,
       };
-      
+
       console.log("Formatted edit data:", formattedData);
-      
+
       updateMutation.mutate({
         id: selectedRecord.id,
         data: formattedData,
@@ -868,40 +878,50 @@ export default function MaintenanceTrackerPage() {
 
                   {/* Direct submission button outside form validation */}
                   <Button
-                    type="button" 
+                    type="button"
                     disabled={createMutation.isPending}
                     className="w-full md:w-auto"
                     onClick={() => {
                       console.log("Direct submission button clicked");
-                      
+
                       // Get values directly
                       const values = addForm.getValues();
                       console.log("Form values:", values);
-                      
+
                       // Check required fields manually
-                      if (!values.propertyId || !values.maintenanceType || !values.maintDate) {
+                      if (
+                        !values.propertyId ||
+                        !values.maintenanceType ||
+                        !values.maintDate
+                      ) {
                         console.log("Missing required fields");
                         toast({
                           title: "Form Error",
-                          description: "Please fill in all required fields: Property, Type, and Date",
+                          description:
+                            "Please fill in all required fields: Property, Type, and Date",
                           variant: "destructive",
                         });
                         return;
                       }
-                      
+
                       // Create data object directly
                       const maintenanceData = {
                         propertyId: Number(values.propertyId),
                         maintenanceType: values.maintenanceType,
                         date: format(values.maintDate, "yyyy-MM-dd"),
-                        vendorId: values.vendorId ? Number(values.vendorId) : null,
+                        vendorId: values.vendorId
+                          ? Number(values.vendorId)
+                          : null,
                         description: values.description || "",
                         createdBy: 1, // Admin user ID
-                        flatNumber: properties?.find(p => p.id === Number(values.propertyId))?.flatNumber || ""
+                        flatNumber:
+                          properties?.find(
+                            (p) => p.id === Number(values.propertyId),
+                          )?.flatNumber || "",
                       };
-                      
+
                       console.log("Submitting data directly:", maintenanceData);
-                      
+
                       // Call mutation directly
                       createMutation.mutate(maintenanceData);
                     }}
@@ -936,7 +956,7 @@ export default function MaintenanceTrackerPage() {
                     className="space-y-6"
                   >
                     {/* Property Selection - Read Only */}
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
                       <Label htmlFor="propertyId">Property</Label>
                       <Input
                         id="propertyId"
