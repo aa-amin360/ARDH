@@ -827,33 +827,44 @@ export default function MaintenanceTrackerPage() {
                     )}
                   />
 
-                  {/* Submit button inside form */}
+                  {/* Direct submission button outside form validation */}
                   <Button
                     type="button" 
                     disabled={createMutation.isPending}
                     className="w-full md:w-auto"
                     onClick={() => {
-                      console.log("Manual submit button clicked");
-                      const formValues = addForm.getValues();
-                      console.log("Form state:", formValues);
+                      console.log("Direct submission button clicked");
                       
-                      // Manually validate the form
-                      addForm.trigger().then(isValid => {
-                        console.log("Form validation result:", isValid);
-                        console.log("Form errors:", addForm.formState.errors);
-                        
-                        if (isValid) {
-                          console.log("Form is valid, calling onAddSubmit");
-                          onAddSubmit(formValues);
-                        } else {
-                          console.log("Form is not valid");
-                          toast({
-                            title: "Validation Error",
-                            description: "Please fill in all required fields correctly",
-                            variant: "destructive",
-                          });
-                        }
-                      });
+                      // Get values directly
+                      const values = addForm.getValues();
+                      console.log("Form values:", values);
+                      
+                      // Check required fields manually
+                      if (!values.propertyId || !values.maintenanceType || !values.maintDate) {
+                        console.log("Missing required fields");
+                        toast({
+                          title: "Form Error",
+                          description: "Please fill in all required fields: Property, Type, and Date",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      // Create data object directly
+                      const maintenanceData = {
+                        propertyId: Number(values.propertyId),
+                        maintenanceType: values.maintenanceType,
+                        date: format(values.maintDate, "yyyy-MM-dd"),
+                        vendorId: values.vendorId ? Number(values.vendorId) : null,
+                        description: values.description || "",
+                        createdBy: 1, // Admin user ID
+                        flatNumber: properties?.find(p => p.id === Number(values.propertyId))?.flatNumber || ""
+                      };
+                      
+                      console.log("Submitting data directly:", maintenanceData);
+                      
+                      // Call mutation directly
+                      createMutation.mutate(maintenanceData);
                     }}
                   >
                     {createMutation.isPending ? (
