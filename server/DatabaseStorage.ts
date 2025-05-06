@@ -1485,8 +1485,8 @@ export class DatabaseStorage implements IStorage {
         SELECT 
           mr.id,
           mr.propertyid as "propertyId",
-          p.flatnumber as "flatNumber",
-          mr.date as "maintenanceDate", 
+          mr.flatnumber as "flatNumber",
+          mr.date, 
           mr.maintenancetype as "maintenanceType",
           mr.vendorid as "vendorId",
           mr.description,
@@ -1515,18 +1515,16 @@ export class DatabaseStorage implements IStorage {
         SELECT 
           mr.id,
           mr.propertyid as "propertyId",
-          p.flatnumber as "flatNumber",
-          mr.date as "maintenanceDate", 
+          mr.flatnumber as "flatNumber",
+          mr.date, 
           mr.maintenancetype as "maintenanceType",
           mr.vendorid as "vendorId",
-          COALESCE(v.name, '') as "vendorName",
           mr.description,
           mr.createdby as "createdBy",
           mr.createdat as "createdAt",
           mr.modifiedat as "modifiedAt"
         FROM 
           maintenance_records mr
-
         WHERE 
           mr.propertyid = ${propertyId}
         ORDER BY 
@@ -1550,18 +1548,16 @@ export class DatabaseStorage implements IStorage {
         SELECT 
           mr.id,
           mr.propertyid as "propertyId",
-          p.flatnumber as "flatNumber",
-          mr.date as "maintenanceDate", 
+          mr.flatnumber as "flatNumber",
+          mr.date, 
           mr.maintenancetype as "maintenanceType",
           mr.vendorid as "vendorId",
-          COALESCE(v.name, '') as "vendorName",
           mr.description,
           mr.createdby as "createdBy",
           mr.createdat as "createdAt",
           mr.modifiedat as "modifiedAt"
         FROM 
           maintenance_records mr
-
         WHERE 
           mr.maintenancetype = ${type}
         ORDER BY 

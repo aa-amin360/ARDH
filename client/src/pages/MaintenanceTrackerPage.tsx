@@ -121,8 +121,18 @@ export default function MaintenanceTrackerPage() {
   >({
     queryKey: ["/api/maintenance-records"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/maintenance-records");
-      return await response.json();
+      try {
+        const response = await apiRequest("GET", "/api/maintenance-records");
+        const data = await response.json();
+        // Convert date strings to Date objects for display
+        return data.map((record: any) => ({
+          ...record,
+          date: record.date || record.maintenanceDate 
+        }));
+      } catch (error) {
+        console.error("Error fetching maintenance records:", error);
+        return [];
+      }
     },
   });
 
