@@ -195,13 +195,18 @@ export default function MaintenanceTrackerPage() {
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          throw new Error(
-            errorData.message || "Failed to create maintenance record",
-          );
+          let errorMessage = errorData.message || "Failed to create maintenance record";
+          
+          // Clean any HTML content from error messages
+          if (typeof errorMessage === 'string' && (errorMessage.includes('<') && errorMessage.includes('>'))) {
+            errorMessage = "An unexpected error occurred. Please try again.";
+          }
+          
+          throw new Error(errorMessage);
         } catch (jsonError) {
           // If JSON parsing fails
           throw new Error(
-            `Failed to create maintenance record: ${response.statusText}`,
+            `Failed to create maintenance record. Please try again.`,
           );
         }
       }
@@ -243,13 +248,18 @@ export default function MaintenanceTrackerPage() {
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          throw new Error(
-            errorData.message || "Failed to update maintenance record",
-          );
+          let errorMessage = errorData.message || "Failed to update maintenance record";
+          
+          // Clean any HTML content from error messages
+          if (typeof errorMessage === 'string' && (errorMessage.includes('<') && errorMessage.includes('>'))) {
+            errorMessage = "An unexpected error occurred. Please try again.";
+          }
+          
+          throw new Error(errorMessage);
         } catch (jsonError) {
           // If JSON parsing fails
           throw new Error(
-            `Failed to update maintenance record: ${response.statusText}`,
+            `Failed to update maintenance record. Please try again.`,
           );
         }
       }

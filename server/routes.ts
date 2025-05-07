@@ -1550,11 +1550,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json({ message: "Maintenance record deleted successfully" });
       } catch (error) {
+        // Log the full error for debugging
         console.error(
           `Error deleting maintenance record ${req.params.id}:`,
           error,
         );
-        next(error);
+        
+        // Send a clean user-friendly error message
+        res.status(500).json({ 
+          message: "Failed to delete maintenance record. Please try again." 
+        });
       }
     },
   );

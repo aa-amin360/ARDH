@@ -2,7 +2,23 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
+    let text = (await res.text()) || res.statusText;
+    
+    // Try to parse JSON error message
+    try {
+      const errorJson = JSON.parse(text);
+      if (errorJson.message) {
+        text = errorJson.message;
+      }
+    } catch (e) {
+      // If the text isn't JSON, continue with text as is
+    }
+    
+    // Remove HTML content if found in error message
+    if (text.includes('<') && text.includes('>')) {
+      text = "An unexpected error occurred";
+    }
+    
     const errorMessage = res.status === 401
       ? "You are not authorized to access this resource. Please log in."
       : `${res.status}: ${text}`;
