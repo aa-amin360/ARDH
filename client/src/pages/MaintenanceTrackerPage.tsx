@@ -301,13 +301,18 @@ export default function MaintenanceTrackerPage() {
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          throw new Error(
-            errorData.message || "Failed to delete maintenance record",
-          );
+          let errorMessage = errorData.message || "Failed to delete maintenance record";
+          
+          // Clean any HTML content from error messages
+          if (typeof errorMessage === 'string' && (errorMessage.includes('<') && errorMessage.includes('>'))) {
+            errorMessage = "An unexpected error occurred. Please try again.";
+          }
+          
+          throw new Error(errorMessage);
         } catch (jsonError) {
           // If JSON parsing fails
           throw new Error(
-            `Failed to delete maintenance record: ${response.statusText}`,
+            `Failed to delete maintenance record. Please try again.`,
           );
         }
       }
