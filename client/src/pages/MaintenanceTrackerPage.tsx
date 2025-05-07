@@ -94,20 +94,6 @@ const maintenanceFormSchema = z.object({
   description: z.string().optional(),
 });
 
-// Define maintenance types
-const maintenanceTypes = [
-  "Water Tank Cleaning",
-  "Elevator Maintenance",
-  "Fire Extinguisher Refill",
-  "Pest Control",
-  "Garden Maintenance",
-  "AC Servicing",
-  "Electrical Maintenance",
-  "Plumbing Maintenance",
-  "Painting",
-  "Security System Maintenance",
-];
-
 export default function MaintenanceTrackerPage() {
   const [activeTab, setActiveTab] = useState("add");
   const [selectedRecord, setSelectedRecord] =
@@ -170,14 +156,32 @@ export default function MaintenanceTrackerPage() {
     { id: 21, flatNumber: "601" },
   ];
 
+  const mainCategory = "General Maintenance Works";
+
+  // Query to fetch subcategor  ies based on selected category
+  const { data: subcategories = [], isLoading: isLoadingSubcategories } =
+    useQuery({
+      queryKey: ["subcategories", mainCategory],
+      queryFn: async ({ queryKey }) => {
+        const [, currentCategory] = queryKey; // Extract the category from the key
+        return apiRequest(
+          "GET",
+          `/api/expenses/subcategories/${currentCategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!mainCategory, // Only run the query if mainCategory has a value
+    });
+
   // Query for vendors
-  const { data: vendors, isLoading: isLoadingVendors } = useQuery<Vendor[]>({
+  {
+    /*const { data: vendors, isLoading: isLoadingVendors } = useQuery<Vendor[]>({
     queryKey: ["/api/vendors"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/vendors");
       return await response.json();
     },
-  });
+  });*/
+  }
 
   // Mutation for creating a maintenance record
   const createMutation = useMutation({
@@ -336,6 +340,26 @@ export default function MaintenanceTrackerPage() {
     },
   });
 
+  // Filter records based on selected filters
+  const filteredRecords = maintenanceRecords?.filter((record) => {
+    let matches = true;
+    if (
+      filterProperty &&
+      filterProperty !== "all" &&
+      record.propertyId.toString() !== filterProperty
+    ) {
+      matches = false;
+    }
+    if (
+      filterType &&
+      filterType !== "all" &&
+      record.maintenanceType !== filterType
+    ) {
+      matches = false;
+    }
+    return matches;
+  });
+
   // Setup form for modifying a maintenance record
   const editForm = useForm<z.infer<typeof maintenanceFormSchema>>({
     resolver: zodResolver(maintenanceFormSchema),
@@ -346,6 +370,24 @@ export default function MaintenanceTrackerPage() {
       vendorId: "",
       description: "",
     },
+  });
+
+  const watchMainType = addForm.watch("maintenanceType");
+  const activeMaintenanceType =
+    watchMainType || selectedRecord?.maintenanceType;
+
+  // Query for Vendors by subcategory
+  const { data: vendors = [], isLoading: isLoadingVendors } = useQuery({
+    queryKey: ["/api/vendors/by-subcategory", activeMaintenanceType],
+    queryFn: async () => {
+      if (!activeMaintenanceType) return [];
+
+      return apiRequest(
+        "GET",
+        `/api/vendors/by-subcategory/${encodeURIComponent(activeMaintenanceType)}`,
+      ).then((res) => res.json());
+    },
+    enabled: !!activeMaintenanceType,
   });
 
   // Handle property change in Add form - fetch last maintenance date
@@ -467,7 +509,7 @@ export default function MaintenanceTrackerPage() {
   // Handle delete record button click
   const handleDeleteRecord = (id: number) => {
     setRecordToDelete(id);
-    setIsDeleteDialogOpen(true);
+    setIsDeleteDialogOpen(true); // Only open the confirmation dialog here
   };
 
   // Confirm delete action
@@ -484,26 +526,6 @@ export default function MaintenanceTrackerPage() {
     setFilterType("all");
   };
 
-  // Filter records based on selected filters
-  const filteredRecords = maintenanceRecords?.filter((record) => {
-    let matches = true;
-    if (
-      filterProperty &&
-      filterProperty !== "all" &&
-      record.propertyId.toString() !== filterProperty
-    ) {
-      matches = false;
-    }
-    if (
-      filterType &&
-      filterType !== "all" &&
-      record.maintenanceType !== filterType
-    ) {
-      matches = false;
-    }
-    return matches;
-  });
-
   // Effect to monitor property and maintenance type changes in the add form
   useEffect(() => {
     const propertyId = addForm.watch("propertyId");
@@ -515,12 +537,14 @@ export default function MaintenanceTrackerPage() {
   }, [addForm.watch("propertyId"), addForm.watch("maintenanceType")]);
 
   // Loading state
-  if (isLoadingRecords || isLoadingVendors) {
+  {
+    /*if (isLoadingRecords || isLoadingVendors) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }*/
   }
 
   return (
@@ -574,15 +598,24 @@ export default function MaintenanceTrackerPage() {
 
                 <div className="flex items-center gap-2">
                   <Label htmlFor="filterType">Maintenance Type:</Label>
+
                   <Select value={filterType} onValueChange={setFilterType}>
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="All Types" />
+                      <SelectValue
+                        placeholder={
+                          isLoadingSubcategories
+                            ? "Loading..."
+                            : "Select Maintenance Type"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      {maintenanceTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
+                      {subcategories.map((type) => (
+                        <SelectItem
+                          key={type.expense_sub_category}
+                          value={type.expense_sub_category}
+                        >
+                          {type.expense_sub_category}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -611,7 +644,7 @@ export default function MaintenanceTrackerPage() {
                     <TableHead>Property</TableHead>
                     <TableHead>Maintenance Type</TableHead>
                     <TableHead>Maintenance Date</TableHead>
-                    <TableHead>Vendor</TableHead>
+                    <TableHead>Vendor ID</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -629,11 +662,7 @@ export default function MaintenanceTrackerPage() {
                           <TableCell>
                             {format(new Date(record.date), "dd/MM/yyyy")}
                           </TableCell>
-                          <TableCell>
-                            {record.vendorId 
-                              ? vendors?.find(v => v.id === record.vendorId)?.name || `Vendor ID: ${record.vendorId}` 
-                              : 'N/A'}
-                          </TableCell>
+                          <TableCell>{record.vendorId}</TableCell>
                           <TableCell className="max-w-[200px] truncate">
                             {record.description}
                           </TableCell>
@@ -646,14 +675,45 @@ export default function MaintenanceTrackerPage() {
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => handleDeleteRecord(record.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="text-destructive"
+                                    onClick={() =>
+                                      handleDeleteRecord(record.id)
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Are you sure?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete this record.
+                                      This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => {
+                                        confirmDelete(); // This triggers the actual deletion
+                                      }}
+                                    >
+                                      Yes, Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -749,13 +809,22 @@ export default function MaintenanceTrackerPage() {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select maintenance type" />
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingSubcategories
+                                      ? "Loading..."
+                                      : "Select Maintenance Type"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {maintenanceTypes.map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
+                              {subcategories.map((type) => (
+                                <SelectItem
+                                  key={type.expense_sub_category}
+                                  value={type.expense_sub_category}
+                                >
+                                  {type.expense_sub_category}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -842,11 +911,16 @@ export default function MaintenanceTrackerPage() {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a vendor" />
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingVendors
+                                      ? "Loading..."
+                                      : "Select a Vendor"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">No Vendor</SelectItem>
                               {vendors?.map((vendor) => (
                                 <SelectItem
                                   key={vendor.id}
@@ -1051,7 +1125,6 @@ export default function MaintenanceTrackerPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value={"0"}>No Vendor</SelectItem>
                                 {vendors?.map((vendor) => (
                                   <SelectItem
                                     key={vendor.id}

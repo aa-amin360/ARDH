@@ -215,9 +215,11 @@ export default function PropertiesPage() {
 
   // Create property mutation
   const createPropertyMutation = useMutation({
+   
     mutationFn: async (values: PropertyFormValues) => {
       const res = await apiRequest("POST", "/api/properties", values);
       return await res.json();
+    
     },
     onSuccess: async (createdProperty) => {
       try {

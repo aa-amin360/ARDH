@@ -50,10 +50,27 @@ app.use((req, res, next) => {
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+      
+      // Clean error message - remove HTML tags and stack traces
+      let message = err.message || "Internal Server Error";
+      
+      // Replace any HTML-like content with a clean message
+      if (message.includes("<") && message.includes(">")) {
+        message = "An error occurred while processing your request";
+      }
+      
+      // Limit message length to make it user-friendly
+      if (message.length > 150) {
+        message = message.substring(0, 150) + "...";
+      }
 
-      res.status(status).json({ message });
-      throw err;
+      // Log the full error for debugging but show clean message to user
+      console.error("API Error:", err);
+      
+      // Only send response if headers haven't been sent yet
+      if (!res.headersSent) {
+        res.status(status).json({ message });
+      }
     });
 
     // importantly only setup vite in development and after

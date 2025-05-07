@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { setupAuth } from "./auth";
+import { constraintMessages } from "@shared/dbErrorHandler";
 import {
   insertUserSchema,
   insertPropertySchema,
@@ -128,11 +129,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const propertyData = insertPropertySchema.parse(req.body);
       const newProperty = await storage.createProperty(propertyData);
       res.status(201).json(newProperty);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
+    } catch (error: any) {
+      // Log error for debugging but send clean message to user
+      console.error("Error creating property:", error);
+
+      // Get user-friendly message
+      let message = constraintMessages[error.constraint] || 
+        "Something went wrong. Please check the entered data or try again later.";
+      
+      // Handle zod validation errors with cleaner messages
+      if (error.errors) {
+        message = "Invalid property data: " + 
+          error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
       }
-      next(error);
+      
+      // Don't call next(error) after sending response - prevents "headers already sent" errors
+      res.status(400).json({ message });
     }
   });
 
@@ -149,11 +161,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(updatedProperty);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
+    } catch (error: any) {
+      // Log full error for debugging
+      console.error(`Error updating property ${req.params.id}:`, error);
+      
+      // Send clean user-friendly message
+      let message = constraintMessages[error.constraint] ||
+        "Something went wrong. Please check the entered data or try again later.";
+      
+      // Format validation errors more nicely
+      if (error.errors) {
+        message = "Invalid property data: " + 
+          error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
       }
-      next(error);
+      
+      // Send response but don't call next(error) afterward
+      res.status(400).json({ message });
     }
   });
 
@@ -271,11 +294,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const newIncome = await storage.createIncome(incomeData);
         res.status(201).json(newIncome);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ message: error.errors });
-        }
-        next(error);
+      } catch (error: any) {
+        const message =
+          constraintMessages[error.constraint] || "Something went wrong.";
+        res.status(400).json({ message });
+        //next(error);
       }
     },
   );
@@ -296,10 +319,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.json(updatedIncome);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ message: error.errors });
-        }
+      } catch (error: any) {
+        const message =
+          constraintMessages[error.constraint] || "Something went wrong.";
+        res.status(400).json({ message });
         next(error);
       }
     },
@@ -438,10 +461,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newExpense = await storage.createExpense(expenseData);
       res.status(201).json(newExpense);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
+      res.status(400).json({ message });
       next(error);
     }
   });
@@ -458,10 +481,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(updatedExpense);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
+      res.status(400).json({ message });
       next(error);
     }
   });
@@ -669,11 +692,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newTenant = await storage.createTenant(tenantData);
       res.status(201).json(newTenant);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.log("Validation error:", error.errors);
-        return res.status(400).json({ message: error.errors });
-      }
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] ||
+        "Something went wrong. Please check the entered data or try again later.";
+      res.status(400).json({ message });
       next(error);
     }
   });
@@ -690,11 +713,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(updatedTenant);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      next(error);
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
+      console.error("Error updating tenant:", error, message);
+      res.status(400).json({ message });
     }
   });
 
@@ -795,10 +818,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newVendor = await storage.createVendor(vendorData);
       res.status(201).json(newVendor);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
+      res.status(400).json({ message });
       next(error);
     }
   });
@@ -815,10 +838,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(updatedVendor);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] ||
+        "Something went wrong. Please check the entered data or try again later.";
+      res.status(400).json({ message });
       next(error);
     }
   });
@@ -980,10 +1004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.json(updatedCharge);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ message: error.errors });
-        }
+      } catch (error: any) {
+        const message =
+          constraintMessages[error.constraint] || "Something went wrong.";
+        res.status(400).json({ message });
         next(error);
       }
     },
@@ -1303,11 +1327,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(updatedOwner);
-    } catch (error) {
-      console.error(`Error updating property owner ${req.params.id}:`, error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
+      res.status(400).json({ message });
       next(error);
     }
   });
@@ -1446,12 +1469,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Creating maintenance record with data:", recordData);
         const newRecord = await storage.createMaintenanceRecord(recordData);
         res.status(201).json(newRecord);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ message: error.errors });
-        }
+      } catch (error: any) {
+        // Log error for debugging
         console.error("Error creating maintenance record:", error);
-        next(error);
+
+        // Get a clean user-friendly message
+        let message = "Failed to create maintenance record";
+        
+        // Handle different error types with appropriate messages
+        if (error.constraint && constraintMessages[error.constraint]) {
+          message = constraintMessages[error.constraint];
+        } else if (error.errors) {
+          // Handle validation errors
+          message = "Invalid data: " + 
+            error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
+        }
+        
+        // Send response without calling next(error)
+        res.status(400).json({ message });
       }
     },
   );
@@ -1478,15 +1513,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.json(updatedRecord);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ message: error.errors });
+      } catch (error: any) {
+        // Log error for debugging purposes
+        console.error(`Error updating maintenance record ${req.params.id}:`, error);
+
+        // Get a clean user-friendly message
+        let message = "Failed to update maintenance record";
+        
+        // Handle different error types
+        if (error.constraint && constraintMessages[error.constraint]) {
+          message = constraintMessages[error.constraint];
+        } else if (error.errors) {
+          message = "Invalid data: " + 
+            error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
         }
-        console.error(
-          `Error updating maintenance record ${req.params.id}:`,
-          error,
-        );
-        next(error);
+        
+        // Send response without calling next(error)
+        res.status(400).json({ message });
       }
     },
   );

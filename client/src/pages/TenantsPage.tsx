@@ -184,7 +184,7 @@ export default function TenantsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/tenants"] });
       setIsEditDialogOpen(false);
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Error",
         description: `Failed to update tenant: ${error.message}`,
@@ -1023,6 +1023,7 @@ export default function TenantsPage() {
               <DialogFooter>
                 <Button
                   variant="outline"
+                  type="button"
                   onClick={() => setIsEditDialogOpen(false)}
                 >
                   Cancel
