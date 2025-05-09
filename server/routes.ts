@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { setupAuth } from "./auth";
 import { constraintMessages } from "@shared/dbErrorHandler";
+import multer from "multer";
+import path from "path";
 import {
   insertUserSchema,
   insertPropertySchema,
@@ -19,6 +21,45 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up file upload
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      // Create uploads directory if it doesn't exist
+      const uploadDir = path.join(__dirname, '..', 'uploads');
+      if (!require('fs').existsSync(uploadDir)) {
+        require('fs').mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+      // Generate a unique filename with original extension
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      cb(null, uniqueSuffix + ext);
+    }
+  });
+  
+  // File filter to validate file types
+  const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    // Accept only jpg, jpeg, png, and pdf files
+    if (file.mimetype === 'image/jpeg' || 
+        file.mimetype === 'image/png' || 
+        file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPG, PNG and PDF files are allowed.'));
+    }
+  };
+  
+  // Configure multer upload
+  const upload = multer({
+    storage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB file size limit
+    },
+    fileFilter
+  });
+  
   // Set up authentication
   setupAuth(app);
 
@@ -289,18 +330,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     adminOnlyForIncome,
     async (req, res, next) => {
       try {
+        // Parse the income data
         const incomeData = insertIncomeSchema.parse({
           ...req.body,
           createdBy: (req.user as any).id,
+          // Set attachmentId to null by default (will be updated if a file is uploaded)
+          attachmentId: null,
         });
 
         const newIncome = await storage.createIncome(incomeData);
         res.status(201).json(newIncome);
       } catch (error: any) {
+        console.error("Error creating income:", error);
         const message =
           constraintMessages[error.constraint] || "Something went wrong.";
         res.status(400).json({ message });
-        //next(error);
       }
     },
   );
@@ -1573,6 +1617,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     },
   );
+
+  // Attachment routes
+  // Upload an attachment
+  app.post(
+    "/api/attachments",
+    isAuthenticated,
+    upload.single("file"),
+    async (req, res, next) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        // Create attachment record in the database
+        const attachment = await storage.createAttachment({
+          fileName: req.file.originalname,
+          filePath: req.file.path,
+          fileType: req.file.mimetype,
+          fileSize: req.file.size,
+          uploadedBy: (req.user as any).id,
+        });
+
+        // If entityType and entityId are provided, link the attachment to the entity
+        const { entityType, entityId } = req.body;
+        if (entityType && entityId && (entityType === 'income' || entityType === 'expense')) {
+          await storage.updateEntityWithAttachment(
+            entityType,
+            parseInt(entityId),
+            attachment.id
+          );
+        }
+
+        res.status(201).json(attachment);
+      } catch (error) {
+        console.error("Error uploading attachment:", error);
+        next(error);
+      }
+    }
+  );
+
+  // Get an attachment by ID
+  app.get("/api/attachments/:id", isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const attachment = await storage.getAttachment(id);
+
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Send the file
+      res.sendFile(attachment.filePath);
+    } catch (error) {
+      console.error("Error retrieving attachment:", error);
+      next(error);
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
