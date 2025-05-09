@@ -33,7 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
+import { Loader2, Plus, FileSpreadsheet, Download } from "lucide-react";
 import { insertIncomeSchema, PropertyCharge } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
@@ -73,6 +73,7 @@ export default function IncomePage() {
   const [endDate, setEndDate] = useState<string>("");
   const [filteredIncomes, setFilteredIncomes] = useState<any[]>([]);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   // Query to fetch incomes
   const {
@@ -154,8 +155,9 @@ export default function IncomePage() {
         expectedIncome: 0, // Added default values for new fields
         difference: 0,
       });
-      // Reset attachment ID
+      // Reset attachment states
       setAttachmentId(null);
+      setAttachmentFile(null);
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
     },
     onError: (error: Error) => {
@@ -270,18 +272,51 @@ export default function IncomePage() {
   }, [form.getValues("amount")]);*/
   }
 
-  function onSubmit(values: IncomeFormValues) {
-    // Process the values for submission
-    const propertyId = values.propertyId || 0;
+  async function onSubmit(values: IncomeFormValues) {
+    try {
+      // If there's a file selected, upload it first
+      let finalAttachmentId = attachmentId;
+      
+      if (attachmentFile) {
+        const formData = new FormData();
+        formData.append('file', attachmentFile);
+        formData.append('entityType', 'income');
+        
+        // Upload the file
+        const response = await fetch('/api/attachments', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload attachment');
+        }
+        
+        const attachmentData = await response.json();
+        finalAttachmentId = attachmentData.id;
+        
+        console.log('Attachment uploaded with ID:', finalAttachmentId);
+      }
+      
+      // Process the values for submission
+      const propertyId = values.propertyId || 0;
+      
+      const formattedValues = {
+        ...values,
+        propertyId,
+        createdBy: user?.id || 0,
+        attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
+      };
 
-    const formattedValues = {
-      ...values,
-      propertyId,
-      createdBy: user?.id || 0,
-      attachmentId, // Include the attachment ID in the submission
-    };
-
-    addIncomeMutation.mutate(formattedValues);
+      addIncomeMutation.mutate(formattedValues);
+    } catch (error) {
+      console.error('Error uploading attachment:', error);
+      toast({
+        title: "Error uploading attachment",
+        description: (error as Error).message || "Failed to upload attachment",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -485,6 +520,7 @@ export default function IncomePage() {
                       entityType="income"
                       attachmentId={attachmentId}
                       onAttachmentUploaded={setAttachmentId}
+                      onFileSelected={(file) => setAttachmentFile(file)}
                     />
                   </div>
 
