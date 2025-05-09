@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Form,
   FormControl,
@@ -81,12 +82,6 @@ export default function IncomePage() {
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/incomes");
       return res.json(); // assuming your `apiRequest` returns a Response object
-    },
-    onSuccess: (data) => {
-      console.log("Income data fetched:", data);
-    },
-    onError: (error) => {
-      console.error("Error fetching income data:", error);
     },
   });
 
@@ -554,6 +549,39 @@ export default function IncomePage() {
               </Button>
             </CardHeader>
             <CardContent>
+              {/* Date range filter */}
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="fromDate">From Date</Label>
+                  <Input
+                    id="fromDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="toDate">To Date</Label>
+                  <Input
+                    id="toDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+
               {isLoading ? (
                 <div className="flex justify-center my-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -562,7 +590,7 @@ export default function IncomePage() {
                 <p className="text-center text-red-500 my-8">
                   Error loading income records
                 </p>
-              ) : Array.isArray(incomes) && incomes.length > 0 ? (
+              ) : Array.isArray(filteredIncomes) && filteredIncomes.length > 0 ? (
                 <div>
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-2">
@@ -581,7 +609,7 @@ export default function IncomePage() {
                         </TableHeader>
                         <TableBody>
                           {/* Show only last 5 entries */}
-                          {incomes.slice(-5).map((income) => (
+                          {filteredIncomes.slice(-5).map((income) => (
                             <TableRow key={income.id}>
                               <TableCell className="whitespace-nowrap">
                                 {formatDate(income.date)}
@@ -625,7 +653,7 @@ export default function IncomePage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {incomes.map((income) => (
+                        {filteredIncomes.map((income) => (
                           <TableRow key={income.id}>
                             <TableCell className="whitespace-nowrap">
                               {formatDate(income.date)}

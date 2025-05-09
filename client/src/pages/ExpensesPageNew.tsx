@@ -74,6 +74,10 @@ export default function ExpensesPage() {
   const [flatOptions, setFlatOptions] = useState<
     { id: number; flat_number: string }[]
   >([]);
+  // Date range filter states
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
 
   // Form
   const form = useForm<ExpenseFormValues>({
@@ -163,6 +167,31 @@ export default function ExpensesPage() {
       }
     }
   }, [watchCategory, subcategories, form]);
+  
+  // Filter expenses based on date range
+  useEffect(() => {
+    if (!expenses || !Array.isArray(expenses)) {
+      setFilteredExpenses([]);
+      return;
+    }
+    
+    let filtered = [...expenses];
+    
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      filtered = filtered.filter(expense => {
+        const createdAt = new Date(expense.createdAt);
+        return createdAt >= start && createdAt <= end;
+      });
+    }
+    
+    setFilteredExpenses(filtered);
+  }, [expenses, startDate, endDate]);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
