@@ -426,6 +426,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+// Create schema for attachment upload
+export const insertAttachmentSchema = createInsertSchema(attachments).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+// Create schema for file upload validation
+export const fileUploadSchema = z.object({
+  file: z.any(),
+  entityType: z.enum(["income", "expense"]),
+  entityId: z.number().optional(),
+});
+
 // Define types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -451,6 +464,8 @@ export type MaintenanceRecord = typeof maintenanceRecords.$inferSelect;
 export type InsertMaintenanceRecord = z.infer<
   typeof insertMaintenanceRecordSchema
 >;
+export type Attachment = typeof attachments.$inferSelect;
+export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
 export type Login = z.infer<typeof loginSchema>;
 
 // Summary types for dashboard

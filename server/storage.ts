@@ -38,6 +38,11 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getUsers(): Promise<User[]>;
+  
+  // Attachments
+  getAttachment(id: number): Promise<Attachment | undefined>;
+  createAttachment(attachment: InsertAttachment): Promise<Attachment>;
+  updateEntityWithAttachment(entityType: 'income' | 'expense', entityId: number, attachmentId: number): Promise<void>;
 
   // Properties
   getProperty(id: number): Promise<Property | undefined>;

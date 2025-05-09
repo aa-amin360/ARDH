@@ -21,6 +21,8 @@ import {
   InsertPropertyOwner,
   MaintenanceRecord,
   InsertMaintenanceRecord,
+  Attachment,
+  InsertAttachment,
   IncomeSummary,
   ExpenseSummary,
   PropertySummary,
@@ -35,6 +37,7 @@ import {
   tenantCharges,
   propertyOwners,
   maintenanceRecords,
+  attachments,
 } from "@shared/schema";
 import {
   and,
@@ -62,6 +65,44 @@ export class DatabaseStorage implements IStorage {
       pool,
       createTableIfMissing: true,
     });
+  }
+
+  // Attachment methods
+  async getAttachment(id: number): Promise<Attachment | undefined> {
+    const [attachment] = await db
+      .select()
+      .from(attachments)
+      .where(eq(attachments.id, id));
+    return attachment;
+  }
+
+  async createAttachment(attachment: InsertAttachment): Promise<Attachment> {
+    const [newAttachment] = await db
+      .insert(attachments)
+      .values({
+        ...attachment,
+        uploadedAt: new Date(),
+      })
+      .returning();
+    return newAttachment;
+  }
+
+  async updateEntityWithAttachment(
+    entityType: 'income' | 'expense',
+    entityId: number,
+    attachmentId: number
+  ): Promise<void> {
+    if (entityType === 'income') {
+      await db
+        .update(incomes)
+        .set({ attachmentId })
+        .where(eq(incomes.id, entityId));
+    } else if (entityType === 'expense') {
+      await db
+        .update(expenses)
+        .set({ attachmentId })
+        .where(eq(expenses.id, entityId));
+    }
   }
 
   // User methods
