@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
 import { insertIncomeSchema, PropertyCharge } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { AttachmentUploader } from "@/components/AttachmentUploader";
 // Bulk upload component will be implemented later
 import {
   Table,
@@ -71,6 +72,7 @@ export default function IncomePage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [filteredIncomes, setFilteredIncomes] = useState<any[]>([]);
+  const [attachmentId, setAttachmentId] = useState<number | null>(null);
 
   // Query to fetch incomes
   const {
@@ -274,6 +276,7 @@ export default function IncomePage() {
       ...values,
       propertyId,
       createdBy: user?.id || 0,
+      attachmentId, // Include the attachment ID in the submission
     };
 
     addIncomeMutation.mutate(formattedValues);

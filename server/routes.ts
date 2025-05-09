@@ -25,7 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       // Create uploads directory if it doesn't exist
-      const uploadDir = path.join(__dirname, '..', 'uploads');
+      const uploadDir = path.resolve('./uploads');
       if (!require('fs').existsSync(uploadDir)) {
         require('fs').mkdirSync(uploadDir, { recursive: true });
       }
@@ -1635,10 +1635,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Create attachment record in the database
         const attachment = await dbStorage.createAttachment({
-          fileName: req.file.originalname,
-          filePath: req.file.path,
-          fileType: req.file.mimetype,
-          fileSize: req.file.size,
+          filename: req.file.originalname,
+          data: fs.readFileSync(req.file.path).toString('base64'),
+          filetype: req.file.mimetype,
+          filesize: req.file.size,
           uploadedBy: (req.user as any).id,
         });
 
