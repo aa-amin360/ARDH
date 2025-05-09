@@ -657,6 +657,7 @@ export default function IncomePage() {
                             <TableHead>Description</TableHead>
                             <TableHead>Property</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
+                            <TableHead>Attachment</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -680,6 +681,21 @@ export default function IncomePage() {
                               <TableCell className="text-right font-medium">
                                 {formatCurrency(income.amount)}
                               </TableCell>
+                              <TableCell>
+                                {income.attachmentId ? (
+                                  <a
+                                    href={`/api/attachments/${income.attachmentId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center text-blue-600 hover:text-blue-800"
+                                  >
+                                    <Download className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">None</span>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -702,6 +718,7 @@ export default function IncomePage() {
                           <TableHead>Description</TableHead>
                           <TableHead>Property</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Attachment</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -723,6 +740,21 @@ export default function IncomePage() {
                             </TableCell>
                             <TableCell className="text-right font-medium">
                               {formatCurrency(income.amount)}
+                            </TableCell>
+                            <TableCell>
+                              {income.attachmentId ? (
+                                <a
+                                  href={`/api/attachments/${income.attachmentId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center text-blue-600 hover:text-blue-800"
+                                >
+                                  <Download className="h-4 w-4 mr-1" />
+                                  Download
+                                </a>
+                              ) : (
+                                <span className="text-gray-400 text-sm">None</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
