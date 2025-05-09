@@ -97,6 +97,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Property routes
+  app.get("/api/properties/flats", isAuthenticated, async (req, res, next) => {
+    try {
+      const flats = await storage.getFlatNumberOptions();
+      res.json(flats); // [{ id, flat_number }]
+    } catch (error) {
+      console.error("Error fetching flat numbers:", error);
+      next(error);
+    }
+  });
+
   app.get("/api/properties", isAuthenticated, async (req, res, next) => {
     try {
       console.log("Fetching properties for user:", req.user);
@@ -130,20 +140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newProperty = await storage.createProperty(propertyData);
       res.status(201).json(newProperty);
     } catch (error: any) {
-      // Log error for debugging but send clean message to user
-      console.error("Error creating property:", error);
-
-      // Get user-friendly message
-      let message = constraintMessages[error.constraint] || 
-        "Something went wrong. Please check the entered data or try again later.";
-      
-      // Handle zod validation errors with cleaner messages
-      if (error.errors) {
-        message = "Invalid property data: " + 
-          error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
-      }
-      
-      // Don't call next(error) after sending response - prevents "headers already sent" errors
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
       res.status(400).json({ message });
     }
   });
@@ -164,17 +162,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       // Log full error for debugging
       console.error(`Error updating property ${req.params.id}:`, error);
-      
+
       // Send clean user-friendly message
-      let message = constraintMessages[error.constraint] ||
+      let message =
+        constraintMessages[error.constraint] ||
         "Something went wrong. Please check the entered data or try again later.";
-      
+
       // Format validation errors more nicely
       if (error.errors) {
-        message = "Invalid property data: " + 
-          error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
+        message =
+          "Invalid property data: " +
+          error.errors
+            .map((e: any) => e.message || e.path.join("."))
+            .join(", ");
       }
-      
+
       // Send response but don't call next(error) afterward
       res.status(400).json({ message });
     }
@@ -863,6 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Property Charges routes
+
   app.get("/api/property-charges", isAuthenticated, async (req, res, next) => {
     try {
       const charges = await storage.getPropertyCharges();
@@ -1304,12 +1307,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const newOwner = await storage.createPropertyOwner(ownerData);
       res.status(201).json(newOwner);
-    } catch (error) {
-      console.error("Error creating property owner:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors });
-      }
-      next(error);
+    } catch (error: any) {
+      const message =
+        constraintMessages[error.constraint] || "Something went wrong.";
+      res.status(400).json({ message });
     }
   });
 
@@ -1475,16 +1476,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get a clean user-friendly message
         let message = "Failed to create maintenance record";
-        
+
         // Handle different error types with appropriate messages
         if (error.constraint && constraintMessages[error.constraint]) {
           message = constraintMessages[error.constraint];
         } else if (error.errors) {
           // Handle validation errors
-          message = "Invalid data: " + 
-            error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
+          message =
+            "Invalid data: " +
+            error.errors
+              .map((e: any) => e.message || e.path.join("."))
+              .join(", ");
         }
-        
+
         // Send response without calling next(error)
         res.status(400).json({ message });
       }
@@ -1515,19 +1519,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(updatedRecord);
       } catch (error: any) {
         // Log error for debugging purposes
-        console.error(`Error updating maintenance record ${req.params.id}:`, error);
+        console.error(
+          `Error updating maintenance record ${req.params.id}:`,
+          error,
+        );
 
         // Get a clean user-friendly message
         let message = "Failed to update maintenance record";
-        
+
         // Handle different error types
         if (error.constraint && constraintMessages[error.constraint]) {
           message = constraintMessages[error.constraint];
         } else if (error.errors) {
-          message = "Invalid data: " + 
-            error.errors.map((e: any) => e.message || e.path.join('.')).join(', ');
+          message =
+            "Invalid data: " +
+            error.errors
+              .map((e: any) => e.message || e.path.join("."))
+              .join(", ");
         }
-        
+
         // Send response without calling next(error)
         res.status(400).json({ message });
       }
@@ -1555,10 +1565,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `Error deleting maintenance record ${req.params.id}:`,
           error,
         );
-        
+
         // Send a clean user-friendly error message
-        res.status(500).json({ 
-          message: "Failed to delete maintenance record. Please try again." 
+        res.status(500).json({
+          message: "Failed to delete maintenance record. Please try again.",
         });
       }
     },

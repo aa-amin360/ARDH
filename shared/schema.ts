@@ -186,7 +186,7 @@ export const expenses = pgTable("expenses", {
   category: text("category").notNull(),
   subcategory: text("subcategory").notNull(),
   description: text("description").notNull(),
-  vendor: text("vendor"),
+  vendorId: integer("vendor"),
   propertyId: integer("property_id").references(() => properties.id),
   createdBy: integer("created_by")
     .references(() => users.id)

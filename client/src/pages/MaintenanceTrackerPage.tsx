@@ -105,6 +105,9 @@ export default function MaintenanceTrackerPage() {
   const [lastMaintenanceDate, setLastMaintenanceDate] = useState<Date | null>(
     null,
   );
+  const [flatOptions, setFlatOptions] = useState<
+    { id: number; flat_number: string }[]
+  >([]);
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -195,13 +198,18 @@ export default function MaintenanceTrackerPage() {
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          let errorMessage = errorData.message || "Failed to create maintenance record";
-          
+          let errorMessage =
+            errorData.message || "Failed to create maintenance record";
+
           // Clean any HTML content from error messages
-          if (typeof errorMessage === 'string' && (errorMessage.includes('<') && errorMessage.includes('>'))) {
+          if (
+            typeof errorMessage === "string" &&
+            errorMessage.includes("<") &&
+            errorMessage.includes(">")
+          ) {
             errorMessage = "An unexpected error occurred. Please try again.";
           }
-          
+
           throw new Error(errorMessage);
         } catch (jsonError) {
           // If JSON parsing fails
@@ -248,13 +256,18 @@ export default function MaintenanceTrackerPage() {
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          let errorMessage = errorData.message || "Failed to update maintenance record";
-          
+          let errorMessage =
+            errorData.message || "Failed to update maintenance record";
+
           // Clean any HTML content from error messages
-          if (typeof errorMessage === 'string' && (errorMessage.includes('<') && errorMessage.includes('>'))) {
+          if (
+            typeof errorMessage === "string" &&
+            errorMessage.includes("<") &&
+            errorMessage.includes(">")
+          ) {
             errorMessage = "An unexpected error occurred. Please try again.";
           }
-          
+
           throw new Error(errorMessage);
         } catch (jsonError) {
           // If JSON parsing fails
@@ -301,13 +314,18 @@ export default function MaintenanceTrackerPage() {
       if (!response.ok) {
         try {
           const errorData = await response.json();
-          let errorMessage = errorData.message || "Failed to delete maintenance record";
-          
+          let errorMessage =
+            errorData.message || "Failed to delete maintenance record";
+
           // Clean any HTML content from error messages
-          if (typeof errorMessage === 'string' && (errorMessage.includes('<') && errorMessage.includes('>'))) {
+          if (
+            typeof errorMessage === "string" &&
+            errorMessage.includes("<") &&
+            errorMessage.includes(">")
+          ) {
             errorMessage = "An unexpected error occurred. Please try again.";
           }
-          
+
           throw new Error(errorMessage);
         } catch (jsonError) {
           // If JSON parsing fails
@@ -386,6 +404,13 @@ export default function MaintenanceTrackerPage() {
       description: "",
     },
   });
+
+  useEffect(() => {
+    fetch("/api/properties/flats")
+      .then((res) => res.json())
+      .then(setFlatOptions)
+      .catch((err) => console.error("Failed to load flats:", err));
+  }, []);
 
   const watchMainType = addForm.watch("maintenanceType");
   const activeMaintenanceType =
@@ -599,12 +624,9 @@ export default function MaintenanceTrackerPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Properties</SelectItem>
-                      {properties?.map((property) => (
-                        <SelectItem
-                          key={property.id}
-                          value={property.id.toString()}
-                        >
-                          {property.flatNumber}
+                      {flatOptions?.map((flat) => (
+                        <SelectItem key={flat.id} value={flat.id.toString()}>
+                          {flat.flat_number}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -787,12 +809,12 @@ export default function MaintenanceTrackerPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {properties?.map((property) => (
+                              {flatOptions?.map((property) => (
                                 <SelectItem
                                   key={property.id}
                                   value={property.id.toString()}
                                 >
-                                  {property.flatNumber}
+                                  {property.flat_number}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1054,9 +1076,9 @@ export default function MaintenanceTrackerPage() {
                       <Input
                         id="propertyId"
                         value={
-                          properties?.find(
+                          flatOptions?.find(
                             (p) => p.id === selectedRecord.propertyId,
-                          )?.flatNumber || "Unknown Property"
+                          )?.flat_number || "General"
                         }
                         disabled
                       />

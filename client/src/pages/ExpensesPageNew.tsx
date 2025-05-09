@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -69,8 +69,11 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState("view");
+  const [activeTab, setActiveTab] = React.useState("add");
   const [selectedCategory, setSelectedCategory] = React.useState("");
+  const [flatOptions, setFlatOptions] = useState<
+    { id: number; flat_number: string }[]
+  >([]);
 
   // Form
   const form = useForm<ExpenseFormValues>({
@@ -95,6 +98,13 @@ export default function ExpensesPage() {
     },
   });
 
+  useEffect(() => {
+    fetch("/api/properties/flats")
+      .then((res) => res.json())
+      .then(setFlatOptions)
+      .catch((err) => console.error("Failed to load flats:", err));
+  }, []);
+
   // Watch fields to trigger dependent queries
   const watchCategory = form.watch("category");
   const watchSubcategory = form.watch("subcategory");
@@ -108,31 +118,6 @@ export default function ExpensesPage() {
     queryKey: ["/api/expenses"],
     queryFn: () => apiRequest("GET", "/api/expenses").then((res) => res.json()),
   });
-
-  // Query to fetch properties for dropdown
-  const properties = [
-    { id: 0, flatNumber: "ARDH Building" },
-    { id: 2, flatNumber: "101" },
-    { id: 3, flatNumber: "102" },
-    { id: 4, flatNumber: "103" },
-    { id: 5, flatNumber: "201" },
-    { id: 6, flatNumber: "202" },
-    { id: 7, flatNumber: "203" },
-    { id: 8, flatNumber: "204" },
-    { id: 9, flatNumber: "301" },
-    { id: 10, flatNumber: "302" },
-    { id: 11, flatNumber: "303" },
-    { id: 12, flatNumber: "304" },
-    { id: 13, flatNumber: "401" },
-    { id: 14, flatNumber: "402" },
-    { id: 15, flatNumber: "403" },
-    { id: 16, flatNumber: "404" },
-    { id: 17, flatNumber: "501" },
-    { id: 18, flatNumber: "502" },
-    { id: 19, flatNumber: "503" },
-    { id: 20, flatNumber: "504" },
-    { id: 21, flatNumber: "601" },
-  ];
 
   // Query to fetch expense categories
   const { data: categories = [] } = useQuery({
@@ -255,8 +240,8 @@ export default function ExpensesPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="view">View Expenses</TabsTrigger>
           <TabsTrigger value="add">Add Expense</TabsTrigger>
+          <TabsTrigger value="view">View Expenses</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
         </TabsList>
 
@@ -401,16 +386,13 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem key="common" value="0">
-                                Common Areas
-                              </SelectItem>
-                              {Array.isArray(properties) &&
-                                properties.map((property) => (
+                              {Array.isArray(flatOptions) &&
+                                flatOptions.map((property) => (
                                   <SelectItem
                                     key={property.id}
                                     value={property.id.toString()}
                                   >
-                                    {property.flatNumber}
+                                    {property.flat_number}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
@@ -644,9 +626,9 @@ export default function ExpensesPage() {
                             </TableCell>
                             <TableCell>
                               {expense.propertyId
-                                ? properties.find(
+                                ? flatOptions.find(
                                     (p) => p.id === expense.propertyId,
-                                  )?.flatNumber || "Unknown"
+                                  )?.flat_number || "Unknown"
                                 : "Common Areas"}
                             </TableCell>
                             <TableCell className="max-w-xs truncate">

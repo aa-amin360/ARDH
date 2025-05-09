@@ -62,7 +62,14 @@ export default function IncomePage() {
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState("view");
+  const [activeTab, setActiveTab] = React.useState("add");
+  const [flatOptions, setFlatOptions] = useState<
+    { id: number; flat_number: string }[]
+  >([]);
+  // Date range filter states
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [filteredIncomes, setFilteredIncomes] = useState<any[]>([]);
 
   // Query to fetch incomes
   const {
@@ -82,45 +89,6 @@ export default function IncomePage() {
       console.error("Error fetching income data:", error);
     },
   });
-
-  //Dropdown for properties
-  const properties = [
-    { id: 0, flatNumber: "ARDH Building" },
-    { id: 1, flatNumber: "Common Areas" },
-    { id: 2, flatNumber: "101" },
-    { id: 3, flatNumber: "102" },
-    { id: 4, flatNumber: "103" },
-    { id: 5, flatNumber: "201" },
-    { id: 6, flatNumber: "202" },
-    { id: 7, flatNumber: "203" },
-    { id: 8, flatNumber: "204" },
-    { id: 9, flatNumber: "301" },
-    { id: 10, flatNumber: "302" },
-    { id: 11, flatNumber: "303" },
-    { id: 12, flatNumber: "304" },
-    { id: 13, flatNumber: "401" },
-    { id: 14, flatNumber: "402" },
-    { id: 15, flatNumber: "403" },
-    { id: 16, flatNumber: "404" },
-    { id: 17, flatNumber: "501" },
-    { id: 18, flatNumber: "502" },
-    { id: 19, flatNumber: "503" },
-    { id: 20, flatNumber: "504" },
-    { id: 21, flatNumber: "601" },
-  ];
-
-  const propertyOptions = React.useMemo(() => {
-    const rest = properties.slice(2); // skip ARDH and Common Areas for sorting
-    const sortedFlats = rest.sort((a, b) =>
-      a.flatNumber.localeCompare(b.flatNumber, undefined, { numeric: true }),
-    );
-
-    return [
-      properties[0], // ARDH Building
-      properties[1], // Common Areas
-      ...sortedFlats,
-    ];
-  }, []);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
@@ -191,6 +159,13 @@ export default function IncomePage() {
     },
   });
 
+  useEffect(() => {
+    fetch("/api/properties/flats")
+      .then((res) => res.json())
+      .then(setFlatOptions)
+      .catch((err) => console.error("Failed to load flats:", err));
+  }, []);
+
   const selectedPropertyId = form.watch("propertyId");
   const selectedIncomeType = form.watch("type");
   const enteredAmount = form.watch("amount");
@@ -204,6 +179,7 @@ export default function IncomePage() {
   ) => {
     console.log("Fetching expected charge for flat:", flatNumber);
     console.log("Fetching expected charge for type:", incomeType);
+
     if (!flatNumber || !incomeType) return;
 
     try {
@@ -221,14 +197,24 @@ export default function IncomePage() {
       if (!Array.isArray(data)) {
         throw new Error("Invalid response format");
       }
+
       console.log("Fetched charges:", data);
-      const matched = data.find(
+
+      // Filter current charges (effectiveTo === null)
+      const currentCharges = data.filter(
+        (item: any) => item.effectiveTo === null,
+      );
+
+      // Find the most relevant charge for the given incomeType
+      const matched = currentCharges.find(
         (item: any) =>
           item.chargeType?.toLowerCase().trim() ===
           incomeType?.toLowerCase().trim(),
       );
-      setExpectedIncome(matched?.amount || 0);
-      console.log("Expected charge:", matched?.amount || 0);
+
+      const amount = matched?.amount || 0;
+      setExpectedIncome(amount);
+      console.log("Expected charge:", amount);
     } catch (error) {
       console.error("Error fetching expected charges:", error);
       toast({
@@ -240,17 +226,42 @@ export default function IncomePage() {
   };
 
   useEffect(() => {
-    const selectedProperty = propertyOptions.find(
+    const selectedProperty = flatOptions.find(
       (p) => p.id === selectedPropertyId,
     );
 
-    if (selectedProperty?.flatNumber && selectedIncomeType) {
-      fetchExpectedCharge(selectedProperty.flatNumber, selectedIncomeType);
+    if (selectedProperty?.flat_number && selectedIncomeType) {
+      fetchExpectedCharge(selectedProperty.flat_number, selectedIncomeType);
     }
   }, [form.watch("propertyId"), selectedIncomeType]);
   useEffect(() => {
     setDifference(enteredAmount - expectedIncome);
   }, [enteredAmount, expectedIncome]);
+  
+  // Filter incomes based on date range
+  useEffect(() => {
+    if (!incomes || !Array.isArray(incomes)) {
+      setFilteredIncomes([]);
+      return;
+    }
+    
+    let filtered = [...incomes];
+    
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      filtered = filtered.filter(income => {
+        const createdAt = new Date(income.createdAt);
+        return createdAt >= start && createdAt <= end;
+      });
+    }
+    
+    setFilteredIncomes(filtered);
+  }, [incomes, startDate, endDate]);
   {
     /*React.useEffect(() => {
     // Placeholder calculation - replace with actual logic
@@ -278,8 +289,8 @@ export default function IncomePage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="view">View Income</TabsTrigger>
           <TabsTrigger value="add">Add Income</TabsTrigger>
+          <TabsTrigger value="view">View Incomes</TabsTrigger>
           <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
         </TabsList>
 
@@ -419,12 +430,12 @@ export default function IncomePage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {propertyOptions.map((option) => (
+                              {flatOptions.map((flat) => (
                                 <SelectItem
-                                  key={option.id}
-                                  value={option.id.toString()}
+                                  key={flat.id}
+                                  value={flat.id.toString()}
                                 >
-                                  {option.flatNumber}
+                                  {flat.flat_number}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -581,9 +592,9 @@ export default function IncomePage() {
                               <TableCell>{income.description}</TableCell>
                               <TableCell>
                                 {income.propertyId
-                                  ? properties?.find(
+                                  ? flatOptions?.find(
                                       (p) => p.id === income.propertyId,
-                                    )?.flatNumber || `#${income.propertyId}`
+                                    )?.flat_number || `#${income.propertyId}`
                                   : "Common"}
                               </TableCell>
                               <TableCell className="text-right font-medium">
@@ -625,9 +636,9 @@ export default function IncomePage() {
                             <TableCell>{income.description}</TableCell>
                             <TableCell>
                               {income.propertyId
-                                ? properties?.find(
+                                ? flatOptions?.find(
                                     (p) => p.id === income.propertyId,
-                                  )?.flatNumber || `#${income.propertyId}`
+                                  )?.flat_number || `#${income.propertyId}`
                                 : "Common"}
                             </TableCell>
                             <TableCell className="text-right font-medium">

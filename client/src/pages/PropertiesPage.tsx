@@ -82,11 +82,11 @@ const propertyFormSchema = insertPropertySchema.extend({
   // Will be stored in property_charges table instead
   rentAmount: z.coerce
     .number()
-    .min(0, "Expected rent must be a positive number")
+    .min(1, "Please Enter the Rent Amount")
     .optional(),
   maintenanceFee: z.coerce
     .number()
-    .min(0, "Maintenance fee must be a positive number")
+    .min(1, "Please enter the maintenance fee")
     .optional(),
   waterFee: z.coerce
     .number()
@@ -215,11 +215,9 @@ export default function PropertiesPage() {
 
   // Create property mutation
   const createPropertyMutation = useMutation({
-   
     mutationFn: async (values: PropertyFormValues) => {
       const res = await apiRequest("POST", "/api/properties", values);
       return await res.json();
-    
     },
     onSuccess: async (createdProperty) => {
       try {

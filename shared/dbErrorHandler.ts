@@ -4,7 +4,7 @@ export const constraintMessages: Record<string, string> = {
   properties_flat_number_key:
     "Property Flat Number is already registered. Kindly delete or modify accordingly as needed.",
 
-  unique_nestaway_id:
+  unique_nestaway_id_when_present:
     "Property Nestaway id already in use. Kindly delete or modify accordingly as needed.",
 
   expenses_pkey: "expense-id not unique, please check database.",
@@ -20,6 +20,15 @@ export const constraintMessages: Record<string, string> = {
   unique_maint_entry: "Entered maintenance record is a duplicate entry.",
 
   unique_flat_number_active_idx: "Another Tenant already active for this flat.",
+
+  unique_flat_number: "Another property already exists with this flat number.",
+
+  check_recent_duplicate_property_charge:
+    "Similar property charge already exists for this flat within a month ago.",
+
+  unique_tenant_per_flat: "Same tenant already exists for this flat.",
+
+  unique_vendor_vendorinfo: "Vendor already exists with the same details.",
 };
 
 export function getConstraintErrorMessage(error: any): string {

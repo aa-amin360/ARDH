@@ -36,7 +36,18 @@ import {
   propertyOwners,
   maintenanceRecords,
 } from "@shared/schema";
-import { and, eq, desc, sql, count, isNull, gte, like, or } from "drizzle-orm";
+import {
+  and,
+  eq,
+  asc,
+  desc,
+  sql,
+  count,
+  isNull,
+  gte,
+  like,
+  or,
+} from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import connectPg from "connect-pg-simple";
@@ -292,6 +303,14 @@ export class DatabaseStorage implements IStorage {
   async deleteProperty(id: number): Promise<boolean> {
     const result = await db.delete(properties).where(eq(properties.id, id));
     return true; // In Drizzle, the result doesn't directly tell us if something was deleted
+  }
+
+  async getFlatNumberOptions(): Promise<{ id: number; flat_number: string }[]> {
+    const results = await db.execute(
+      sql`SELECT id, flat_number FROM properties ORDER BY flat_number`,
+    );
+
+    return results.rows; // [{ id: 1, flat_number: 'A-101' }, ...]
   }
 
   // Income methods
@@ -874,8 +893,12 @@ export class DatabaseStorage implements IStorage {
       const results = await db
         .select()
         .from(propertyCharges)
-        .where(eq(propertyCharges.flatNumber, flatNumber))
-        .where(sql`${propertyCharges.effectiveTo} IS NULL`);
+        .where(
+          and(
+            eq(propertyCharges.flatNumber, flatNumber),
+            isNull(propertyCharges.effectiveTo),
+          ),
+        );
       console.log(
         `Found ${results.length} current charges for flat ${flatNumber}`,
       );
@@ -1647,31 +1670,32 @@ export class DatabaseStorage implements IStorage {
 
       // Build the update object with only defined fields
       const updateData: any = {
-        modifiedAt: new Date()
+        modifiedAt: new Date(),
       };
-      
+
       if (updates.date !== undefined) {
         updateData.date = updates.date;
       }
-      
+
       if (updates.flatNumber !== undefined) {
         updateData.flatNumber = updates.flatNumber;
       }
-      
+
       if (updates.maintenanceType !== undefined) {
         updateData.maintenanceType = updates.maintenanceType;
       }
-      
+
       if (updates.description !== undefined) {
         updateData.description = updates.description;
       }
-      
+
       if (updates.vendorId !== undefined) {
         updateData.vendorId = updates.vendorId;
       }
 
       // Use Drizzle's SQL builder for safety
-      const result = await db.update(maintenanceRecords)
+      const result = await db
+        .update(maintenanceRecords)
         .set(updateData)
         .where(eq(maintenanceRecords.id, id))
         .returning();
@@ -1690,12 +1714,13 @@ export class DatabaseStorage implements IStorage {
   async deleteMaintenanceRecord(id: number): Promise<boolean> {
     try {
       console.log(`Deleting maintenance record with ID: ${id}`);
-      
+
       // Use Drizzle's higher-level methods
-      const result = await db.delete(maintenanceRecords)
+      const result = await db
+        .delete(maintenanceRecords)
         .where(eq(maintenanceRecords.id, id))
         .returning({ id: maintenanceRecords.id });
-      
+
       return result.length > 0;
     } catch (error) {
       console.error(`Error deleting maintenance record: ${error}`);
