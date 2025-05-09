@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
@@ -433,12 +434,12 @@ export default function ExpensesPage() {
 
                     <FormField
                       control={form.control}
-                      name="vendor"
+                      name="vendorId"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
                             value={field.value?.toString() || "none"}
                             disabled={!watchSubcategory || isLoadingVendors}
                           >
@@ -620,6 +621,30 @@ export default function ExpensesPage() {
               <CardDescription>
                 View all expenses and their details.
               </CardDescription>
+              
+              {/* Date Range Filter */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">From Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">To Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="max-w-xs"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -644,8 +669,8 @@ export default function ExpensesPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {expenses.length > 0 ? (
-                        expenses.map((expense: any) => (
+                      {filteredExpenses.length > 0 ? (
+                        filteredExpenses.map((expense: any) => (
                           <TableRow key={expense.id}>
                             <TableCell>{formatDate(expense.date)}</TableCell>
                             <TableCell>{expense.category}</TableCell>

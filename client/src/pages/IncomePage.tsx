@@ -84,6 +84,31 @@ export default function IncomePage() {
       return res.json(); // assuming your `apiRequest` returns a Response object
     },
   });
+  
+  // Filter incomes based on date range
+  useEffect(() => {
+    if (!incomes || !Array.isArray(incomes)) {
+      setFilteredIncomes([]);
+      return;
+    }
+    
+    let filtered = [...incomes];
+    
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      filtered = filtered.filter(income => {
+        const createdAt = new Date(income.createdAt);
+        return createdAt >= start && createdAt <= end;
+      });
+    }
+    
+    setFilteredIncomes(filtered);
+  }, [incomes, startDate, endDate]);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
@@ -233,30 +258,6 @@ export default function IncomePage() {
     setDifference(enteredAmount - expectedIncome);
   }, [enteredAmount, expectedIncome]);
   
-  // Filter incomes based on date range
-  useEffect(() => {
-    if (!incomes || !Array.isArray(incomes)) {
-      setFilteredIncomes([]);
-      return;
-    }
-    
-    let filtered = [...incomes];
-    
-    if (startDate && endDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      
-      filtered = filtered.filter(income => {
-        const createdAt = new Date(income.createdAt);
-        return createdAt >= start && createdAt <= end;
-      });
-    }
-    
-    setFilteredIncomes(filtered);
-  }, [incomes, startDate, endDate]);
   {
     /*React.useEffect(() => {
     // Placeholder calculation - replace with actual logic
