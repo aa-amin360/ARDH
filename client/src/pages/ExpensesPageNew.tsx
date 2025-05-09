@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet } from "lucide-react";
+import { Loader2, Plus, FileSpreadsheet, Download } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 // import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
@@ -247,8 +247,9 @@ export default function ExpensesPage() {
         time: "",
       });
       
-      // Reset attachment ID state
+      // Reset attachment states
       setAttachmentId(null);
+      setAttachmentFile(null);
       
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
@@ -261,15 +262,48 @@ export default function ExpensesPage() {
     },
   });
 
-  function onSubmit(values: ExpenseFormValues) {
-    // Process the values for submission
-    const formattedValues = {
-      ...values,
-      createdBy: user?.id || 0,
-      attachmentId, // Include the attachment ID in the submission
-    };
-
-    addExpenseMutation.mutate(formattedValues);
+  async function onSubmit(values: ExpenseFormValues) {
+    try {
+      // If there's a file selected, upload it first
+      let finalAttachmentId = attachmentId;
+      
+      if (attachmentFile) {
+        const formData = new FormData();
+        formData.append('file', attachmentFile);
+        formData.append('entityType', 'expense');
+        
+        // Upload the file
+        const response = await fetch('/api/attachments', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload attachment');
+        }
+        
+        const attachmentData = await response.json();
+        finalAttachmentId = attachmentData.id;
+        
+        console.log('Attachment uploaded with ID:', finalAttachmentId);
+      }
+      
+      // Process the values for submission
+      const formattedValues = {
+        ...values,
+        createdBy: user?.id || 0,
+        attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
+      };
+  
+      addExpenseMutation.mutate(formattedValues);
+    } catch (error) {
+      console.error('Error uploading attachment:', error);
+      toast({
+        title: "Error uploading attachment",
+        description: (error as Error).message || "Failed to upload attachment",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -615,6 +649,7 @@ export default function ExpensesPage() {
                       entityType="expense"
                       attachmentId={attachmentId}
                       onAttachmentUploaded={(id) => setAttachmentId(id)}
+                      onFileSelected={(file) => setAttachmentFile(file)}
                       className="w-full"
                     />
                   </div>
@@ -703,6 +738,7 @@ export default function ExpensesPage() {
                         <TableHead>Amount</TableHead>
                         <TableHead>Property</TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead>Attachment</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -725,12 +761,26 @@ export default function ExpensesPage() {
                             <TableCell className="max-w-xs truncate">
                               {expense.description}
                             </TableCell>
+                            <TableCell>
+                              {expense.attachmentId ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => window.open(`/api/attachments/${expense.attachmentId}`, '_blank')}
+                                >
+                                  <Download size={16} className="mr-1" />
+                                  Download
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">None</span>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="text-center py-6 text-muted-foreground"
                           >
                             No expenses found. Add an expense to see it here.
