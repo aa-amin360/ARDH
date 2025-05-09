@@ -1634,29 +1634,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        // Create attachment record in the database
-        const attachment = await dbStorage.createAttachment({
-          filename: req.file.originalname,
-          data: fs.readFileSync(req.file.path).toString('base64'),
-          filetype: req.file.mimetype,
-          filesize: req.file.size,
-          uploadedBy: (req.user as any).id,
-        });
+        console.log("Uploading file:", req.file.originalname, req.file.mimetype, req.file.size);
+        
+        try {
+          // Create attachment record in the database
+          const fileData = fs.readFileSync(req.file.path).toString('base64');
+          
+          const attachment = await dbStorage.createAttachment({
+            filename: req.file.originalname,
+            data: fileData,
+            filetype: req.file.mimetype,
+            filesize: req.file.size,
+            uploadedBy: (req.user as any).id,
+          });
 
-        // If entityType and entityId are provided, link the attachment to the entity
-        const { entityType, entityId } = req.body;
-        if (entityType && entityId && (entityType === 'income' || entityType === 'expense')) {
-          await dbStorage.updateEntityWithAttachment(
-            entityType,
-            parseInt(entityId),
-            attachment.id
-          );
+          // If entityType and entityId are provided, link the attachment to the entity
+          const { entityType, entityId } = req.body;
+          if (entityType && entityId && (entityType === 'income' || entityType === 'expense')) {
+            await dbStorage.updateEntityWithAttachment(
+              entityType,
+              parseInt(entityId),
+              attachment.id
+            );
+          }
+
+          // Log success and return
+          console.log("Attachment created successfully with ID:", attachment.id);
+          res.status(201).json({
+            id: attachment.id,
+            fileName: attachment.filename,
+            fileType: attachment.filetype,
+            fileSize: attachment.filesize
+          });
+        } catch (error) {
+          console.error("Error processing file:", error);
+          throw error;
+        } finally {
+          // Clean up the uploaded file
+          try {
+            if (req.file && req.file.path) {
+              fs.unlinkSync(req.file.path);
+              console.log("Temporary file cleaned up:", req.file.path);
+            }
+          } catch (cleanupError) {
+            console.error("Error cleaning up file:", cleanupError);
+          }
         }
-
-        res.status(201).json(attachment);
       } catch (error) {
         console.error("Error uploading attachment:", error);
-        next(error);
+        res.status(500).json({ message: "Failed to upload attachment: " + (error as Error).message });
       }
     }
   );
@@ -1693,18 +1719,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Attachment not found" });
       }
 
-      // Send metadata only
+      // Send metadata only with consistent field naming
       res.json({
         id: attachment.id,
-        fileName: attachment.filename, // Client expects fileName
-        fileType: attachment.filetype, // Client expects fileType
-        fileSize: attachment.filesize, // Client expects fileSize
+        fileName: attachment.filename, // Standardize to camelCase for frontend
+        fileType: attachment.filetype, // Standardize to camelCase for frontend
+        fileSize: attachment.filesize, // Standardize to camelCase for frontend
         uploadedAt: attachment.uploadedAt,
         uploadedBy: attachment.uploadedBy
       });
     } catch (error) {
       console.error("Error retrieving attachment metadata:", error);
-      next(error);
+      res.status(500).json({ message: "Failed to retrieve attachment metadata: " + (error as Error).message });
     }
   });
 

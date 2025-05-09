@@ -41,12 +41,34 @@ export function AttachmentUploader({
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await apiRequest('POST', '/api/attachments', formData, {
-        isFormData: true
-      });
-      return await res.json();
+      console.log("Uploading attachment:", 
+        formData.get('file'), 
+        formData.get('entityType'), 
+        formData.get('entityId')
+      );
+      
+      try {
+        const res = await apiRequest('POST', '/api/attachments', formData, {
+          isFormData: true
+        });
+        
+        // Check if response is ok
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || `Server error: ${res.status}`);
+        }
+        
+        // Parse response
+        const data = await res.json();
+        console.log("Upload response:", data);
+        return data;
+      } catch (error) {
+        console.error("Upload error:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
+      console.log("Upload success, data:", data);
       toast({
         title: "Success",
         description: "Attachment uploaded successfully",
@@ -55,7 +77,7 @@ export function AttachmentUploader({
       setIsUploading(false);
       setExistingAttachment(data);
       
-      if (onAttachmentUploaded) {
+      if (onAttachmentUploaded && data.id) {
         onAttachmentUploaded(data.id);
       }
       
@@ -68,9 +90,10 @@ export function AttachmentUploader({
       }
     },
     onError: (error: Error) => {
+      console.error("Upload error in mutation:", error);
       toast({
         title: "Error",
-        description: `Failed to upload attachment: ${error.message}`,
+        description: `Failed to upload attachment: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
       setIsUploading(false);
@@ -80,14 +103,31 @@ export function AttachmentUploader({
   // Fetch existing attachment if there's an attachmentId
   const fetchAttachment = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest('GET', `/api/attachments/${id}/metadata`);
-      return await res.json();
+      console.log("Fetching attachment metadata for ID:", id);
+      try {
+        const res = await apiRequest('GET', `/api/attachments/${id}/metadata`);
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          console.error("Error fetching attachment:", errorData);
+          throw new Error(errorData.message || `Server error: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        console.log("Attachment metadata:", data);
+        return data;
+      } catch (error) {
+        console.error("Failed to fetch attachment:", error);
+        throw error;
+      }
     },
     onSuccess: (data) => {
+      console.log("Successfully fetched attachment:", data);
       setExistingAttachment(data);
     },
-    onError: () => {
-      // Silently fail, the attachment may have been deleted or is inaccessible
+    onError: (error) => {
+      // Log error but silently fail in UI, as the attachment may have been deleted
+      console.error("Error in fetchAttachment:", error);
       setExistingAttachment(null);
     }
   });
@@ -165,8 +205,8 @@ export function AttachmentUploader({
   const getFileIcon = () => {
     if (!existingAttachment) return <FileText size={24} />;
     
-    const fileType = existingAttachment.fileType;
-    if (fileType.includes('image')) {
+    const fileType = existingAttachment.fileType || '';
+    if (fileType && fileType.includes('image')) {
       return <img 
         src={`/api/attachments/${existingAttachment.id}`} 
         alt="Preview" 
@@ -190,9 +230,9 @@ export function AttachmentUploader({
             <div className="flex items-center">
               {getFileIcon()}
               <div className="ml-3">
-                <p className="text-sm font-medium truncate max-w-[200px]">{existingAttachment.fileName}</p>
+                <p className="text-sm font-medium truncate max-w-[200px]">{existingAttachment.fileName || 'Attachment'}</p>
                 <p className="text-xs text-muted-foreground">
-                  {(existingAttachment.fileSize / 1024).toFixed(2)} KB
+                  {existingAttachment.fileSize ? ((existingAttachment.fileSize / 1024).toFixed(2) + ' KB') : 'Unknown size'}
                 </p>
               </div>
             </div>
