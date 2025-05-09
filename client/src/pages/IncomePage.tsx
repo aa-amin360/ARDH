@@ -109,16 +109,11 @@ export default function IncomePage() {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       
-      // Don't filter by date for now - let's see all records
-      console.log("Skipping date filtering to show all records");
-      // filtered = filtered.filter(income => {
-      //   // Check if we're using the correct date field
-      //   console.log("Income record:", income);
-      //   // Use date field instead of createdAt for filtering
-      //   const incomeDate = new Date(income.date);
-      //   console.log("Income date:", incomeDate, "In range?", incomeDate >= start && incomeDate <= end);
-      //   return incomeDate >= start && incomeDate <= end;
-      // });
+      filtered = filtered.filter(income => {
+        // Use date field for filtering, not createdAt
+        const incomeDate = new Date(income.date);
+        return incomeDate >= start && incomeDate <= end;
+      });
     }
     
     console.log("Filtered incomes:", filtered.length, filtered);
@@ -759,6 +754,7 @@ export default function IncomePage() {
                                   href={`/api/attachments/${income.attachmentId}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
+                                  download
                                   className="flex items-center text-blue-600 hover:text-blue-800"
                                 >
                                   <Download className="h-4 w-4 mr-1" />
