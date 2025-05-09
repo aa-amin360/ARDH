@@ -1701,7 +1701,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const buffer = Buffer.from(attachment.data, 'base64');
       res.set('Content-Type', attachment.filetype);
       res.set('Content-Length', buffer.length.toString());
-      res.set('Content-Disposition', `inline; filename="${attachment.filename}"`);
+      // Change from inline to attachment to force download
+      res.set('Content-Disposition', `attachment; filename="${attachment.filename}"`);
       res.send(buffer);
     } catch (error) {
       console.error("Error retrieving attachment:", error);
