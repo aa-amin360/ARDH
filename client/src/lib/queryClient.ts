@@ -27,10 +27,15 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+interface ApiRequestOptions {
+  isFormData?: boolean;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options: ApiRequestOptions = {},
 ): Promise<Response> {
   // Ensure we're using the correct base URL for the API
   const baseUrl = window.location.origin;
@@ -38,10 +43,30 @@ export async function apiRequest(
   
   console.log(`Making API request to: ${apiUrl}`);
   
+  // Prepare headers
+  const headers: HeadersInit = {};
+  
+  // Only set Content-Type for JSON requests, not for FormData
+  if (data && !options.isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Prepare request body
+  let body: BodyInit | undefined = undefined;
+  if (data) {
+    if (options.isFormData) {
+      // Use FormData as is
+      body = data as FormData;
+    } else {
+      // JSON stringify regular data
+      body = JSON.stringify(data);
+    }
+  }
+  
   const res = await fetch(apiUrl, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body,
     credentials: "include",
   });
 

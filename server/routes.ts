@@ -500,18 +500,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/expenses", isAuthenticated, async (req, res, next) => {
     try {
+      // Parse the expense data
       const expenseData = insertExpenseSchema.parse({
         ...req.body,
         createdBy: (req.user as any).id,
+        // Set attachmentId to null by default (will be updated if a file is uploaded)
+        attachmentId: null,
       });
 
       const newExpense = await storage.createExpense(expenseData);
       res.status(201).json(newExpense);
     } catch (error: any) {
+      console.error("Error creating expense:", error);
       const message =
         constraintMessages[error.constraint] || "Something went wrong.";
       res.status(400).json({ message });
-      next(error);
     }
   });
 
@@ -1657,7 +1660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Get an attachment by ID
+  // Get an attachment by ID (download the file)
   app.get("/api/attachments/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
@@ -1671,6 +1674,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.sendFile(attachment.filePath);
     } catch (error) {
       console.error("Error retrieving attachment:", error);
+      next(error);
+    }
+  });
+  
+  // Get attachment metadata without downloading the file
+  app.get("/api/attachments/:id/metadata", isAuthenticated, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const attachment = await storage.getAttachment(id);
+
+      if (!attachment) {
+        return res.status(404).json({ message: "Attachment not found" });
+      }
+
+      // Send metadata only
+      res.json({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        fileType: attachment.fileType,
+        fileSize: attachment.fileSize,
+        uploadedAt: attachment.uploadedAt,
+        uploadedBy: attachment.uploadedBy
+      });
+    } catch (error) {
+      console.error("Error retrieving attachment metadata:", error);
       next(error);
     }
   });
