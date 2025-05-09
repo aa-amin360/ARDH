@@ -154,6 +154,8 @@ export default function IncomePage() {
         expectedIncome: 0, // Added default values for new fields
         difference: 0,
       });
+      // Reset attachment ID
+      setAttachmentId(null);
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
     },
     onError: (error: Error) => {
@@ -473,6 +475,16 @@ export default function IncomePage() {
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+                  </div>
+
+                  {/* Attachment uploader component */}
+                  <div className="col-span-2 mt-4">
+                    <FormLabel>Attachment</FormLabel>
+                    <AttachmentUploader
+                      entityType="income"
+                      attachmentId={attachmentId}
+                      onAttachmentUploaded={setAttachmentId}
                     />
                   </div>
 

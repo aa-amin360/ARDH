@@ -6,6 +6,7 @@ import { setupAuth } from "./auth";
 import { constraintMessages } from "@shared/dbErrorHandler";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import {
   insertUserSchema,
   insertPropertySchema,
@@ -1670,8 +1671,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Attachment not found" });
       }
 
-      // Send the file
-      res.sendFile(attachment.filePath);
+      // Send the file as base64 data with proper content type
+      const buffer = Buffer.from(attachment.data, 'base64');
+      res.set('Content-Type', attachment.filetype);
+      res.set('Content-Length', buffer.length.toString());
+      res.set('Content-Disposition', `inline; filename="${attachment.filename}"`);
+      res.send(buffer);
     } catch (error) {
       console.error("Error retrieving attachment:", error);
       next(error);
@@ -1691,9 +1696,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send metadata only
       res.json({
         id: attachment.id,
-        fileName: attachment.fileName,
-        fileType: attachment.fileType,
-        fileSize: attachment.fileSize,
+        fileName: attachment.filename, // Client expects fileName
+        fileType: attachment.filetype, // Client expects fileType
+        fileSize: attachment.filesize, // Client expects fileSize
         uploadedAt: attachment.uploadedAt,
         uploadedBy: attachment.uploadedBy
       });
