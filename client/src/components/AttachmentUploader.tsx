@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { Button } from "@/components/ui/button";
@@ -93,8 +93,6 @@ export function AttachmentUploader({
   });
 
   // Fetch the attachment metadata when component mounts if there's an attachmentId
-  import { useEffect } from 'react';
-  
   useEffect(() => {
     if (attachmentId) {
       fetchAttachment.mutate(attachmentId);
