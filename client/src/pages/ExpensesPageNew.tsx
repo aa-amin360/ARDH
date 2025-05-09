@@ -45,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AttachmentUploader } from "@/components/AttachmentUploader";
 
 // Extended schema with validation
 const expenseFormSchema = insertExpenseSchema.extend({
@@ -79,6 +80,7 @@ export default function ExpensesPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
+  const [attachmentId, setAttachmentId] = useState<number | null>(null);
 
   // Form
   const form = useForm<ExpenseFormValues>({
@@ -259,6 +261,7 @@ export default function ExpensesPage() {
     const formattedValues = {
       ...values,
       createdBy: user?.id || 0,
+      attachmentId, // Include the attachment ID in the submission
     };
 
     addExpenseMutation.mutate(formattedValues);
@@ -597,6 +600,19 @@ export default function ExpensesPage() {
                       </FormItem>
                     )}
                   />
+
+                  <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                    <h3 className="text-lg font-medium">Attachment</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Upload a receipt or invoice for this expense (optional)
+                    </p>
+                    <AttachmentUploader
+                      entityType="expense"
+                      attachmentId={attachmentId}
+                      onAttachmentUploaded={(id) => setAttachmentId(id)}
+                      className="w-full"
+                    />
+                  </div>
 
                   <Button
                     type="submit"
