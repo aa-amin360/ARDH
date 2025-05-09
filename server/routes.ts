@@ -27,8 +27,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     destination: function (req, file, cb) {
       // Create uploads directory if it doesn't exist
       const uploadDir = path.resolve('./uploads');
-      if (!require('fs').existsSync(uploadDir)) {
-        require('fs').mkdirSync(uploadDir, { recursive: true });
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
       }
       cb(null, uploadDir);
     },
