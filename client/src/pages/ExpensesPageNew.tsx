@@ -168,29 +168,29 @@ export default function ExpensesPage() {
       }
     }
   }, [watchCategory, subcategories, form]);
-  
+
   // Filter expenses based on date range
   useEffect(() => {
     if (!expenses || !Array.isArray(expenses)) {
       setFilteredExpenses([]);
       return;
     }
-    
+
     let filtered = [...expenses];
-    
+
     if (startDate && endDate) {
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
-      
+
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      
-      filtered = filtered.filter(expense => {
+
+      filtered = filtered.filter((expense) => {
         const createdAt = new Date(expense.createdAt);
         return createdAt >= start && createdAt <= end;
       });
     }
-    
+
     setFilteredExpenses(filtered);
   }, [expenses, startDate, endDate]);
 
@@ -439,7 +439,9 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Vendor</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            onValueChange={(value) =>
+                              field.onChange(parseInt(value))
+                            }
                             value={field.value?.toString() || "none"}
                             disabled={!watchSubcategory || isLoadingVendors}
                           >
@@ -621,10 +623,10 @@ export default function ExpensesPage() {
               <CardDescription>
                 View all expenses and their details.
               </CardDescription>
-              
+
               {/* Date Range Filter */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 mt-4">
-                <div className="space-y-2">
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="startDate">From Date</Label>
                   <Input
                     id="startDate"
@@ -634,7 +636,7 @@ export default function ExpensesPage() {
                     className="max-w-xs"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="endDate">To Date</Label>
                   <Input
                     id="endDate"
@@ -644,6 +646,20 @@ export default function ExpensesPage() {
                     className="max-w-xs"
                   />
                 </div>
+
+                <div className="flex items-end">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setStartDate("");
+                        setEndDate("");
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                
+              
               </div>
             </CardHeader>
             <CardContent>

@@ -172,6 +172,7 @@ export const incomes = pgTable("incomes", {
   description: text("description").notNull(),
   propertyId: integer("property_id").references(() => properties.id),
   receivedFrom: text("received_from").notNull(),
+  attachmentId: integer("attachment_id"),
   createdBy: integer("created_by")
     .references(() => users.id)
     .notNull(),
@@ -198,9 +199,9 @@ export const expenses = pgTable("expenses", {
   personInCharge: text("person_in_charge"),
   time: text("time"),
 
-  // Attachment URL for receipt/documentation
-  attachmentUrl: text("attachment_url"),
-
+  // Reference to attachment
+  attachmentId: integer("attachment_id"),
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -304,6 +305,19 @@ export const propertyOwners = pgTable("property_owners", {
   modifiedAt: timestamp("modified_at").defaultNow().notNull(),
 });
 
+// Attachments table for storing file attachments
+export const attachments = pgTable("attachments", {
+  id: serial("id").primaryKey(),
+  filename: text("filename").notNull(),
+  filetype: text("filetype").notNull(), // MIME type
+  filesize: integer("filesize").notNull(),
+  data: text("data").notNull(), // Base64 encoded file data
+  uploadedBy: integer("uploaded_by")
+    .references(() => users.id)
+    .notNull(),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
 // Maintenance records table for tracking maintenance activities
 export const maintenanceRecords = pgTable("maintenance_records", {
   id: serial("id").primaryKey(),
@@ -339,6 +353,8 @@ export const insertIncomeSchema = createInsertSchema(incomes, {
 }).omit({
   id: true,
   createdAt: true,
+}).partial({
+  attachmentId: true, // Make attachmentId optional
 });
 
 export const insertExpenseSchema = createInsertSchema(expenses, {
@@ -349,7 +365,7 @@ export const insertExpenseSchema = createInsertSchema(expenses, {
     createdAt: true,
   })
   .partial({
-    attachmentUrl: true, // Make attachmentUrl optional
+    attachmentId: true, // Make attachmentId optional
   });
 
 export const insertWaterTankSchema = createInsertSchema(waterTanks).omit({
