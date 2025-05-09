@@ -335,8 +335,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const incomeData = insertIncomeSchema.parse({
           ...req.body,
           createdBy: (req.user as any).id,
-          // Set attachmentId to null by default (will be updated if a file is uploaded)
-          attachmentId: null,
+          // Use the attachmentId from the request body if provided, otherwise set to null
+          attachmentId: req.body.attachmentId || null,
         });
 
         const newIncome = await dbStorage.createIncome(incomeData);
