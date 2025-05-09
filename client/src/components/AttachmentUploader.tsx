@@ -14,6 +14,7 @@ interface AttachmentUploaderProps {
   entityId?: number;
   attachmentId?: number | null;
   onAttachmentUploaded?: (attachmentId: number) => void;
+  onFileSelected?: (file: File | null) => void;
   className?: string;
 }
 
@@ -32,6 +33,7 @@ export function AttachmentUploader({
   entityId, 
   attachmentId, 
   onAttachmentUploaded,
+  onFileSelected,
   className
 }: AttachmentUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -165,6 +167,11 @@ export function AttachmentUploader({
       }
       
       setFile(selectedFile);
+      
+      // Notify parent component about the selected file
+      if (onFileSelected) {
+        onFileSelected(selectedFile);
+      }
     }
   };
 
@@ -191,6 +198,10 @@ export function AttachmentUploader({
 
   const handleRemove = () => {
     setFile(null);
+    // Also notify parent component
+    if (onFileSelected) {
+      onFileSelected(null);
+    }
   };
 
   const handleRemoveExisting = () => {
@@ -287,16 +298,7 @@ export function AttachmentUploader({
           </div>
         )}
 
-        {file && !existingAttachment && (
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleUpload} 
-              disabled={isUploading}
-            >
-              {isUploading ? "Uploading..." : "Upload"}
-            </Button>
-          </div>
-        )}
+        {/* Button removed - file is automatically passed to parent for upload with form */}
       </div>
     </Card>
   );

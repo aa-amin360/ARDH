@@ -81,6 +81,7 @@ export default function ExpensesPage() {
   const [endDate, setEndDate] = useState<string>("");
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
   // Form
   const form = useForm<ExpenseFormValues>({
