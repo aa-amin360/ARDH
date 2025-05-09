@@ -84,32 +84,44 @@ export default function IncomePage() {
     queryKey: ["/api/incomes"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/incomes");
-      return res.json(); // assuming your `apiRequest` returns a Response object
+      const data = await res.json();
+      console.log("Fetched incomes:", data); // Debug log to check incoming data
+      return data;
     },
   });
   
   // Filter incomes based on date range
   useEffect(() => {
     if (!incomes || !Array.isArray(incomes)) {
+      console.log("No incomes array to filter:", incomes);
       setFilteredIncomes([]);
       return;
     }
     
+    console.log("Starting with incomes:", incomes.length, incomes);
     let filtered = [...incomes];
     
     if (startDate && endDate) {
+      console.log("Filtering by date range:", startDate, "to", endDate);
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
       
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       
-      filtered = filtered.filter(income => {
-        const createdAt = new Date(income.createdAt);
-        return createdAt >= start && createdAt <= end;
-      });
+      // Don't filter by date for now - let's see all records
+      console.log("Skipping date filtering to show all records");
+      // filtered = filtered.filter(income => {
+      //   // Check if we're using the correct date field
+      //   console.log("Income record:", income);
+      //   // Use date field instead of createdAt for filtering
+      //   const incomeDate = new Date(income.date);
+      //   console.log("Income date:", incomeDate, "In range?", incomeDate >= start && incomeDate <= end);
+      //   return incomeDate >= start && incomeDate <= end;
+      // });
     }
     
+    console.log("Filtered incomes:", filtered.length, filtered);
     setFilteredIncomes(filtered);
   }, [incomes, startDate, endDate]);
 
