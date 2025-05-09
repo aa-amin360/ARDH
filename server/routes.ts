@@ -1,6 +1,6 @@
 import express, { Request, Response, type Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage as dbStorage } from "./storage";
 import { z } from "zod";
 import { setupAuth } from "./auth";
 import { constraintMessages } from "@shared/dbErrorHandler";
@@ -22,7 +22,7 @@ import {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up file upload
-  const storage = multer.diskStorage({
+  const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       // Create uploads directory if it doesn't exist
       const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Configure multer upload
   const upload = multer({
-    storage,
+    storage: multerStorage,
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB file size limit
     },
@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User routes (admin only)
   app.get("/api/users", isAdmin, async (req, res, next) => {
     try {
-      const users = await storage.getUsers();
+      const users = await dbStorage.getUsers();
       res.json(
         users.map((user) => ({
           id: user.id,
@@ -120,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/users", isAdmin, async (req, res, next) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      const newUser = await storage.createUser(userData);
+      const newUser = await dbStorage.createUser(userData);
 
       res.status(201).json({
         id: newUser.id,
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Property routes
   app.get("/api/properties/flats", isAuthenticated, async (req, res, next) => {
     try {
-      const flats = await storage.getFlatNumberOptions();
+      const flats = await dbStorage.getFlatNumberOptions();
       res.json(flats); // [{ id, flat_number }]
     } catch (error) {
       console.error("Error fetching flat numbers:", error);
@@ -151,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/properties", isAuthenticated, async (req, res, next) => {
     try {
       console.log("Fetching properties for user:", req.user);
-      const properties = await storage.getProperties();
+      const properties = await dbStorage.getProperties();
       console.log("Properties found:", properties.length);
       res.json(properties);
     } catch (error) {
@@ -163,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/properties/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const property = await storage.getProperty(id);
+      const property = await dbStorage.getProperty(id);
 
       if (!property) {
         return res.status(404).json({ message: "Property not found" });
@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/properties", isAuthenticated, async (req, res, next) => {
     try {
       const propertyData = insertPropertySchema.parse(req.body);
-      const newProperty = await storage.createProperty(propertyData);
+      const newProperty = await dbStorage.createProperty(propertyData);
       res.status(201).json(newProperty);
     } catch (error: any) {
       const message =
@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const propertyData = insertPropertySchema.partial().parse(req.body);
 
-      const updatedProperty = await storage.updateProperty(id, propertyData);
+      const updatedProperty = await dbStorage.updateProperty(id, propertyData);
 
       if (!updatedProperty) {
         return res.status(404).json({ message: "Property not found" });
@@ -230,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Updating property ${id} with data:`, propertyData);
 
-      const updatedProperty = await storage.updateProperty(id, propertyData);
+      const updatedProperty = await dbStorage.updateProperty(id, propertyData);
 
       if (!updatedProperty) {
         return res.status(404).json({ message: "Property not found" });
@@ -249,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/properties/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteProperty(id);
+      const success = await dbStorage.deleteProperty(id);
 
       if (!success) {
         return res.status(404).json({ message: "Property not found" });
@@ -268,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     adminOnlyForIncome,
     async (req, res, next) => {
       try {
-        const incomes = await storage.getIncomes();
+        const incomes = await dbStorage.getIncomes();
         res.json(incomes);
       } catch (error) {
         next(error);
@@ -311,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const id = parseInt(req.params.id);
-        const income = await storage.getIncome(id);
+        const income = await dbStorage.getIncome(id);
 
         if (!income) {
           return res.status(404).json({ message: "Income not found" });
@@ -338,7 +338,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           attachmentId: null,
         });
 
-        const newIncome = await storage.createIncome(incomeData);
+        const newIncome = await dbStorage.createIncome(incomeData);
         res.status(201).json(newIncome);
       } catch (error: any) {
         console.error("Error creating income:", error);
@@ -358,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const id = parseInt(req.params.id);
         const incomeData = insertIncomeSchema.partial().parse(req.body);
 
-        const updatedIncome = await storage.updateIncome(id, incomeData);
+        const updatedIncome = await dbStorage.updateIncome(id, incomeData);
 
         if (!updatedIncome) {
           return res.status(404).json({ message: "Income not found" });
@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/incomes/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteIncome(id);
+      const success = await dbStorage.deleteIncome(id);
 
       if (!success) {
         return res.status(404).json({ message: "Income not found" });
@@ -392,7 +392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Expense routes
   app.get("/api/expenses", isAuthenticated, async (req, res, next) => {
     try {
-      const expenses = await storage.getExpenses();
+      const expenses = await dbStorage.getExpenses();
       res.json(expenses);
     } catch (error) {
       next(error);
@@ -405,7 +405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req, res, next) => {
       try {
-        const categories = await storage.getDistinctExpenseCategories();
+        const categories = await dbStorage.getDistinctExpenseCategories();
         res.json(categories);
       } catch (error) {
         console.error("Error fetching expense categories:", error);
@@ -420,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const category = req.params.category;
-        const subcategories = await storage.getExpenseSubcategories(category);
+        const subcategories = await dbStorage.getExpenseSubcategories(category);
         res.json(subcategories);
       } catch (error) {
         console.error("Error fetching expense subcategories:", error);
@@ -432,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get maintenance types (from expense subcategories where category is "General Maintenance Works")
   app.get("/api/maintenance-types", isAuthenticated, async (req, res, next) => {
     try {
-      const maintenanceTypes = await storage.getMaintenanceTypes();
+      const maintenanceTypes = await dbStorage.getMaintenanceTypes();
       res.json(maintenanceTypes);
     } catch (error) {
       console.error("Error fetching maintenance types:", error);
@@ -448,7 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const subcategory = req.params.subcategory;
         const vendors =
-          await storage.getVendorsByExpenseSubcategory(subcategory);
+          await dbStorage.getVendorsByExpenseSubcategory(subcategory);
         res.json(vendors);
       } catch (error) {
         next(error);
@@ -486,7 +486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/expenses/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const expense = await storage.getExpense(id);
+      const expense = await dbStorage.getExpense(id);
 
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
@@ -508,7 +508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         attachmentId: req.body.attachmentId || null,
       });
 
-      const newExpense = await storage.createExpense(expenseData);
+      const newExpense = await dbStorage.createExpense(expenseData);
       res.status(201).json(newExpense);
     } catch (error: any) {
       console.error("Error creating expense:", error);
@@ -523,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const expenseData = insertExpenseSchema.partial().parse(req.body);
 
-      const updatedExpense = await storage.updateExpense(id, expenseData);
+      const updatedExpense = await dbStorage.updateExpense(id, expenseData);
 
       if (!updatedExpense) {
         return res.status(404).json({ message: "Expense not found" });
@@ -541,7 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/expenses/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteExpense(id);
+      const success = await dbStorage.deleteExpense(id);
 
       if (!success) {
         return res.status(404).json({ message: "Expense not found" });
@@ -556,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Water Tank routes
   app.get("/api/water-tanks", isAuthenticated, async (req, res, next) => {
     try {
-      const waterTanks = await storage.getWaterTanks();
+      const waterTanks = await dbStorage.getWaterTanks();
       res.json(waterTanks);
     } catch (error) {
       next(error);
@@ -566,7 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/water-tanks/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const waterTank = await storage.getWaterTank(id);
+      const waterTank = await dbStorage.getWaterTank(id);
 
       if (!waterTank) {
         return res.status(404).json({ message: "Water tank record not found" });
@@ -585,7 +585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: (req.user as any).id,
       });
 
-      const newWaterTank = await storage.createWaterTank(waterTankData);
+      const newWaterTank = await dbStorage.createWaterTank(waterTankData);
       res.status(201).json(newWaterTank);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -600,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const waterTankData = insertWaterTankSchema.partial().parse(req.body);
 
-      const updatedWaterTank = await storage.updateWaterTank(id, waterTankData);
+      const updatedWaterTank = await dbStorage.updateWaterTank(id, waterTankData);
 
       if (!updatedWaterTank) {
         return res.status(404).json({ message: "Water tank record not found" });
@@ -618,7 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/water-tanks/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteWaterTank(id);
+      const success = await dbStorage.deleteWaterTank(id);
 
       if (!success) {
         return res.status(404).json({ message: "Water tank record not found" });
@@ -637,7 +637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     adminOnlyForIncome,
     async (req, res, next) => {
       try {
-        const incomeSummary = await storage.getIncomeSummary();
+        const incomeSummary = await dbStorage.getIncomeSummary();
         res.json(incomeSummary);
       } catch (error) {
         next(error);
@@ -650,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req, res, next) => {
       try {
-        const expenseSummary = await storage.getExpenseSummary();
+        const expenseSummary = await dbStorage.getExpenseSummary();
         res.json(expenseSummary);
       } catch (error) {
         next(error);
@@ -663,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req, res, next) => {
       try {
-        const propertySummary = await storage.getPropertySummary();
+        const propertySummary = await dbStorage.getPropertySummary();
         res.json(propertySummary);
       } catch (error) {
         next(error);
@@ -677,7 +677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const limit = parseInt(req.query.limit as string) || 10;
-        const transactions = await storage.getRecentTransactions(limit);
+        const transactions = await dbStorage.getRecentTransactions(limit);
 
         // If user is data_entry, filter out income transactions
         if (req.user && (req.user as any).role === "data_entry") {
@@ -695,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tenant routes
   app.get("/api/tenants", isAuthenticated, async (req, res, next) => {
     try {
-      const tenants = await storage.getTenants();
+      const tenants = await dbStorage.getTenants();
       res.json(tenants);
     } catch (error) {
       next(error);
@@ -705,7 +705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tenants/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const tenant = await storage.getTenant(id);
+      const tenant = await dbStorage.getTenant(id);
 
       if (!tenant) {
         return res.status(404).json({ message: "Tenant not found" });
@@ -723,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const propertyId = parseInt(req.params.propertyId);
-        const tenants = await storage.getTenantsByProperty(propertyId);
+        const tenants = await dbStorage.getTenantsByProperty(propertyId);
         res.json(tenants);
       } catch (error) {
         next(error);
@@ -739,7 +739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.body.createdBy || (req.user as any)?.id || 1, // Safe fallback
       });
 
-      const newTenant = await storage.createTenant(tenantData);
+      const newTenant = await dbStorage.createTenant(tenantData);
       res.status(201).json(newTenant);
     } catch (error: any) {
       const message =
@@ -755,7 +755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const tenantData = insertTenantSchema.partial().parse(req.body);
 
-      const updatedTenant = await storage.updateTenant(id, tenantData);
+      const updatedTenant = await dbStorage.updateTenant(id, tenantData);
 
       if (!updatedTenant) {
         return res.status(404).json({ message: "Tenant not found" });
@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/tenants/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteTenant(id);
+      const success = await dbStorage.deleteTenant(id);
 
       if (!success) {
         return res.status(404).json({ message: "Tenant not found" });
@@ -793,7 +793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req, res, next) => {
       try {
-        const types = await storage.getDistinctVendorServiceTypes();
+        const types = await dbStorage.getDistinctVendorServiceTypes();
         res.json(types.map((row) => row.vendor_type));
       } catch (error) {
         console.error("Error fetching vendor service types:", error);
@@ -804,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/vendors", isAuthenticated, async (req, res, next) => {
     try {
-      const vendors = await storage.getVendors();
+      const vendors = await dbStorage.getVendors();
       res.json(vendors);
     } catch (error) {
       next(error);
@@ -817,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const serviceType = req.params.serviceType;
-        const vendors = await storage.getVendorsByServiceType(serviceType);
+        const vendors = await dbStorage.getVendorsByServiceType(serviceType);
         res.json(vendors);
       } catch (error) {
         next(error);
@@ -834,7 +834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const maintenanceType = req.params.maintenanceType;
         console.log(`Getting vendors for maintenance type: ${maintenanceType}`);
         const vendors =
-          await storage.getVendorsByMaintenanceType(maintenanceType);
+          await dbStorage.getVendorsByMaintenanceType(maintenanceType);
         res.json(vendors);
       } catch (error) {
         console.error("Error fetching vendors by maintenance type:", error);
@@ -846,7 +846,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/vendors/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const vendor = await storage.getVendor(id);
+      const vendor = await dbStorage.getVendor(id);
 
       if (!vendor) {
         return res.status(404).json({ message: "Vendor not found" });
@@ -865,7 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: (req.user as any).id,
       });
 
-      const newVendor = await storage.createVendor(vendorData);
+      const newVendor = await dbStorage.createVendor(vendorData);
       res.status(201).json(newVendor);
     } catch (error: any) {
       const message =
@@ -880,7 +880,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const vendorData = insertVendorSchema.partial().parse(req.body);
 
-      const updatedVendor = await storage.updateVendor(id, vendorData);
+      const updatedVendor = await dbStorage.updateVendor(id, vendorData);
 
       if (!updatedVendor) {
         return res.status(404).json({ message: "Vendor not found" });
@@ -899,7 +899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/vendors/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteVendor(id);
+      const success = await dbStorage.deleteVendor(id);
 
       if (!success) {
         return res.status(404).json({ message: "Vendor not found" });
@@ -915,7 +915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/property-charges", isAuthenticated, async (req, res, next) => {
     try {
-      const charges = await storage.getPropertyCharges();
+      const charges = await dbStorage.getPropertyCharges();
       res.json(charges);
     } catch (error) {
       next(error);
@@ -928,7 +928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const flatNumber = req.params.flatNumber;
-        const charges = await storage.getPropertyChargesByFlat(flatNumber);
+        const charges = await dbStorage.getPropertyChargesByFlat(flatNumber);
         res.json(charges);
       } catch (error) {
         next(error);
@@ -942,7 +942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const flatNumber = req.params.flatNumber;
-        const charges = await storage.getCurrentPropertyCharges(flatNumber);
+        const charges = await dbStorage.getCurrentPropertyCharges(flatNumber);
         res.json(charges);
       } catch (error) {
         next(error);
@@ -957,7 +957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const flatNumber = req.params.flatNumber;
-        const hasActiveTenants = await storage.hasActiveTenants(flatNumber);
+        const hasActiveTenants = await dbStorage.hasActiveTenants(flatNumber);
         res.json({ hasActiveTenants });
       } catch (error) {
         next(error);
@@ -971,7 +971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const { flatNumber, chargeType } = req.params;
-        const charges = await storage.getPropertyChargeHistory(
+        const charges = await dbStorage.getPropertyChargeHistory(
           flatNumber,
           chargeType,
         );
@@ -988,7 +988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const id = parseInt(req.params.id);
-        const charge = await storage.getPropertyCharge(id);
+        const charge = await dbStorage.getPropertyCharge(id);
 
         if (!charge) {
           return res.status(404).json({ message: "Property charge not found" });
@@ -1015,13 +1015,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // First close old active charge if same flat and charge type exist already
-        await storage.closeActiveCharge(
+        await dbStorage.closeActiveCharge(
           chargeData.flatNumber,
           chargeData.chargeType,
         );
 
         // Then add new charge
-        const newCharge = await storage.addNewCharge(chargeData);
+        const newCharge = await dbStorage.addNewCharge(chargeData);
 
         res.status(201).json(newCharge);
       } catch (error) {
@@ -1044,7 +1044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const id = parseInt(req.params.id);
         const chargeData = insertPropertyChargeSchema.partial().parse(req.body);
 
-        const updatedCharge = await storage.updatePropertyCharge(
+        const updatedCharge = await dbStorage.updatePropertyCharge(
           id,
           chargeData,
         );
@@ -1066,7 +1066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/property-charges/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deletePropertyCharge(id);
+      const success = await dbStorage.deletePropertyCharge(id);
 
       if (!success) {
         return res.status(404).json({ message: "Property charge not found" });
@@ -1081,7 +1081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Tenant Charges routes
   app.get("/api/tenant-charges", isAuthenticated, async (req, res, next) => {
     try {
-      const charges = await storage.getTenantCharges();
+      const charges = await dbStorage.getTenantCharges();
       res.json(charges);
     } catch (error) {
       next(error);
@@ -1094,7 +1094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const tenantId = parseInt(req.params.tenantId);
-        const charges = await storage.getTenantChargesByTenant(tenantId);
+        const charges = await dbStorage.getTenantChargesByTenant(tenantId);
         res.json(charges);
       } catch (error) {
         next(error);
@@ -1108,7 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const tenantId = parseInt(req.params.tenantId);
-        const charges = await storage.getCurrentTenantCharges(tenantId);
+        const charges = await dbStorage.getCurrentTenantCharges(tenantId);
         res.json(charges);
       } catch (error) {
         next(error);
@@ -1123,7 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const tenantId = parseInt(req.params.tenantId);
         const { chargeType } = req.params;
-        const charges = await storage.getTenantChargeHistory(
+        const charges = await dbStorage.getTenantChargeHistory(
           tenantId,
           chargeType,
         );
@@ -1140,7 +1140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const id = parseInt(req.params.id);
-        const charge = await storage.getTenantCharge(id);
+        const charge = await dbStorage.getTenantCharge(id);
 
         if (!charge) {
           return res.status(404).json({ message: "Tenant charge not found" });
@@ -1164,7 +1164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdBy: (req.user as any).id,
         });
 
-        const newCharge = await storage.createTenantCharge(chargeData);
+        const newCharge = await dbStorage.createTenantCharge(chargeData);
         res.status(201).json(newCharge);
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -1184,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const id = parseInt(req.params.id);
         const chargeData = insertTenantChargeSchema.partial().parse(req.body);
 
-        const updatedCharge = await storage.updateTenantCharge(id, chargeData);
+        const updatedCharge = await dbStorage.updateTenantCharge(id, chargeData);
 
         if (!updatedCharge) {
           return res.status(404).json({ message: "Tenant charge not found" });
@@ -1203,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/tenant-charges/:id", isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteTenantCharge(id);
+      const success = await dbStorage.deleteTenantCharge(id);
 
       if (!success) {
         return res.status(404).json({ message: "Tenant charge not found" });
@@ -1232,7 +1232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        await storage.syncPropertyChargeWithTenant(
+        await dbStorage.syncPropertyChargeWithTenant(
           flatNumber,
           chargeType,
           amount,
@@ -1256,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const { flatNumber } = req.params;
-        const tenants = await storage.getCurrentTenantsForFlat(flatNumber);
+        const tenants = await dbStorage.getCurrentTenantsForFlat(flatNumber);
         res.json(tenants);
       } catch (error) {
         next(error);
@@ -1268,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/property-owners", isAuthenticated, async (req, res, next) => {
     try {
       console.log("Fetching all property owners");
-      const owners = await storage.getPropertyOwners();
+      const owners = await dbStorage.getPropertyOwners();
       res.json(owners);
     } catch (error) {
       console.error("Error fetching property owners:", error);
@@ -1287,7 +1287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         console.log(`Searching property owners with term: ${term}`);
-        const owners = await storage.searchPropertyOwners(term);
+        const owners = await dbStorage.searchPropertyOwners(term);
         res.json(owners);
       } catch (error) {
         console.error("Error searching property owners:", error);
@@ -1302,7 +1302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const id = req.params.id;
-        const owner = await storage.getPropertyOwner(id);
+        const owner = await dbStorage.getPropertyOwner(id);
 
         if (!owner) {
           return res.status(404).json({ message: "Property owner not found" });
@@ -1324,13 +1324,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req, res, next) => {
       try {
-        const owner = await storage.getPropertyOwner(req.params.id);
+        const owner = await dbStorage.getPropertyOwner(req.params.id);
 
         if (!owner) {
           return res.status(404).json({ message: "Property owner not found" });
         }
 
-        const linkedFlats = await storage.getPropertyOwnerLinkedFlats(
+        const linkedFlats = await dbStorage.getPropertyOwnerLinkedFlats(
           owner.fullName,
         );
         res.json(linkedFlats);
@@ -1352,7 +1352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: (req.user as any).id,
       });
 
-      const newOwner = await storage.createPropertyOwner(ownerData);
+      const newOwner = await dbStorage.createPropertyOwner(ownerData);
       res.status(201).json(newOwner);
     } catch (error: any) {
       const message =
@@ -1368,7 +1368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Updating property owner ${id} with data:`, ownerData);
 
-      const updatedOwner = await storage.updatePropertyOwner(id, ownerData);
+      const updatedOwner = await dbStorage.updatePropertyOwner(id, ownerData);
 
       if (!updatedOwner) {
         return res.status(404).json({ message: "Property owner not found" });
@@ -1388,7 +1388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = req.params.id;
 
       // Check if owner is linked to any properties first
-      const isLinked = await storage.isPropertyOwnerLinked(id);
+      const isLinked = await dbStorage.isPropertyOwnerLinked(id);
 
       if (isLinked) {
         return res.status(400).json({
@@ -1397,7 +1397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const success = await storage.deletePropertyOwner(id);
+      const success = await dbStorage.deletePropertyOwner(id);
 
       if (!success) {
         return res.status(404).json({ message: "Property owner not found" });
@@ -1416,7 +1416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     async (req, res, next) => {
       try {
-        const records = await storage.getMaintenanceRecords();
+        const records = await dbStorage.getMaintenanceRecords();
         res.json(records);
         console.log("Maintenance records:", records);
       } catch (error) {
@@ -1432,7 +1432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const id = parseInt(req.params.id);
-        const record = await storage.getMaintenanceRecord(id);
+        const record = await dbStorage.getMaintenanceRecord(id);
 
         if (!record) {
           return res
@@ -1458,7 +1458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const propertyId = parseInt(req.params.propertyId);
         const records =
-          await storage.getMaintenanceRecordsByProperty(propertyId);
+          await dbStorage.getMaintenanceRecordsByProperty(propertyId);
         res.json(records);
       } catch (error) {
         console.error(
@@ -1476,7 +1476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const type = req.params.type;
-        const records = await storage.getMaintenanceRecordsByType(type);
+        const records = await dbStorage.getMaintenanceRecordsByType(type);
         res.json(records);
       } catch (error) {
         console.error(
@@ -1495,7 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const propertyId = parseInt(req.params.propertyId);
         const type = req.params.type;
-        const lastDate = await storage.getLastMaintenanceDate(propertyId, type);
+        const lastDate = await dbStorage.getLastMaintenanceDate(propertyId, type);
         res.json({ lastMaintenanceDate: lastDate });
       } catch (error) {
         console.error(`Error fetching last maintenance date:`, error);
@@ -1515,7 +1515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         console.log("Creating maintenance record with data:", recordData);
-        const newRecord = await storage.createMaintenanceRecord(recordData);
+        const newRecord = await dbStorage.createMaintenanceRecord(recordData);
         res.status(201).json(newRecord);
       } catch (error: any) {
         // Log error for debugging
@@ -1552,7 +1552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .partial()
           .parse(req.body);
 
-        const updatedRecord = await storage.updateMaintenanceRecord(
+        const updatedRecord = await dbStorage.updateMaintenanceRecord(
           id,
           recordData,
         );
@@ -1597,7 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req, res, next) => {
       try {
         const id = parseInt(req.params.id);
-        const success = await storage.deleteMaintenanceRecord(id);
+        const success = await dbStorage.deleteMaintenanceRecord(id);
 
         if (!success) {
           return res
@@ -1634,7 +1634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Create attachment record in the database
-        const attachment = await storage.createAttachment({
+        const attachment = await dbStorage.createAttachment({
           fileName: req.file.originalname,
           filePath: req.file.path,
           fileType: req.file.mimetype,
@@ -1645,7 +1645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If entityType and entityId are provided, link the attachment to the entity
         const { entityType, entityId } = req.body;
         if (entityType && entityId && (entityType === 'income' || entityType === 'expense')) {
-          await storage.updateEntityWithAttachment(
+          await dbStorage.updateEntityWithAttachment(
             entityType,
             parseInt(entityId),
             attachment.id
@@ -1664,7 +1664,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attachments/:id", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const attachment = await storage.getAttachment(id);
+      const attachment = await dbStorage.getAttachment(id);
 
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
@@ -1682,7 +1682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/attachments/:id/metadata", isAuthenticated, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const attachment = await storage.getAttachment(id);
+      const attachment = await dbStorage.getAttachment(id);
 
       if (!attachment) {
         return res.status(404).json({ message: "Attachment not found" });
