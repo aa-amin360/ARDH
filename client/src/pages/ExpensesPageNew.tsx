@@ -245,6 +245,10 @@ export default function ExpensesPage() {
         driverContact: "",
         time: "",
       });
+      
+      // Reset attachment ID state
+      setAttachmentId(null);
+      
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
     onError: (error: Error) => {
