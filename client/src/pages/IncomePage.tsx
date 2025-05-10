@@ -46,6 +46,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { getNestawayIdByFlatNumber } from "@shared/constants";
 
 // Extended schema with validation
@@ -76,6 +84,11 @@ export default function IncomePage() {
   const [filteredIncomes, setFilteredIncomes] = useState<any[]>([]);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  
+  // Dialog state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedIncome, setSelectedIncome] = useState<any | null>(null);
 
   // Query to fetch incomes
   const {
