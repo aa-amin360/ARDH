@@ -189,8 +189,8 @@ export default function ExpensesPage() {
       end.setHours(23, 59, 59, 999);
 
       filtered = filtered.filter((expense) => {
-        const createdAt = new Date(expense.createdAt);
-        return createdAt >= start && createdAt <= end;
+        const expenseDate = new Date(expense.date);
+        return expenseDate >= start && expenseDate <= end;
       });
     }
 
@@ -435,9 +435,11 @@ export default function ExpensesPage() {
         <TabsContent value="add" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Add New Expense</CardTitle>
+              <CardTitle>{isEditing ? 'Edit Expense' : 'Add New Expense'}</CardTitle>
               <CardDescription>
-                Enter the details of the expense you want to add.
+                {isEditing 
+                  ? 'Update the details of this expense.'
+                  : 'Enter the details of the expense you want to add.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -917,8 +919,9 @@ export default function ExpensesPage() {
                             <TableCell>
                               {expense.attachmentId ? (
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                                   onClick={() => window.open(`/api/attachments/${expense.attachmentId}`, '_blank')}
                                 >
                                   <Download size={16} className="mr-1" />
@@ -928,12 +931,34 @@ export default function ExpensesPage() {
                                 <span className="text-muted-foreground text-sm">None</span>
                               )}
                             </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditExpense(expense)}
+                                >
+                                  <Pencil size={16} className="text-blue-500" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to delete this expense?')) {
+                                      deleteExpenseMutation.mutate(expense.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 size={16} className="text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={8}
                             className="text-center py-6 text-muted-foreground"
                           >
                             No expenses found. Add an expense to see it here.
