@@ -45,6 +45,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
 
 // Extended schema with validation
@@ -283,15 +291,14 @@ export default function ExpensesPage() {
     },
   });
   
-  // State for editing expense
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+  // Dialog state for editing and deleting
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
   
-  // Function to handle edit button click
+  // Function to handle edit expense dialog
   const handleEditExpense = (expense: any) => {
-    setIsEditing(true);
-    setEditingExpenseId(expense.id);
-    setActiveTab("add");
+    setSelectedExpense(expense);
     
     // Set form values from selected expense
     form.reset({
@@ -320,6 +327,15 @@ export default function ExpensesPage() {
       setAttachmentId(null);
     }
     setAttachmentFile(null);
+    
+    // Open edit dialog
+    setIsEditDialogOpen(true);
+  };
+  
+  // Function to handle delete expense dialog
+  const handleDeleteExpense = (expense: any) => {
+    setSelectedExpense(expense);
+    setIsDeleteDialogOpen(true);
   };
   
   // Mutation to update expense
@@ -353,8 +369,8 @@ export default function ExpensesPage() {
         time: "",
       });
       
-      setIsEditing(false);
-      setEditingExpenseId(null);
+      setIsEditDialogOpen(false);
+      setSelectedExpense(null);
       setAttachmentId(null);
       setAttachmentFile(null);
       
@@ -403,9 +419,9 @@ export default function ExpensesPage() {
       };
   
       // Handle update vs. create
-      if (isEditing && editingExpenseId) {
+      if (isEditDialogOpen && selectedExpense) {
         updateExpenseMutation.mutate({
-          id: editingExpenseId,
+          id: selectedExpense.id,
           values: formattedValues
         });
       } else {
@@ -435,11 +451,9 @@ export default function ExpensesPage() {
         <TabsContent value="add" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>{isEditing ? 'Edit Expense' : 'Add New Expense'}</CardTitle>
+              <CardTitle>Add New Expense</CardTitle>
               <CardDescription>
-                {isEditing 
-                  ? 'Update the details of this expense.'
-                  : 'Enter the details of the expense you want to add.'}
+                Enter the details of the expense you want to add.
               </CardDescription>
             </CardHeader>
             <CardContent>

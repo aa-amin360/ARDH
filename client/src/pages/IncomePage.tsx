@@ -422,7 +422,16 @@ export default function IncomePage() {
         attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
       };
 
-      addIncomeMutation.mutate(formattedValues);
+      if (isEditDialogOpen && selectedIncome) {
+        // Update existing income
+        updateIncomeMutation.mutate({
+          id: selectedIncome.id,
+          values: formattedValues
+        });
+      } else {
+        // Add new income
+        addIncomeMutation.mutate(formattedValues);
+      }
     } catch (error) {
       console.error("Error uploading attachment:", error);
       toast({
@@ -928,6 +937,260 @@ export default function IncomePage() {
           </Card>
         </TabsContent>
       </Tabs>
+      {/* Edit Income Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Income</DialogTitle>
+            <DialogDescription>
+              Update the details of this income record.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Income Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="rent">Rent</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="tax_return">Tax Return</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Amount (₹)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Enter amount"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="propertyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        value={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select property" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Array.isArray(flatOptions) &&
+                            flatOptions.map((property) => (
+                              <SelectItem
+                                key={property.id}
+                                value={property.id.toString()}
+                              >
+                                {property.flat_number}
+                                {property.nestaway_id && ` (Nestaway ID: ${property.nestaway_id})`}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter description"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="receivedFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Received From</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter source of income"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div>
+                  <Label>Attachment</Label>
+                  <AttachmentUploader
+                    entityType="income"
+                    attachmentId={attachmentId}
+                    onAttachmentUploaded={(id) => setAttachmentId(id)}
+                    onFileSelected={(file) => setAttachmentFile(file)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setSelectedIncome(null);
+                    form.reset({
+                      type: "rent",
+                      amount: 0,
+                      date: new Date().toISOString().split("T")[0],
+                      description: "",
+                      receivedFrom: "",
+                      propertyId: 0,
+                      createdBy: 0,
+                      expectedIncome: 0,
+                      difference: 0,
+                      NestawayId: "",
+                    });
+                    setAttachmentId(null);
+                    setAttachmentFile(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={updateIncomeMutation.isPending}
+                >
+                  {updateIncomeMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Income"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Income Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Income</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this income record? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedIncome && (
+              <div className="space-y-2">
+                <p>
+                  <span className="font-semibold">Type:</span>{" "}
+                  {selectedIncome.type || "N/A"}
+                </p>
+                <p>
+                  <span className="font-semibold">Amount:</span>{" "}
+                  {formatCurrency(selectedIncome.amount || 0)}
+                </p>
+                <p>
+                  <span className="font-semibold">Date:</span>{" "}
+                  {formatDate(selectedIncome.date)}
+                </p>
+                <p>
+                  <span className="font-semibold">Description:</span>{" "}
+                  {selectedIncome.description || "N/A"}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setSelectedIncome(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteIncomeMutation.isPending}
+              onClick={() => {
+                if (selectedIncome) {
+                  deleteIncomeMutation.mutate(selectedIncome.id);
+                }
+              }}
+            >
+              {deleteIncomeMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Delete Income
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
