@@ -68,7 +68,7 @@ export default function IncomePage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("add");
   const [flatOptions, setFlatOptions] = useState<
-    { id: number; flat_number: string }[]
+    { id: number; flat_number: string; nestaway_id?: string }[]
   >([]);
   // Date range filter states
   const [startDate, setStartDate] = useState<string>("");
@@ -469,7 +469,7 @@ export default function IncomePage() {
                       control={form.control}
                       name="propertyId"
                       render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="relative">
                           <FormLabel>Property</FormLabel>
                           <Select
                             onValueChange={(value) =>
