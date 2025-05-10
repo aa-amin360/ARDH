@@ -197,6 +197,7 @@ export default function IncomePage() {
   // Mutation to update income
   const updateIncomeMutation = useMutation({
     mutationFn: async ({ id, values }: { id: number; values: IncomeFormValues }) => {
+      console.log("Update income mutation running with values:", values);
       const res = await apiRequest("PATCH", `/api/incomes/${id}`, values);
       if (!res.ok) {
         throw new Error(`Error updating income: ${res.status}`);
@@ -423,6 +424,8 @@ export default function IncomePage() {
         propertyId,
         createdBy: user?.id || 0,
         attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
+        expectedIncome: parseFloat(expectedIncome.toString()) || 0,
+        difference: parseFloat(difference.toString()) || 0
       };
 
       if (isEditDialogOpen && selectedIncome) {

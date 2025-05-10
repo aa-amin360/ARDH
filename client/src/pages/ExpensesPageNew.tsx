@@ -1245,7 +1245,7 @@ export default function ExpensesPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Common Area</SelectItem>
+                            <SelectItem value="0">Common Area</SelectItem>
                             {Array.isArray(flatOptions) && 
                               flatOptions.map((property: any) => (
                                 <SelectItem key={property.id} value={property.id.toString()}>
