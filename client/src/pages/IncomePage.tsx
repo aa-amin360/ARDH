@@ -94,6 +94,14 @@ export default function IncomePage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [filteredIncomes, setFilteredIncomes] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
+  
+  // Calculate pagination details
+  const totalPages = Math.ceil(filteredIncomes.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredIncomes.length);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
@@ -119,10 +127,16 @@ export default function IncomePage() {
     enabled: true,
   });
 
-  // Filter incomes based on date range
+  // Filter incomes based on date range - only show data after filter is applied
   useEffect(() => {
     if (!incomes || !Array.isArray(incomes)) {
       console.log("No incomes array to filter:", incomes);
+      setFilteredIncomes([]);
+      return;
+    }
+
+    if (!isFilterApplied) {
+      // Don't show any data until filter is applied
       setFilteredIncomes([]);
       return;
     }
@@ -147,7 +161,7 @@ export default function IncomePage() {
 
     console.log("Filtered incomes:", filtered.length, filtered);
     setFilteredIncomes(filtered);
-  }, [incomes, startDate, endDate]);
+  }, [incomes, startDate, endDate, isFilterApplied]);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
@@ -167,6 +181,20 @@ export default function IncomePage() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+  
+  // Apply date filter function
+  const applyDateFilter = () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Date range required",
+        description: "Please select both start and end dates to filter records.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsFilterApplied(true);
+    setCurrentPage(1);
   };
 
   // Mutation to add income
@@ -710,7 +738,7 @@ export default function IncomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label htmlFor="start-date">Start Date</Label>
                   <Input
@@ -730,11 +758,20 @@ export default function IncomePage() {
                   />
                 </div>
                 <div className="flex items-end">
+                  <Button 
+                    onClick={applyDateFilter}
+                  >
+                    Apply Filter
+                  </Button>
+                </div>
+                <div className="flex items-end">
                   <Button
                     variant="outline"
                     onClick={() => {
                       setStartDate("");
                       setEndDate("");
+                      setIsFilterApplied(false);
+                      setCurrentPage(1);
                     }}
                   >
                     Clear Filters
@@ -753,9 +790,14 @@ export default function IncomePage() {
               ) : filteredIncomes.length > 0 ? (
                 <div>
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">
-                      Recent Income Entries
-                    </h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">
+                        Income Entries ({filteredIncomes.length} total)
+                      </h3>
+                      <div className="text-sm text-muted-foreground">
+                        Showing {filteredIncomes.length > 0 ? startIndex + 1 : 0} to {endIndex} of {filteredIncomes.length}
+                      </div>
+                    </div>
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -766,10 +808,11 @@ export default function IncomePage() {
                             <TableHead>Property</TableHead>
                             <TableHead>Received From</TableHead>
                             <TableHead>Attachment</TableHead>
+                            <TableHead>Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredIncomes.slice(0, 5).map((income) => (
+                          {filteredIncomes.slice(startIndex, endIndex).map((income) => (
                             <TableRow key={income.id}>
                               <TableCell className="whitespace-nowrap">
                                 {formatDate(income.date)}
