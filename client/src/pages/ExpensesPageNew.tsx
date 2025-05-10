@@ -85,7 +85,7 @@ export default function ExpensesPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState("view");
-  const [selectedCategory, setSelectedCategory] = React.useState("");
+  //const [selectedCategory, setSelectedCategory] = React.useState("");
   const [flatOptions, setFlatOptions] = useState<
     { id: number; flat_number: string; nestaway_id?: string }[]
   >([]);
@@ -100,13 +100,15 @@ export default function ExpensesPage() {
   const [subcategoryOptions, setSubcategoryOptions] = useState<string[]>([]);
   const [vendorOptions, setVendorOptions] = useState<any[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  
+
   // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any>(null);
-  const [editAttachmentFile, setEditAttachmentFile] = useState<File | null>(null);
-  
+  const [editAttachmentFile, setEditAttachmentFile] = useState<File | null>(
+    null,
+  );
+
   // Bulk upload states
   const [showBulkUpload, setShowBulkUpload] = useState(false);
 
@@ -122,6 +124,7 @@ export default function ExpensesPage() {
       vendorId: undefined,
     },
   });
+  const selectedCategory = form.watch("category");
 
   const editForm = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
@@ -149,22 +152,23 @@ export default function ExpensesPage() {
   });
 
   // Fetch expense subcategories based on selected category
-  const { data: expenseSubcategories, refetch: refetchSubcategories } = useQuery({
-    queryKey: ["/api/expenses/subcategories", selectedCategory],
-    queryFn: async () => {
-      if (!selectedCategory) return [];
-      const response = await fetch(
-        `/api/expenses/subcategories?category=${encodeURIComponent(
-          selectedCategory
-        )}`
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch expense subcategories");
-      }
-      return response.json();
-    },
-    enabled: !!selectedCategory,
-  });
+  const { data: expenseSubcategories, refetch: refetchSubcategories } =
+    useQuery({
+      queryKey: ["/api/expenses/subcategories", selectedCategory],
+      queryFn: async () => {
+        if (!selectedCategory) return [];
+        const response = await fetch(
+          `/api/expenses/subcategories?category=${encodeURIComponent(
+            selectedCategory,
+          )}`,
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch expense subcategories");
+        }
+        return response.json();
+      },
+      enabled: !!selectedCategory,
+    });
 
   // Fetch properties (flats)
   const { data: properties } = useQuery({
@@ -211,35 +215,35 @@ export default function ExpensesPage() {
   const createExpenseMutation = useMutation({
     mutationFn: async (data: ExpenseFormValues) => {
       const formData = new FormData();
-      
+
       // Use the date string directly - it's already in the right format
       const expenseData = {
         ...data,
         // The date is already a string from the form
       };
-      
+
       // Add all expense data fields to FormData
       Object.entries(expenseData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           formData.append(key, String(value));
         }
       });
-      
+
       // Add attachment if exists
       if (attachmentFile) {
         formData.append("attachment", attachmentFile);
       }
-      
+
       const response = await fetch("/api/expenses", {
         method: "POST",
         body: formData,
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to create expense");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -273,35 +277,35 @@ export default function ExpensesPage() {
     mutationFn: async (data: ExpenseFormValues & { id: number }) => {
       const { id, ...expenseData } = data;
       const formData = new FormData();
-      
+
       // Use the date string directly - it's already in the right format
       const processedData = {
         ...expenseData,
         // The date is already a string from the form
       };
-      
+
       // Add all expense data fields to FormData
       Object.entries(processedData).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           formData.append(key, String(value));
         }
       });
-      
+
       // Add attachment if exists
       if (editAttachmentFile) {
         formData.append("attachment", editAttachmentFile);
       }
-      
+
       const response = await fetch(`/api/expenses/${id}`, {
         method: "PUT",
         body: formData,
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to update expense");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -329,12 +333,12 @@ export default function ExpensesPage() {
       const response = await fetch(`/api/expenses/${id}`, {
         method: "DELETE",
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to delete expense");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -365,7 +369,9 @@ export default function ExpensesPage() {
     if (expenseCategories) {
       // Handle the expense categories data structure correctly
       // The API returns an array of objects with expense_category property
-      const categories = expenseCategories.map((cat: any) => cat.expense_category);
+      const categories = expenseCategories.map(
+        (cat: any) => cat.expense_category,
+      );
       setCategoryOptions(categories);
       console.log("Categories:", categories);
     }
@@ -375,7 +381,9 @@ export default function ExpensesPage() {
     if (expenseSubcategories) {
       // Handle the expense subcategories data structure correctly
       // The API returns an array of objects with expense_subcategory property
-      const subcategories = expenseSubcategories.map((subcat: any) => subcat.expense_subcategory);
+      const subcategories = expenseSubcategories.map(
+        (subcat: any) => subcat.expense_subcategory,
+      );
       setSubcategoryOptions(subcategories);
       console.log("Subcategories:", subcategories);
     }
@@ -398,19 +406,19 @@ export default function ExpensesPage() {
   useEffect(() => {
     if (isFilterApplied && expenses) {
       let filtered = [...expenses];
-      
+
       // Apply date filter if dates are selected
       if (startDate && endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999); // Set end date to end of day
-        
+
         filtered = filtered.filter((expense) => {
           const expenseDate = new Date(expense.date);
           return expenseDate >= start && expenseDate <= end;
         });
       }
-      
+
       setFilteredExpenses(filtered);
       setCurrentPage(1); // Reset to first page when filter changes
     } else {
@@ -446,7 +454,7 @@ export default function ExpensesPage() {
       });
       return;
     }
-    
+
     setIsFilterApplied(true);
   };
 
@@ -488,10 +496,10 @@ export default function ExpensesPage() {
       propertyId: expense.propertyId,
       vendorId: expense.vendorId,
     });
-    
+
     // Update selected category for subcategory dropdown
     setSelectedCategory(expense.category);
-    
+
     setEditDialogOpen(true);
   };
 
@@ -551,7 +559,7 @@ export default function ExpensesPage() {
           <TabsTrigger value="view">View Expenses</TabsTrigger>
           <TabsTrigger value="add">Add Expense</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="view">
           <Card>
             <CardHeader>
@@ -597,7 +605,8 @@ export default function ExpensesPage() {
                 </div>
               ) : !isFilterApplied ? (
                 <div className="text-center py-10 text-muted-foreground">
-                  Please select a date range and apply the filter to view expense records.
+                  Please select a date range and apply the filter to view
+                  expense records.
                 </div>
               ) : filteredExpenses.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
@@ -633,7 +642,7 @@ export default function ExpensesPage() {
                               <TableCell>
                                 {expense.propertyId
                                   ? flatOptions.find(
-                                      (p) => p.id === expense.propertyId
+                                      (p) => p.id === expense.propertyId,
                                     )?.flat_number || "Unknown"
                                   : "Common Areas"}
                               </TableCell>
@@ -645,7 +654,12 @@ export default function ExpensesPage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(`/api/attachments/${expense.attachmentId}`, "_blank")}
+                                    onClick={() =>
+                                      window.open(
+                                        `/api/attachments/${expense.attachmentId}`,
+                                        "_blank",
+                                      )
+                                    }
                                   >
                                     View
                                   </Button>
@@ -677,7 +691,7 @@ export default function ExpensesPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  
+
                   {/* Pagination controls */}
                   {filteredExpenses.length > 0 && (
                     <div className="flex justify-between items-center">
@@ -711,7 +725,7 @@ export default function ExpensesPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="add">
           <Card>
             <CardHeader>
@@ -740,7 +754,6 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
-                    
                     <FormField
                       control={form.control}
                       name="amount"
@@ -754,7 +767,6 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
-                    
                     <FormField
                       control={form.control}
                       name="category"
@@ -785,7 +797,6 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
-                    
                     <FormField
                       control={form.control}
                       name="subcategory"
@@ -795,7 +806,6 @@ export default function ExpensesPage() {
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
-                            disabled={!selectedCategory}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -803,12 +813,12 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {subcategoryOptions.map((subcategory) => (
+                              {expenseSubcategories.map((subcategory: any) => (
                                 <SelectItem
-                                  key={subcategory}
-                                  value={subcategory}
+                                  key={subcategory.expense_sub_category}
+                                  value={subcategory.expense_sub_category}
                                 >
-                                  {subcategory}
+                                  {subcategory.expense_sub_category}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -817,7 +827,7 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
-                    
+                    s
                     <FormField
                       control={form.control}
                       name="propertyId"
@@ -825,7 +835,9 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Property (Optional)</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(Number(value) || undefined)}
+                            onValueChange={(value) =>
+                              field.onChange(Number(value) || undefined)
+                            }
                             defaultValue={field.value?.toString() || ""}
                           >
                             <FormControl>
@@ -852,7 +864,6 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
-                    
                     <FormField
                       control={form.control}
                       name="vendorId"
@@ -860,7 +871,9 @@ export default function ExpensesPage() {
                         <FormItem>
                           <FormLabel>Vendor (Optional)</FormLabel>
                           <Select
-                            onValueChange={(value) => field.onChange(Number(value) || undefined)}
+                            onValueChange={(value) =>
+                              field.onChange(Number(value) || undefined)
+                            }
                             defaultValue={field.value?.toString() || ""}
                           >
                             <FormControl>
@@ -885,7 +898,7 @@ export default function ExpensesPage() {
                       )}
                     />
                   </div>
-                  
+
                   <FormField
                     control={form.control}
                     name="description"
@@ -899,7 +912,7 @@ export default function ExpensesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <div>
                     <Label>Attachment (Optional)</Label>
                     <AttachmentUploader
@@ -908,7 +921,7 @@ export default function ExpensesPage() {
                       setAttachmentFile={setAttachmentFile}
                     />
                   </div>
-                  
+
                   <Button
                     type="submit"
                     disabled={createExpenseMutation.isPending}
@@ -942,7 +955,7 @@ export default function ExpensesPage() {
               Update the expense details below
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...editForm}>
             <form
               onSubmit={editForm.handleSubmit(onEditSubmit)}
@@ -962,7 +975,7 @@ export default function ExpensesPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="amount"
@@ -976,7 +989,7 @@ export default function ExpensesPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="category"
@@ -1007,7 +1020,7 @@ export default function ExpensesPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="subcategory"
@@ -1036,7 +1049,7 @@ export default function ExpensesPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="propertyId"
@@ -1044,7 +1057,9 @@ export default function ExpensesPage() {
                     <FormItem>
                       <FormLabel>Property (Optional)</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(Number(value) || undefined)}
+                        onValueChange={(value) =>
+                          field.onChange(Number(value) || undefined)
+                        }
                         defaultValue={field.value?.toString() || ""}
                       >
                         <FormControl>
@@ -1071,7 +1086,7 @@ export default function ExpensesPage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={editForm.control}
                   name="vendorId"
@@ -1079,7 +1094,9 @@ export default function ExpensesPage() {
                     <FormItem>
                       <FormLabel>Vendor (Optional)</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(Number(value) || undefined)}
+                        onValueChange={(value) =>
+                          field.onChange(Number(value) || undefined)
+                        }
                         defaultValue={field.value?.toString() || ""}
                       >
                         <FormControl>
@@ -1104,7 +1121,7 @@ export default function ExpensesPage() {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={editForm.control}
                 name="description"
@@ -1118,7 +1135,7 @@ export default function ExpensesPage() {
                   </FormItem>
                 )}
               />
-              
+
               <div>
                 <Label>Attachment</Label>
                 {selectedExpense?.attachmentId ? (
@@ -1128,7 +1145,12 @@ export default function ExpensesPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`/api/attachments/${selectedExpense.attachmentId}`, "_blank")}
+                        onClick={() =>
+                          window.open(
+                            `/api/attachments/${selectedExpense.attachmentId}`,
+                            "_blank",
+                          )
+                        }
                       >
                         View Current Attachment
                       </Button>
@@ -1147,7 +1169,7 @@ export default function ExpensesPage() {
                   />
                 )}
               </div>
-              
+
               <DialogFooter>
                 <Button
                   type="button"
@@ -1181,28 +1203,29 @@ export default function ExpensesPage() {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this expense? This action cannot be undone.
+              Are you sure you want to delete this expense? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedExpense && (
             <div className="space-y-4">
               <div className="border rounded p-4 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="font-medium">Date:</div>
                   <div>{formatDate(selectedExpense.date)}</div>
-                  
+
                   <div className="font-medium">Amount:</div>
                   <div>{formatCurrency(selectedExpense.amount)}</div>
-                  
+
                   <div className="font-medium">Category:</div>
                   <div>{selectedExpense.category}</div>
-                  
+
                   <div className="font-medium">Subcategory:</div>
                   <div>{selectedExpense.subcategory}</div>
                 </div>
               </div>
-              
+
               <DialogFooter>
                 <Button
                   type="button"
