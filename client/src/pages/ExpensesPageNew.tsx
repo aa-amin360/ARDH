@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet, Download } from "lucide-react";
+import { Loader2, Plus, FileSpreadsheet, Download, Pencil, Trash2 } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 // import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
@@ -261,6 +261,113 @@ export default function ExpensesPage() {
       });
     },
   });
+  
+  // Mutation to delete expense
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/expenses/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Expense deleted",
+        description: "The expense has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting expense",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // State for editing expense
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+  
+  // Function to handle edit button click
+  const handleEditExpense = (expense: any) => {
+    setIsEditing(true);
+    setEditingExpenseId(expense.id);
+    setActiveTab("add");
+    
+    // Set form values from selected expense
+    form.reset({
+      category: expense.category,
+      subcategory: expense.subcategory,
+      amount: expense.amount,
+      date: new Date(expense.date).toISOString().split("T")[0],
+      description: expense.description || "",
+      vendorId: expense.vendorId || 0,
+      propertyId: expense.propertyId,
+      attachmentUrl: "",
+      createdBy: expense.createdBy || user?.id || 0,
+      
+      // Set water tanker specific fields if available
+      tankerNumber: expense.tankerNumber || "",
+      liters: expense.liters || 0,
+      personInCharge: expense.personInCharge || "",
+      driverContact: expense.driverContact || "",
+      time: expense.time || "",
+    });
+    
+    // Set attachment ID if exists
+    if (expense.attachmentId) {
+      setAttachmentId(expense.attachmentId);
+    } else {
+      setAttachmentId(null);
+    }
+    setAttachmentFile(null);
+  };
+  
+  // Mutation to update expense
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: number; values: ExpenseFormValues }) => {
+      const res = await apiRequest("PATCH", `/api/expenses/${id}`, values);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Expense updated",
+        description: "The expense has been updated successfully.",
+      });
+      // Reset form and editing state
+      form.reset({
+        category: "",
+        subcategory: "",
+        amount: 0,
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+        vendorId: 0,
+        propertyId: null,
+        attachmentUrl: "",
+        createdBy: 0,
+        
+        // Reset water tanker specific fields
+        tankerNumber: "",
+        liters: 0,
+        personInCharge: "",
+        driverContact: "",
+        time: "",
+      });
+      
+      setIsEditing(false);
+      setEditingExpenseId(null);
+      setAttachmentId(null);
+      setAttachmentFile(null);
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating expense",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   async function onSubmit(values: ExpenseFormValues) {
     try {
@@ -295,7 +402,15 @@ export default function ExpensesPage() {
         attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
       };
   
-      addExpenseMutation.mutate(formattedValues);
+      // Handle update vs. create
+      if (isEditing && editingExpenseId) {
+        updateExpenseMutation.mutate({
+          id: editingExpenseId,
+          values: formattedValues
+        });
+      } else {
+        addExpenseMutation.mutate(formattedValues);
+      }
     } catch (error) {
       console.error('Error uploading attachment:', error);
       toast({
@@ -465,6 +580,7 @@ export default function ExpensesPage() {
                                     value={property.id.toString()}
                                   >
                                     {property.flat_number}
+                                    {property.nestaway_id && ` (Nestaway ID: ${property.nestaway_id})`}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
@@ -654,18 +770,54 @@ export default function ExpensesPage() {
                     />
                   </div>
 
-                  <Button
-                    type="submit"
-                    disabled={addExpenseMutation.isPending}
-                    className="w-full md:w-auto"
-                  >
-                    {addExpenseMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Plus className="mr-2 h-4 w-4" />
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      disabled={addExpenseMutation.isPending || updateExpenseMutation.isPending}
+                      className="w-full md:w-auto"
+                    >
+                      {addExpenseMutation.isPending || updateExpenseMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : isEditing ? (
+                        <Pencil className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      {isEditing ? "Update Expense" : "Add Expense"}
+                    </Button>
+                    
+                    {isEditing && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full md:w-auto"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditingExpenseId(null);
+                          form.reset({
+                            category: "",
+                            subcategory: "",
+                            amount: 0,
+                            date: new Date().toISOString().split("T")[0],
+                            description: "",
+                            vendorId: 0,
+                            propertyId: null,
+                            attachmentUrl: "",
+                            createdBy: 0,
+                            tankerNumber: "",
+                            liters: 0,
+                            personInCharge: "",
+                            driverContact: "",
+                            time: "",
+                          });
+                          setAttachmentId(null);
+                          setAttachmentFile(null);
+                        }}
+                      >
+                        Cancel Edit
+                      </Button>
                     )}
-                    Add Expense
-                  </Button>
+                  </div>
                 </form>
               </Form>
             </CardContent>
@@ -739,6 +891,7 @@ export default function ExpensesPage() {
                         <TableHead>Property</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Attachment</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
