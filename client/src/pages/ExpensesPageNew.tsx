@@ -212,10 +212,10 @@ export default function ExpensesPage() {
     mutationFn: async (data: ExpenseFormValues) => {
       const formData = new FormData();
       
-      // Convert date object to string if necessary
+      // Use the date string directly - it's already in the right format
       const expenseData = {
         ...data,
-        date: typeof data.date === "object" ? data.date.toISOString() : data.date,
+        // The date is already a string from the form
       };
       
       // Add all expense data fields to FormData
@@ -274,12 +274,10 @@ export default function ExpensesPage() {
       const { id, ...expenseData } = data;
       const formData = new FormData();
       
-      // Convert date object to string if necessary
+      // Use the date string directly - it's already in the right format
       const processedData = {
         ...expenseData,
-        date: typeof expenseData.date === "object" 
-          ? expenseData.date.toISOString() 
-          : expenseData.date,
+        // The date is already a string from the form
       };
       
       // Add all expense data fields to FormData
@@ -365,13 +363,21 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     if (expenseCategories) {
-      setCategoryOptions(expenseCategories);
+      // Handle the expense categories data structure correctly
+      // The API returns an array of objects with expense_category property
+      const categories = expenseCategories.map((cat: any) => cat.expense_category);
+      setCategoryOptions(categories);
+      console.log("Categories:", categories);
     }
   }, [expenseCategories]);
 
   useEffect(() => {
     if (expenseSubcategories) {
-      setSubcategoryOptions(expenseSubcategories);
+      // Handle the expense subcategories data structure correctly
+      // The API returns an array of objects with expense_subcategory property
+      const subcategories = expenseSubcategories.map((subcat: any) => subcat.expense_subcategory);
+      setSubcategoryOptions(subcategories);
+      console.log("Subcategories:", subcategories);
     }
   }, [expenseSubcategories]);
 
