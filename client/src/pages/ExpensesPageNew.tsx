@@ -834,7 +834,7 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Common Areas</SelectItem>
+                              <SelectItem value="0">Common Areas</SelectItem>
                               {flatOptions.map((flat) => (
                                 <SelectItem
                                   key={flat.id}
@@ -869,7 +869,7 @@ export default function ExpensesPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No Vendor</SelectItem>
+                              <SelectItem value="0">No Vendor</SelectItem>
                               {vendorOptions.map((vendor) => (
                                 <SelectItem
                                   key={vendor.id}
@@ -1053,7 +1053,7 @@ export default function ExpensesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Common Areas</SelectItem>
+                          <SelectItem value="0">Common Areas</SelectItem>
                           {flatOptions.map((flat) => (
                             <SelectItem
                               key={flat.id}
@@ -1088,7 +1088,7 @@ export default function ExpensesPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No Vendor</SelectItem>
+                          <SelectItem value="0">No Vendor</SelectItem>
                           {vendorOptions.map((vendor) => (
                             <SelectItem
                               key={vendor.id}
