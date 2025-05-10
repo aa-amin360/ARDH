@@ -10,9 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface AttachmentUploaderProps {
-  entityType: 'income' | 'expense';
+  entityType?: 'income' | 'expense';
   entityId?: number;
   attachmentId?: number | null;
+  setAttachmentId?: React.Dispatch<React.SetStateAction<number | null>>;
+  attachmentFile?: File | null;
+  setAttachmentFile?: React.Dispatch<React.SetStateAction<File | null>>;
   onAttachmentUploaded?: (attachmentId: number) => void;
   onFileSelected?: (file: File | null) => void;
   className?: string;
@@ -32,11 +35,14 @@ export function AttachmentUploader({
   entityType, 
   entityId, 
   attachmentId, 
+  setAttachmentId,
+  attachmentFile,
+  setAttachmentFile,
   onAttachmentUploaded,
   onFileSelected,
   className
 }: AttachmentUploaderProps) {
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(attachmentFile || null);
   const [isUploading, setIsUploading] = useState(false);
   const [existingAttachment, setExistingAttachment] = useState<Attachment | null>(null);
   const { toast } = useToast();

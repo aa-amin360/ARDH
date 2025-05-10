@@ -1211,11 +1211,17 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="0">None</SelectItem>
-                            {vendorOptions.map((vendor: any) => (
-                              <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                                {vendor.name}
+                            {vendorsBySubcategory && vendorsBySubcategory.length > 0 ? (
+                              vendorsBySubcategory.map((vendor: any) => (
+                                <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                                  {vendor.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no_vendors">
+                                No vendors found
                               </SelectItem>
-                            ))}
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -1240,11 +1246,12 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="">Common Area</SelectItem>
-                            {properties.map((property) => (
-                              <SelectItem key={property.id} value={property.id.toString()}>
-                                {property.flat_number} {property.nestaway_id ? `(${property.nestaway_id})` : ""}
-                              </SelectItem>
-                            ))}
+                            {Array.isArray(flatOptions) && 
+                              flatOptions.map((property: any) => (
+                                <SelectItem key={property.id} value={property.id.toString()}>
+                                  {property.flat_number} {property.nestaway_id ? `(${property.nestaway_id})` : ""}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
