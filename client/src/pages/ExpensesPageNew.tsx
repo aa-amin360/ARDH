@@ -1014,9 +1014,12 @@ export default function ExpensesPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {expenseCategories.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
+                            {categories.map((category: any) => (
+                              <SelectItem 
+                                key={category.expense_category} 
+                                value={category.expense_category}
+                              >
+                                {category.expense_category}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1039,9 +1042,12 @@ export default function ExpensesPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {subcategories.map((subcategory) => (
-                              <SelectItem key={subcategory} value={subcategory}>
-                                {subcategory}
+                            {subcategories.map((subcategory: any) => (
+                              <SelectItem 
+                                key={subcategory.expense_sub_category} 
+                                value={subcategory.expense_sub_category}
+                              >
+                                {subcategory.expense_sub_category}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -1205,7 +1211,7 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="0">None</SelectItem>
-                            {vendors.map((vendor) => (
+                            {vendorOptions.map((vendor: any) => (
                               <SelectItem key={vendor.id} value={vendor.id.toString()}>
                                 {vendor.name}
                               </SelectItem>
