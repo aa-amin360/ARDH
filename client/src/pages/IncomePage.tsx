@@ -945,7 +945,7 @@ export default function IncomePage() {
       </Tabs>
       {/* Edit Income Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Income</DialogTitle>
             <DialogDescription>
@@ -1138,7 +1138,7 @@ export default function IncomePage() {
       
       {/* Delete Income Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Delete Income</DialogTitle>
             <DialogDescription>
