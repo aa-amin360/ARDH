@@ -40,6 +40,8 @@ import {
   Download,
   Pencil,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -95,6 +97,14 @@ export default function ExpensesPage() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
+  
+  // Calculate pagination details
+  const totalPages = Math.ceil(filteredExpenses.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredExpenses.length);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
@@ -187,9 +197,15 @@ export default function ExpensesPage() {
     }
   }, [watchCategory, subcategories, form]);
 
-  // Filter expenses based on date range
+  // Filter expenses based on date range - only show data after filter is applied
   useEffect(() => {
     if (!expenses || !Array.isArray(expenses)) {
+      setFilteredExpenses([]);
+      return;
+    }
+
+    if (!isFilterApplied) {
+      // Don't show any data until filter is applied
       setFilteredExpenses([]);
       return;
     }
@@ -210,7 +226,7 @@ export default function ExpensesPage() {
     }
 
     setFilteredExpenses(filtered);
-  }, [expenses, startDate, endDate]);
+  }, [expenses, startDate, endDate, isFilterApplied]);
 
   // Format date for display
   const formatDate = (date: string | Date) => {
@@ -230,6 +246,33 @@ export default function ExpensesPage() {
       currency: "INR",
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+  
+  // Apply date filter function
+  const applyDateFilter = () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Date range required",
+        description: "Please select both start and end dates to filter records.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsFilterApplied(true);
+    setCurrentPage(1);
+  };
+
+  // Pagination functions
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
   };
 
   // Mutation to add expense
