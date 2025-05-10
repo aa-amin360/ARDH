@@ -74,7 +74,7 @@ export default function ExpensesPage() {
   const [activeTab, setActiveTab] = React.useState("add");
   const [selectedCategory, setSelectedCategory] = React.useState("");
   const [flatOptions, setFlatOptions] = useState<
-    { id: number; flat_number: string }[]
+    { id: number; flat_number: string; nestaway_id?: string }[]
   >([]);
   // Date range filter states
   const [startDate, setStartDate] = useState<string>("");

@@ -33,7 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet, Download } from "lucide-react";
+import { Loader2, Plus, FileSpreadsheet, Download, Pencil, Trash } from "lucide-react";
 import { insertIncomeSchema, PropertyCharge } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
@@ -494,6 +494,12 @@ export default function IncomePage() {
                             </SelectContent>
                           </Select>
                           <FormMessage />
+                          {/* Nestaway ID Display */}
+                          {field.value && field.value > 0 && (
+                            <div className="absolute top-0 right-0 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                              Nestaway ID: {flatOptions.find(f => f.id === field.value)?.nestaway_id || 'N/A'}
+                            </div>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -519,37 +525,37 @@ export default function IncomePage() {
                       control={form.control}
                       name="description"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
+                        <FormItem className="col-span-2">
+                          <FormLabel>Description (Optional)</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter description" {...field} />
+                            <Textarea
+                              placeholder="Enter any additional details"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  {/* Attachment uploader component */}
-                  <div className="col-span-2 mt-4">
-                    <FormLabel>Attachment</FormLabel>
-                    <AttachmentUploader
-                      entityType="income"
-                      attachmentId={attachmentId}
-                      onAttachmentUploaded={setAttachmentId}
-                      onFileSelected={(file) => setAttachmentFile(file)}
-                    />
+                    <div className="col-span-2">
+                      <FormLabel>Attachment (Optional)</FormLabel>
+                      <AttachmentUploader
+                        onFileSelected={(file) => setAttachmentFile(file)}
+                        entityType="income"
+                      />
+                    </div>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full md:w-auto"
                     disabled={addIncomeMutation.isPending}
+                    className="ml-auto"
                   >
                     {addIncomeMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Adding...
+                        Saving...
                       </>
                     ) : (
                       <>
@@ -564,75 +570,29 @@ export default function IncomePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="bulk" className="mt-4">
+        <TabsContent value="view" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Bulk Upload Income</CardTitle>
+              <CardTitle>View Income Records</CardTitle>
               <CardDescription>
-                Upload a CSV file with income details for bulk adding.
+                Filter and view income records for the specified time period.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center gap-4 p-8 border-2 border-dashed rounded-lg">
-                <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground text-center">
-                  Drop your CSV file here, or click to browse
-                </p>
-                <Button className="gap-2">
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Select File
-                </Button>
-              </div>
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">
-                  Expected CSV Format
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Your CSV should have the following columns: date, amount,
-                  type, description, flatNumber, receivedFrom, notes
-                </p>
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">
-                    Download Template
-                  </h3>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Download CSV Template
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="view" className="mt-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Income Records</CardTitle>
-                <CardDescription>View all income records.</CardDescription>
-              </div>
-              <Button variant="outline" className="gap-1">
-                <FileSpreadsheet className="h-4 w-4" />
-                Export
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {/* Date range filter */}
-              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="fromDate">From Date</Label>
+              <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="start-date">Start Date</Label>
                   <Input
-                    id="fromDate"
+                    id="start-date"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="toDate">To Date</Label>
+                <div>
+                  <Label htmlFor="end-date">End Date</Label>
                   <Input
-                    id="toDate"
+                    id="end-date"
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
@@ -652,16 +612,79 @@ export default function IncomePage() {
               </div>
 
               {isLoading ? (
-                <div className="flex justify-center my-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
                 </div>
               ) : isError ? (
-                <p className="text-center text-red-500 my-8">
-                  Error loading income records
-                </p>
-              ) : Array.isArray(filteredIncomes) &&
-                filteredIncomes.length > 0 ? (
+                <div className="text-center py-12 text-red-500">
+                  Failed to load income data.
+                </div>
+              ) : filteredIncomes.length > 0 ? (
                 <div>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-2">
+                      Recent Income Entries
+                    </h3>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Property</TableHead>
+                            <TableHead>Received From</TableHead>
+                            <TableHead>Attachment</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredIncomes.slice(0, 5).map((income) => (
+                            <TableRow key={income.id}>
+                              <TableCell className="whitespace-nowrap">
+                                {formatDate(income.date)}
+                              </TableCell>
+                              <TableCell className="capitalize">
+                                {income.type.replace("_", " ")}
+                              </TableCell>
+                              <TableCell>
+                                {formatCurrency(income.amount)}
+                              </TableCell>
+                              <TableCell>
+                                {income.propertyId
+                                  ? flatOptions?.find(
+                                      (p) => p.id === income.propertyId,
+                                    )?.flat_number || `#${income.propertyId}`
+                                  : "Common"}
+                              </TableCell>
+                              <TableCell>{income.receivedFrom}</TableCell>
+                              <TableCell>
+                                {income.attachmentId ? (
+                                  <a
+                                    href={`/api/attachments/${income.attachmentId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download
+                                    className="flex items-center text-blue-600 hover:text-blue-800"
+                                  >
+                                    <Download className="h-4 w-4 mr-1" />
+                                    Download
+                                  </a>
+                                ) : (
+                                  <span className="text-gray-400 text-sm">
+                                    None
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2 text-right">
+                      Showing the 5 most recent entries
+                    </p>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <h3 className="text-lg font-semibold mb-2">
                       All Income Entries
@@ -789,6 +812,30 @@ export default function IncomePage() {
                   No income records found.
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Bulk Upload Income</CardTitle>
+              <CardDescription>
+                Upload a CSV file to add multiple income records at once.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-8">
+                <div className="flex flex-col space-y-2">
+                  <h3 className="text-lg font-medium">
+                    Download Template
+                  </h3>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Download CSV Template
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
