@@ -1297,7 +1297,7 @@ export default function ExpensesPage() {
       
       {/* Delete Expense Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
