@@ -43,20 +43,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
-  CheckCircle,
-  AlertCircle,
 } from "lucide-react";
 import { insertIncomeSchema, PropertyCharge } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
 import { format, parseISO } from "date-fns";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Alert,
-  AlertTitle,
-  AlertDescription 
-} from "@/components/ui/alert";
 // Bulk upload component will be implemented later
 import {
   Table,
@@ -112,13 +104,6 @@ export default function IncomePage() {
   const endIndex = Math.min(startIndex + pageSize, filteredIncomes.length);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  
-  // Bulk upload state
-  const [bulkFile, setBulkFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [failedRecords, setFailedRecords] = useState<any[]>([]);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   // Dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -448,127 +433,6 @@ export default function IncomePage() {
   function openDeleteDialog(income: any) {
     setSelectedIncome(income);
     setIsDeleteDialogOpen(true);
-  }
-  
-  // Generate and download CSV template
-  function downloadCsvTemplate() {
-    const headers = [
-      "date (YYYY-MM-DD)",
-      "type (rent, maintenance_fee, tax_return, water_fee, other)",
-      "amount",
-      "property_id (optional, leave blank for common income)",
-      "received_from",
-      "notes"
-    ];
-    
-    // Create sample data row
-    const sampleData = [
-      "2023-01-15",
-      "rent",
-      "25000",
-      "1",
-      "Nestaway",
-      "January rent payment"
-    ];
-    
-    // Combine headers and sample data
-    const csvContent = [
-      headers.join(","),
-      sampleData.join(",")
-    ].join("\n");
-    
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "income_template.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-  
-  // Handle file selection for bulk upload
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files && e.target.files.length > 0) {
-      setBulkFile(e.target.files[0]);
-      setUploadSuccess(false);
-      setFailedRecords([]);
-    }
-  }
-  
-  // Process and upload the CSV file
-  async function uploadBulkFile() {
-    if (!bulkFile) {
-      toast({
-        title: "Error",
-        description: "Please select a CSV file to upload",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsUploading(true);
-    setUploadProgress(0);
-    setFailedRecords([]);
-    
-    const formData = new FormData();
-    formData.append("file", bulkFile);
-    
-    try {
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          const next = prev + 10;
-          return next > 90 ? 90 : next;
-        });
-      }, 300);
-      
-      // Call the bulk upload API
-      const response = await fetch("/api/incomes/bulk-upload", {
-        method: "POST",
-        body: formData,
-      });
-      
-      clearInterval(progressInterval);
-      
-      if (!response.ok) {
-        throw new Error("Failed to upload income records");
-      }
-      
-      const result = await response.json();
-      setUploadProgress(100);
-      setUploadSuccess(true);
-      
-      // Refetch the incomes list to show newly added items
-      refetch();
-      
-      toast({
-        title: "Success",
-        description: `Successfully uploaded ${result.count} income records`,
-      });
-      
-      // Reset upload form after a short delay
-      setTimeout(() => {
-        setBulkFile(null);
-        setUploadProgress(0);
-      }, 3000);
-      
-    } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload income records",
-        variant: "destructive",
-      });
-      
-      // If the server returned validation errors for specific records
-      if (error.failedRecords) {
-        setFailedRecords(error.failedRecords);
-      }
-    } finally {
-      setIsUploading(false);
-    }
   }
 
   async function onSubmit(values: IncomeFormValues) {
@@ -1132,104 +996,10 @@ export default function IncomePage() {
               <div className="space-y-8">
                 <div className="flex flex-col space-y-2">
                   <h3 className="text-lg font-medium">Download Template</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Download a CSV template with the required columns and sample data. Fill in your data and upload it to add multiple income records.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2 w-fit"
-                    onClick={downloadCsvTemplate}
-                  >
+                  <Button variant="outline" size="sm" className="gap-2">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Download CSV Template
                   </Button>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex flex-col space-y-4">
-                  <h3 className="text-lg font-medium">Upload Income Data</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Select a CSV file to upload. Make sure it follows the template format.
-                  </p>
-                  
-                  <div className="grid gap-4">
-                    <div className="flex flex-col space-y-1.5">
-                      <Label htmlFor="csv-file">CSV File</Label>
-                      <Input
-                        id="csv-file"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        disabled={isUploading}
-                      />
-                    </div>
-                    
-                    {bulkFile && (
-                      <div className="flex flex-col space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Selected file:</span>
-                          <span className="text-sm text-muted-foreground">{bulkFile.name}</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {uploadProgress > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Upload progress</span>
-                          <span>{uploadProgress}%</span>
-                        </div>
-                        <Progress value={uploadProgress} className="h-2" />
-                      </div>
-                    )}
-                    
-                    {uploadSuccess && (
-                      <Alert className="bg-green-50 border-green-200">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertTitle className="text-green-800">Upload Successful</AlertTitle>
-                        <AlertDescription className="text-green-700">
-                          Your income data has been uploaded successfully.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    {failedRecords.length > 0 && (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Upload Failed</AlertTitle>
-                        <AlertDescription>
-                          <p>The following records failed validation:</p>
-                          <ul className="mt-2 list-disc pl-5 space-y-1">
-                            {failedRecords.map((record, index) => (
-                              <li key={index} className="text-sm">
-                                Row {record.row}: {record.error}
-                              </li>
-                            ))}
-                          </ul>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    <Button
-                      onClick={uploadBulkFile}
-                      disabled={!bulkFile || isUploading}
-                      className="w-full mt-4"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Income Data
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
               </div>
             </CardContent>
