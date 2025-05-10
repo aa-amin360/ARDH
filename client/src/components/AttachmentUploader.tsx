@@ -174,7 +174,12 @@ export function AttachmentUploader({
       
       setFile(selectedFile);
       
-      // Notify parent component about the selected file
+      // Update parent state if prop is provided
+      if (setAttachmentFile) {
+        setAttachmentFile(selectedFile);
+      }
+      
+      // Also use the legacy callback if provided
       if (onFileSelected) {
         onFileSelected(selectedFile);
       }
@@ -204,7 +209,13 @@ export function AttachmentUploader({
 
   const handleRemove = () => {
     setFile(null);
-    // Also notify parent component
+    
+    // Update parent state if prop is provided
+    if (setAttachmentFile) {
+      setAttachmentFile(null);
+    }
+    
+    // Also use the legacy callback if provided
     if (onFileSelected) {
       onFileSelected(null);
     }
@@ -214,6 +225,13 @@ export function AttachmentUploader({
     // Here you would typically call an API to remove the attachment
     // For now, we'll just clear the local state
     setExistingAttachment(null);
+    
+    // Update parent state if prop is provided
+    if (setAttachmentId) {
+      setAttachmentId(null);
+    }
+    
+    // Also use the legacy callback if provided
     if (onAttachmentUploaded) {
       onAttachmentUploaded(0); // Use 0 or null to indicate removal
     }
