@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Card,
   CardContent,
@@ -36,14 +37,13 @@ import {
   Loader2,
   Plus,
   FileSpreadsheet,
+  Download,
   Pencil,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
+// import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
 import {
   Table,
   TableBody,
@@ -76,6 +76,8 @@ const expenseFormSchema = insertExpenseSchema.extend({
   personInCharge: z.string().optional(),
   driverContact: z.string().optional(),
   time: z.string().optional(),
+
+  //
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -84,435 +86,137 @@ export default function ExpensesPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState("view");
-  //const [selectedCategory, setSelectedCategory] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState("add");
+  const [selectedCategory, setSelectedCategory] = React.useState("");
   const [flatOptions, setFlatOptions] = useState<
     { id: number; flat_number: string; nestaway_id?: string }[]
   >([]);
   // Date range filter states
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [filteredExpenses, setFilteredExpenses] = useState<any[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-  const [subcategoryOptions, setSubcategoryOptions] = useState<string[]>([]);
-  const [vendorOptions, setVendorOptions] = useState<any[]>([]);
+  const [attachmentId, setAttachmentId] = useState<number | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
-  // Dialog states
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedExpense, setSelectedExpense] = useState<any>(null);
-  const [editAttachmentFile, setEditAttachmentFile] = useState<File | null>(
-    null,
-  );
-
-  // Bulk upload states
-  const [showBulkUpload, setShowBulkUpload] = useState(false);
-
+  // Form
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      date: new Date().toISOString().slice(0, 10),
-      amount: 0,
       category: "",
       subcategory: "",
-      description: "",
-      propertyId: undefined,
-      vendorId: undefined,
-    },
-  });
-  const selectedCategory = form.watch("category");
-
-  const editForm = useForm<ExpenseFormValues>({
-    resolver: zodResolver(expenseFormSchema),
-    defaultValues: {
-      date: new Date().toISOString().slice(0, 10),
       amount: 0,
-      category: "",
-      subcategory: "",
+      date: new Date().toISOString().split("T")[0],
       description: "",
-      propertyId: undefined,
-      vendorId: undefined,
+      vendorId: 0,
+      propertyId: null,
+      attachmentUrl: "",
+      createdBy: 0,
+
+      // Water tanker specific fields
+      tankerNumber: "",
+      liters: 0,
+      personInCharge: "",
+      driverContact: "",
+      time: "",
     },
   });
 
-  // Fetch expense categories
-  const { data: expenseCategories } = useQuery({
-    queryKey: ["/api/expenses/categories"],
-    queryFn: async () => {
-      const response = await fetch("/api/expenses/categories");
-      if (!response.ok) {
-        throw new Error("Failed to fetch expense categories");
-      }
-      return response.json();
-    },
-  });
+  useEffect(() => {
+    fetch("/api/properties/flats")
+      .then((res) => res.json())
+      .then(setFlatOptions)
+      .catch((err) => console.error("Failed to load flats:", err));
+  }, []);
 
-  // Fetch expense subcategories based on selected category
-  const { data: expenseSubcategories, refetch: refetchSubcategories } =
-    useQuery({
-      queryKey: ["/api/expenses/subcategories", selectedCategory],
-      queryFn: async () => {
-        if (!selectedCategory) return [];
-        const response = await fetch(
-          `/api/expenses/subcategories?category=${encodeURIComponent(
-            selectedCategory,
-          )}`,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch expense subcategories");
-        }
-        return response.json();
-      },
-      enabled: !!selectedCategory,
-    });
+  // Watch fields to trigger dependent queries
+  const watchCategory = form.watch("category");
+  const watchSubcategory = form.watch("subcategory");
 
-  // Fetch properties (flats)
-  const { data: properties } = useQuery({
-    queryKey: ["/api/properties"],
-    queryFn: async () => {
-      const response = await fetch("/api/properties");
-      if (!response.ok) {
-        throw new Error("Failed to fetch properties");
-      }
-      return response.json();
-    },
-  });
-
-  // Fetch vendors
-  const { data: vendors } = useQuery({
-    queryKey: ["/api/vendors"],
-    queryFn: async () => {
-      const response = await fetch("/api/vendors");
-      if (!response.ok) {
-        throw new Error("Failed to fetch vendors");
-      }
-      return response.json();
-    },
-  });
-
-  // Fetch expenses
+  // Query to fetch expenses for the view tab
   const {
-    data: expenses,
+    data: expenses = [],
     isLoading,
     isError,
-    refetch: refetchExpenses,
   } = useQuery({
     queryKey: ["/api/expenses"],
-    queryFn: async () => {
-      const response = await fetch("/api/expenses");
-      if (!response.ok) {
-        throw new Error("Failed to fetch expenses");
-      }
-      return response.json();
-    },
+    queryFn: () => apiRequest("GET", "/api/expenses").then((res) => res.json()),
   });
 
-  // Create expense mutation
-  const createExpenseMutation = useMutation({
-    mutationFn: async (data: ExpenseFormValues) => {
-      const formData = new FormData();
-
-      // Use the date string directly - it's already in the right format
-      const expenseData = {
-        ...data,
-        // The date is already a string from the form
-      };
-
-      // Add all expense data fields to FormData
-      Object.entries(expenseData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
-        }
-      });
-
-      // Add attachment if exists
-      if (attachmentFile) {
-        formData.append("attachment", attachmentFile);
-      }
-
-      const response = await fetch("/api/expenses", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create expense");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
-      toast({
-        title: "Success",
-        description: "Expense created successfully",
-      });
-      form.reset({
-        date: new Date().toISOString().slice(0, 10),
-        amount: 0,
-        category: "",
-        subcategory: "",
-        description: "",
-        propertyId: undefined,
-        vendorId: undefined,
-      });
-      setAttachmentFile(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+  // Query to fetch expense categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ["/api/expenses/categories"],
+    queryFn: () =>
+      apiRequest("GET", "/api/expenses/categories").then((res) => res.json()),
   });
 
-  // Update expense mutation
-  const updateExpenseMutation = useMutation({
-    mutationFn: async (data: ExpenseFormValues & { id: number }) => {
-      const { id, ...expenseData } = data;
-      const formData = new FormData();
+  // Query to fetch subcategories based on selected category
+  const { data: subcategories = [], isLoading: isLoadingSubcategories } =
+    useQuery({
+      queryKey: ["/api/expenses/subcategories", watchCategory],
+      queryFn: async () => {
+        if (!watchCategory) return [];
+        return apiRequest(
+          "GET",
+          `/api/expenses/subcategories/${watchCategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!watchCategory,
+    });
 
-      // Use the date string directly - it's already in the right format
-      const processedData = {
-        ...expenseData,
-        // The date is already a string from the form
-      };
+  // Query to fetch vendors based on selected subcategory
+  const { data: vendorsBySubcategory = [], isLoading: isLoadingVendors } =
+    useQuery({
+      queryKey: ["/api/vendors/by-subcategory", watchSubcategory],
+      queryFn: async () => {
+        if (!watchSubcategory) return [];
+        return apiRequest(
+          "GET",
+          `/api/vendors/by-subcategory/${watchSubcategory}`,
+        ).then((res) => res.json());
+      },
+      enabled: !!watchSubcategory,
+    });
 
-      // Add all expense data fields to FormData
-      Object.entries(processedData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
-        }
-      });
-
-      // Add attachment if exists
-      if (editAttachmentFile) {
-        formData.append("attachment", editAttachmentFile);
+  // Update subcategory when category changes
+  React.useEffect(() => {
+    if (watchCategory && subcategories && subcategories.length > 0) {
+      const firstSubcategory = subcategories[0]?.expense_sub_category;
+      if (firstSubcategory) {
+        form.setValue("subcategory", firstSubcategory);
       }
-
-      const response = await fetch(`/api/expenses/${id}`, {
-        method: "PUT",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update expense");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
-      toast({
-        title: "Success",
-        description: "Expense updated successfully",
-      });
-      setEditDialogOpen(false);
-      setSelectedExpense(null);
-      setEditAttachmentFile(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Delete expense mutation
-  const deleteExpenseMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/expenses/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete expense");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
-      toast({
-        title: "Success",
-        description: "Expense deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setSelectedExpense(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  useEffect(() => {
-    if (properties) {
-      setFlatOptions(properties);
     }
-  }, [properties]);
+  }, [watchCategory, subcategories, form]);
 
+  // Filter expenses based on date range
   useEffect(() => {
-    if (expenseCategories) {
-      // Handle the expense categories data structure correctly
-      // The API returns an array of objects with expense_category property
-      const categories = expenseCategories.map(
-        (cat: any) => cat.expense_category,
-      );
-      setCategoryOptions(categories);
-      console.log("Categories:", categories);
-    }
-  }, [expenseCategories]);
-
-  useEffect(() => {
-    if (expenseSubcategories) {
-      // Handle the expense subcategories data structure correctly
-      // The API returns an array of objects with expense_subcategory property
-      const subcategories = expenseSubcategories.map(
-        (subcat: any) => subcat.expense_subcategory,
-      );
-      setSubcategoryOptions(subcategories);
-      console.log("Subcategories:", subcategories);
-    }
-  }, [expenseSubcategories]);
-
-  useEffect(() => {
-    if (vendors) {
-      setVendorOptions(vendors);
-    }
-  }, [vendors]);
-
-  useEffect(() => {
-    // Update subcategory options when category changes
-    if (selectedCategory) {
-      refetchSubcategories();
-      form.setValue("subcategory", "");
-    }
-  }, [selectedCategory, refetchSubcategories, form]);
-
-  useEffect(() => {
-    if (isFilterApplied && expenses) {
-      let filtered = [...expenses];
-
-      // Apply date filter if dates are selected
-      if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999); // Set end date to end of day
-
-        filtered = filtered.filter((expense) => {
-          const expenseDate = new Date(expense.date);
-          return expenseDate >= start && expenseDate <= end;
-        });
-      }
-
-      setFilteredExpenses(filtered);
-      setCurrentPage(1); // Reset to first page when filter changes
-    } else {
+    if (!expenses || !Array.isArray(expenses)) {
       setFilteredExpenses([]);
-    }
-  }, [expenses, isFilterApplied, startDate, endDate]);
-
-  // For pagination
-  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
-  // Handle pagination
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  // Handle filter application
-  const applyFilter = () => {
-    if (!startDate || !endDate) {
-      toast({
-        title: "Error",
-        description: "Please select both start and end dates",
-        variant: "destructive",
-      });
       return;
     }
 
-    setIsFilterApplied(true);
-  };
+    let filtered = [...expenses];
 
-  const resetFilter = () => {
-    setStartDate("");
-    setEndDate("");
-    setIsFilterApplied(false);
-    setFilteredExpenses([]);
-  };
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
 
-  // Handle form submission for creating expenses
-  const onSubmit = (data: ExpenseFormValues) => {
-    createExpenseMutation.mutate(data);
-  };
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
 
-  // Handle edit form submission
-  const onEditSubmit = (data: ExpenseFormValues) => {
-    if (selectedExpense) {
-      updateExpenseMutation.mutate({ ...data, id: selectedExpense.id });
+      filtered = filtered.filter((expense) => {
+        const expenseDate = new Date(expense.date);
+        return expenseDate >= start && expenseDate <= end;
+      });
     }
-  };
 
-  // Handle delete confirmation
-  const confirmDelete = () => {
-    if (selectedExpense) {
-      deleteExpenseMutation.mutate(selectedExpense.id);
-    }
-  };
-
-  // Open edit dialog with expense data
-  const openEditDialog = (expense: any) => {
-    setSelectedExpense(expense);
-    editForm.reset({
-      date: new Date(expense.date).toISOString().slice(0, 10),
-      amount: expense.amount,
-      category: expense.category,
-      subcategory: expense.subcategory,
-      description: expense.description,
-      propertyId: expense.propertyId,
-      vendorId: expense.vendorId,
-    });
-
-    // Update selected category for subcategory dropdown
-    setSelectedCategory(expense.category);
-
-    setEditDialogOpen(true);
-  };
-
-  // Open delete dialog
-  const openDeleteDialog = (expense: any) => {
-    setSelectedExpense(expense);
-    setDeleteDialogOpen(true);
-  };
+    setFilteredExpenses(filtered);
+  }, [expenses, startDate, endDate]);
 
   // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-IN", {
+  const formatDate = (date: string | Date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -524,214 +228,248 @@ export default function ExpensesPage() {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
+  // Mutation to add expense
+  const addExpenseMutation = useMutation({
+    mutationFn: async (values: ExpenseFormValues) => {
+      const res = await apiRequest("POST", "/api/expenses", values);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Expense added",
+        description: "The expense has been added successfully.",
+      });
+      form.reset({
+        category: "",
+        subcategory: "",
+        amount: 0,
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+        vendorId: 0,
+        propertyId: null,
+        attachmentUrl: "",
+        createdBy: 0,
+
+        // Reset water tanker specific fields
+        tankerNumber: "",
+        liters: 0,
+        personInCharge: "",
+        driverContact: "",
+        time: "",
+      });
+
+      // Reset attachment states
+      setAttachmentId(null);
+      setAttachmentFile(null);
+
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error adding expense",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to delete expense
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/expenses/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Expense deleted",
+        description: "The expense has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting expense",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Dialog state for editing and deleting
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
+
+  // Function to handle edit expense dialog
+  const handleEditExpense = (expense: any) => {
+    setSelectedExpense(expense);
+
+    // Set form values from selected expense
+    form.reset({
+      category: expense.category,
+      subcategory: expense.subcategory,
+      amount: expense.amount,
+      date: new Date(expense.date).toISOString().split("T")[0],
+      description: expense.description || "",
+      vendorId: expense.vendorId || 0,
+      propertyId: expense.propertyId,
+      attachmentUrl: "",
+      createdBy: expense.createdBy || user?.id || 0,
+
+      // Set water tanker specific fields if available
+      tankerNumber: expense.tankerNumber || "",
+      liters: expense.liters || 0,
+      personInCharge: expense.personInCharge || "",
+      driverContact: expense.driverContact || "",
+      time: expense.time || "",
+    });
+
+    // Set attachment ID if exists
+    if (expense.attachmentId) {
+      setAttachmentId(expense.attachmentId);
+    } else {
+      setAttachmentId(null);
+    }
+    setAttachmentFile(null);
+
+    // Open edit dialog
+    setIsEditDialogOpen(true);
+  };
+
+  // Function to handle delete expense dialog
+  const handleDeleteExpense = (expense: any) => {
+    setSelectedExpense(expense);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Mutation to update expense
+  const updateExpenseMutation = useMutation({
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: number;
+      values: ExpenseFormValues;
+    }) => {
+      const res = await apiRequest("PUT", `/api/expenses/${id}`, values);
+      if (!res.ok) {
+        throw new Error(`Error updating expense: ${res.status}`);
+      }
+      return await res.json().catch(() => ({}));
+    },
+    onSuccess: () => {
+      toast({
+        title: "Expense updated",
+        description: "The expense has been updated successfully.",
+      });
+      // Reset form and editing state
+      form.reset({
+        category: "",
+        subcategory: "",
+        amount: 0,
+        date: new Date().toISOString().split("T")[0],
+        description: "",
+        vendorId: 0,
+        propertyId: null,
+        attachmentUrl: "",
+        createdBy: 0,
+
+        // Reset water tanker specific fields
+        tankerNumber: "",
+        liters: 0,
+        personInCharge: "",
+        driverContact: "",
+        time: "",
+      });
+
+      setIsEditDialogOpen(false);
+      setSelectedExpense(null);
+      setAttachmentId(null);
+      setAttachmentFile(null);
+
+      queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating expense",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  async function onSubmit(values: ExpenseFormValues) {
+    try {
+      // If there's a file selected, upload it first
+      let finalAttachmentId = attachmentId;
+
+      if (attachmentFile) {
+        const formData = new FormData();
+        formData.append("file", attachmentFile);
+        formData.append("entityType", "expense");
+
+        // Upload the file
+        const response = await fetch("/api/attachments", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to upload attachment");
+        }
+
+        const attachmentData = await response.json();
+        finalAttachmentId = attachmentData.id;
+
+        console.log("Attachment uploaded with ID:", finalAttachmentId);
+      }
+
+      // Process the values for submission
+      const formattedValues = {
+        ...values,
+        createdBy: user?.id || 0,
+        attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
+      };
+
+      // Handle update vs. create
+      if (isEditDialogOpen && selectedExpense) {
+        updateExpenseMutation.mutate({
+          id: selectedExpense.id,
+          values: formattedValues,
+        });
+      } else {
+        addExpenseMutation.mutate(formattedValues);
+      }
+    } catch (error) {
+      console.error("Error uploading attachment:", error);
+      toast({
+        title: "Error uploading attachment",
+        description: (error as Error).message || "Failed to upload attachment",
+        variant: "destructive",
+      });
+    }
+  }
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Expense Management</h1>
-        <div className="space-x-2">
-          <Button onClick={() => setShowBulkUpload(!showBulkUpload)}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            {showBulkUpload ? "Cancel Bulk Upload" : "Bulk Upload"}
-          </Button>
-        </div>
-      </div>
+    <div className="container mx-auto py-6">
+      <h1 className="text-2xl font-bold mb-6">Expense Management</h1>
 
-      {/* Bulk Upload Section */}
-      {showBulkUpload && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Bulk Upload Expenses</CardTitle>
-            <CardDescription>
-              Upload multiple expenses at once using a CSV file
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ExpenseBulkUpload />
-          </CardContent>
-        </Card>
-      )}
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="view">View Expenses</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="add">Add Expense</TabsTrigger>
+          <TabsTrigger value="view">View Expenses</TabsTrigger>
+          <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="view">
-          <Card>
-            <CardHeader>
-              <CardTitle>Expense Records</CardTitle>
-              <CardDescription>
-                View and manage all expense records
-              </CardDescription>
-              <div className="flex flex-wrap gap-4 mt-4">
-                <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end gap-2">
-                  <Button onClick={applyFilter}>Apply Filter</Button>
-                  <Button variant="outline" onClick={resetFilter}>
-                    Reset
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center items-center h-40">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : isError ? (
-                <div className="text-center text-destructive">
-                  Error loading expenses. Please try again.
-                </div>
-              ) : !isFilterApplied ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  Please select a date range and apply the filter to view
-                  expense records.
-                </div>
-              ) : filteredExpenses.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">
-                  No expense records found for the selected date range.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Subcategory</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Property</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Attachment</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredExpenses
-                          .slice(startIndex, endIndex)
-                          .map((expense) => (
-                            <TableRow key={expense.id}>
-                              <TableCell>{formatDate(expense.date)}</TableCell>
-                              <TableCell>{expense.category}</TableCell>
-                              <TableCell>{expense.subcategory}</TableCell>
-                              <TableCell>
-                                {formatCurrency(expense.amount)}
-                              </TableCell>
-                              <TableCell>
-                                {expense.propertyId
-                                  ? flatOptions.find(
-                                      (p) => p.id === expense.propertyId,
-                                    )?.flat_number || "Unknown"
-                                  : "Common Areas"}
-                              </TableCell>
-                              <TableCell className="max-w-xs truncate">
-                                {expense.description}
-                              </TableCell>
-                              <TableCell>
-                                {expense.attachmentId ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      window.open(
-                                        `/api/attachments/${expense.attachmentId}`,
-                                        "_blank",
-                                      )
-                                    }
-                                  >
-                                    View
-                                  </Button>
-                                ) : (
-                                  "None"
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => openEditDialog(expense)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="text-destructive"
-                                    onClick={() => openDeleteDialog(expense)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Pagination controls */}
-                  {filteredExpenses.length > 0 && (
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">
-                        Showing {startIndex + 1} to{" "}
-                        {Math.min(endIndex, filteredExpenses.length)} of{" "}
-                        {filteredExpenses.length} entries
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handlePrevPage}
-                          disabled={currentPage === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleNextPage}
-                          disabled={currentPage >= totalPages}
-                        >
-                          Next <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="add">
+        <TabsContent value="add" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle>Add New Expense</CardTitle>
               <CardDescription>
-                Enter details for a new expense record
+                Enter the details of the expense you want to add.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -740,7 +478,101 @@ export default function ExpensesPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-6"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((category: any) => (
+                                <SelectItem
+                                  key={category.expense_category}
+                                  value={category.expense_category}
+                                >
+                                  {category.expense_category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="subcategory"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subcategory</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
+                            disabled={!watchCategory || isLoadingSubcategories}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingSubcategories
+                                      ? "Loading..."
+                                      : "Select subcategory"
+                                  }
+                                />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {subcategories.length > 0 ? (
+                                subcategories.map((subcategory: any) => (
+                                  <SelectItem
+                                    key={subcategory.expense_sub_category}
+                                    value={subcategory.expense_sub_category}
+                                  >
+                                    {subcategory.expense_sub_category}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                  No subcategories found
+                                </div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount (₹)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="Enter amount"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="date"
@@ -754,143 +586,86 @@ export default function ExpensesPage() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="amount"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Amount (₹)</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              setSelectedCategory(value);
-                            }}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categoryOptions.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="subcategory"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Subcategory</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select subcategory" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {expenseSubcategories.map((subcategory: any) => (
-                                <SelectItem
-                                  key={subcategory.expense_sub_category}
-                                  value={subcategory.expense_sub_category}
-                                >
-                                  {subcategory.expense_sub_category}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    s
+
                     <FormField
                       control={form.control}
                       name="propertyId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Property (Optional)</FormLabel>
+                          <FormLabel>Property</FormLabel>
                           <Select
                             onValueChange={(value) =>
-                              field.onChange(Number(value) || undefined)
+                              field.onChange(parseInt(value))
                             }
-                            defaultValue={field.value?.toString() || ""}
+                            value={field.value?.toString()}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select property" />
+                                <SelectValue placeholder="Select property (optional)" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">Common Areas</SelectItem>
-                              {flatOptions.map((flat) => (
-                                <SelectItem
-                                  key={flat.id}
-                                  value={flat.id.toString()}
-                                >
-                                  {flat.flat_number}
-                                </SelectItem>
-                              ))}
+                              {Array.isArray(flatOptions) &&
+                                flatOptions.map((property) => (
+                                  <SelectItem
+                                    key={property.id}
+                                    value={property.id.toString()}
+                                  >
+                                    {property.flat_number}
+                                    {property.nestaway_id &&
+                                      ` (Nestaway ID: ${property.nestaway_id})`}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            Leave blank for common area expenses
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={form.control}
                       name="vendorId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Vendor (Optional)</FormLabel>
+                          <FormLabel>Vendor</FormLabel>
                           <Select
                             onValueChange={(value) =>
-                              field.onChange(Number(value) || undefined)
+                              field.onChange(parseInt(value))
                             }
-                            defaultValue={field.value?.toString() || ""}
+                            value={field.value?.toString() || "none"}
+                            disabled={!watchSubcategory || isLoadingVendors}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select vendor" />
+                                <SelectValue
+                                  placeholder={
+                                    isLoadingVendors
+                                      ? "Loading vendors..."
+                                      : "Select vendor (optional)"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">No Vendor</SelectItem>
-                              {vendorOptions.map((vendor) => (
-                                <SelectItem
-                                  key={vendor.id}
-                                  value={vendor.id.toString()}
-                                >
-                                  {vendor.name}
+                              <SelectItem value="none">
+                                Select Vendor
+                              </SelectItem>
+                              {vendorsBySubcategory &&
+                              vendorsBySubcategory.length > 0 ? (
+                                vendorsBySubcategory.map((vendor: any) => (
+                                  <SelectItem
+                                    key={vendor.id}
+                                    value={vendor.id.toString()}
+                                  >
+                                    {vendor.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no_vendors">
+                                  No vendors found
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -898,6 +673,104 @@ export default function ExpensesPage() {
                       )}
                     />
                   </div>
+
+                  {/* Water Tanker specific fields */}
+                  {watchCategory === "Utility" &&
+                    watchSubcategory === "Water Tanker" && (
+                      <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                        <h3 className="text-lg font-medium">
+                          Water Tanker Details
+                        </h3>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <FormField
+                            control={form.control}
+                            name="tankerNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tanker Number</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter tanker number"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="liters"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Liters Discharged</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="Enter liters"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="personInCharge"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Person In Charge</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter person in charge"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="driverContact"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Driver Contact</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Enter driver contact"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="time"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Time</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="time"
+                                    placeholder="Enter time"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
 
                   <FormField
                     control={form.control}
@@ -906,300 +779,577 @@ export default function ExpensesPage() {
                       <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Textarea {...field} />
+                          <Textarea
+                            placeholder="Enter description"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <div>
-                    <Label>Attachment (Optional)</Label>
+                  <div className="space-y-4 border rounded-md p-4 bg-slate-50">
+                    <h3 className="text-lg font-medium">Attachment</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Upload a receipt or invoice for this expense (optional)
+                    </p>
                     <AttachmentUploader
                       entityType="expense"
-                      attachmentId={null}
-                      setAttachmentFile={setAttachmentFile}
+                      attachmentId={attachmentId}
+                      onAttachmentUploaded={(id) => setAttachmentId(id)}
+                      onFileSelected={(file) => setAttachmentFile(file)}
+                      className="w-full"
                     />
                   </div>
 
                   <Button
                     type="submit"
-                    disabled={createExpenseMutation.isPending}
+                    disabled={addExpenseMutation.isPending}
                     className="w-full md:w-auto"
                   >
-                    {createExpenseMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
+                    {addExpenseMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Expense
-                      </>
+                      <Plus className="mr-2 h-4 w-4" />
                     )}
+                    Add Expense
                   </Button>
                 </form>
               </Form>
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <TabsContent value="view" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Expenses List</CardTitle>
+              <CardDescription>
+                View all expenses and their details.
+              </CardDescription>
+
+              {/* Date Range Filter */}
+              <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="startDate">From Date</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="max-w-xs"
+                  />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="endDate">To Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="max-w-xs"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-40">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : isError ? (
+                <div className="text-center text-destructive">
+                  Error loading expenses. Please try again.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Subcategory</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Property</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Attachment</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredExpenses.length > 0 ? (
+                        filteredExpenses.map((expense: any) => (
+                          <TableRow key={expense.id}>
+                            <TableCell>{formatDate(expense.date)}</TableCell>
+                            <TableCell>{expense.category}</TableCell>
+                            <TableCell>{expense.subcategory}</TableCell>
+                            <TableCell>
+                              {formatCurrency(expense.amount)}
+                            </TableCell>
+                            <TableCell>
+                              {expense.propertyId
+                                ? flatOptions.find(
+                                    (p) => p.id === expense.propertyId,
+                                  )?.flat_number || "Unknown"
+                                : "Common Areas"}
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">
+                              {expense.description}
+                            </TableCell>
+                            <TableCell>
+                              {expense.attachmentId ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                  onClick={() =>
+                                    window.open(
+                                      `/api/attachments/${expense.attachmentId}`,
+                                      "_blank",
+                                    )
+                                  }
+                                >
+                                  <Download size={16} className="mr-1" />
+                                  Download
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">
+                                  None
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditExpense(expense)}
+                                >
+                                  <Pencil size={16} className="text-blue-500" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteExpense(expense)}
+                                >
+                                  <Trash2 size={16} className="text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-6 text-muted-foreground"
+                          >
+                            No expenses found. Add an expense to see it here.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Bulk Upload Expenses</CardTitle>
+              <CardDescription>
+                Upload multiple expenses at once using a template.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="flex flex-col gap-2">
+                  <p className="text-muted-foreground">
+                    Download the template, fill it with your expense data, and
+                    upload it back to import multiple expenses at once.
+                  </p>
+                  <Button variant="outline" className="w-full md:w-auto">
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Download Template
+                  </Button>
+                </div>
+
+                {/* <ExpenseBulkUpload /> */}
+                <div className="border-2 border-dashed border-border rounded-md p-8 text-center">
+                  <p className="text-muted-foreground mb-2">
+                    Bulk upload feature coming soon...
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      {/* Edit Expense Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
             <DialogDescription>
-              Update the expense details below
+              Update the details of this expense.
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...editForm}>
-            <form
-              onSubmit={editForm.handleSubmit(onEditSubmit)}
-              className="space-y-6"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={editForm.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={editForm.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount (₹)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={editForm.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedCategory(value);
-                        }}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {categoryOptions.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={editForm.control}
-                  name="subcategory"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Subcategory</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={!selectedCategory}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select subcategory" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {subcategoryOptions.map((subcategory) => (
-                            <SelectItem key={subcategory} value={subcategory}>
-                              {subcategory}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={editForm.control}
-                  name="propertyId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Property (Optional)</FormLabel>
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(Number(value) || undefined)
-                        }
-                        defaultValue={field.value?.toString() || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select property" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">Common Areas</SelectItem>
-                          {flatOptions.map((flat) => (
-                            <SelectItem
-                              key={flat.id}
-                              value={flat.id.toString()}
-                            >
-                              {flat.flat_number}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Leave blank for common area expenses
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={editForm.control}
-                  name="vendorId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Vendor (Optional)</FormLabel>
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(Number(value) || undefined)
-                        }
-                        defaultValue={field.value?.toString() || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select vendor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">No Vendor</SelectItem>
-                          {vendorOptions.map((vendor) => (
-                            <SelectItem
-                              key={vendor.id}
-                              value={vendor.id.toString()}
-                            >
-                              {vendor.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div>
-                <Label>Attachment</Label>
-                {selectedExpense?.attachmentId ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          window.open(
-                            `/api/attachments/${selectedExpense.attachmentId}`,
-                            "_blank",
-                          )
-                        }
-                      >
-                        View Current Attachment
-                      </Button>
-                    </div>
-                    <AttachmentUploader
-                      entityType="expense"
-                      attachmentId={selectedExpense.attachmentId}
-                      setAttachmentFile={setEditAttachmentFile}
-                    />
-                  </div>
-                ) : (
-                  <AttachmentUploader
-                    entityType="expense"
-                    attachmentId={null}
-                    setAttachmentFile={setEditAttachmentFile}
+          <div className="grid gap-4 py-4">
+            <Form {...form}>
+              <form
+                id="edit-form"
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
+                {/* Form fields - same as add form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {categories.map((category: any) => (
+                              <SelectItem
+                                key={category.expense_category}
+                                value={category.expense_category}
+                              >
+                                {category.expense_category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                )}
-              </div>
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateExpenseMutation.isPending}
-                >
-                  {updateExpenseMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Expense"
+                  <FormField
+                    control={form.control}
+                    name="subcategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select subcategory" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {subcategories.map((subcategory: any) => (
+                              <SelectItem
+                                key={subcategory.expense_sub_category}
+                                value={subcategory.expense_sub_category}
+                              >
+                                {subcategory.expense_sub_category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount (₹)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+                />
+
+                {form.watch("category") === "Water Tanker" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="tankerNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tanker Number</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter tanker number"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="liters"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Liters</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Enter liters"
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="personInCharge"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Person in Charge</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter person in charge"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="driverContact"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Driver Contact</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Enter driver contact"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Time</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="vendorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendor</FormLabel>
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(Number(value))
+                          }
+                          defaultValue={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select vendor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0">None</SelectItem>
+                            {vendorsBySubcategory &&
+                            vendorsBySubcategory.length > 0 ? (
+                              vendorsBySubcategory.map((vendor: any) => (
+                                <SelectItem
+                                  key={vendor.id}
+                                  value={vendor.id.toString()}
+                                >
+                                  {vendor.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no_vendors">
+                                No vendors found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="propertyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property (Flat)</FormLabel>
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(Number(value))
+                          }
+                          defaultValue={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select property" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0">Common Area</SelectItem>
+                            {Array.isArray(flatOptions) &&
+                              flatOptions.map((property: any) => (
+                                <SelectItem
+                                  key={property.id}
+                                  value={property.id.toString()}
+                                >
+                                  {property.flat_number}{" "}
+                                  {property.nestaway_id
+                                    ? `(${property.nestaway_id})`
+                                    : ""}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Attachment upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="attachment">Attachment (optional)</Label>
+                  <AttachmentUploader
+                    attachmentId={attachmentId}
+                    setAttachmentId={setAttachmentId}
+                    attachmentFile={attachmentFile}
+                    setAttachmentFile={setAttachmentFile}
+                    className="w-full"
+                  />
+                </div>
+              </form>
+            </Form>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="edit-form"
+              disabled={updateExpenseMutation.isPending}
+            >
+              {updateExpenseMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Pencil className="mr-2 h-4 w-4" />
+              )}
+              Update Expense
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+      {/* Delete Expense Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
@@ -1209,48 +1359,48 @@ export default function ExpensesPage() {
           </DialogHeader>
 
           {selectedExpense && (
-            <div className="space-y-4">
-              <div className="border rounded p-4 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="font-medium">Date:</div>
-                  <div>{formatDate(selectedExpense.date)}</div>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 items-center gap-4">
+                <div className="font-medium">Category:</div>
+                <div>{selectedExpense.category}</div>
 
-                  <div className="font-medium">Amount:</div>
-                  <div>{formatCurrency(selectedExpense.amount)}</div>
+                <div className="font-medium">Subcategory:</div>
+                <div>{selectedExpense.subcategory}</div>
 
-                  <div className="font-medium">Category:</div>
-                  <div>{selectedExpense.category}</div>
+                <div className="font-medium">Amount:</div>
+                <div>₹{selectedExpense.amount.toFixed(2)}</div>
 
-                  <div className="font-medium">Subcategory:</div>
-                  <div>{selectedExpense.subcategory}</div>
-                </div>
+                <div className="font-medium">Date:</div>
+                <div>{new Date(selectedExpense.date).toLocaleDateString()}</div>
               </div>
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={confirmDelete}
-                  disabled={deleteExpenseMutation.isPending}
-                >
-                  {deleteExpenseMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete Expense"
-                  )}
-                </Button>
-              </DialogFooter>
             </div>
           )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedExpense) {
+                  deleteExpenseMutation.mutate(selectedExpense.id);
+                  setIsDeleteDialogOpen(false);
+                }
+              }}
+              disabled={deleteExpenseMutation.isPending}
+            >
+              {deleteExpenseMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete Expense
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
