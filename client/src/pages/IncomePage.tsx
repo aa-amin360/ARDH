@@ -46,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getNestawayIdByFlatNumber } from "@shared/constants";
 
 // Extended schema with validation
 const incomeFormSchema = insertIncomeSchema.extend({
@@ -55,7 +56,8 @@ const incomeFormSchema = insertIncomeSchema.extend({
   }),
   propertyId: z.coerce.number().optional(),
   expectedIncome: z.number().optional(), // Added expectedIncome field
-  difference: z.number().optional(), // Added difference field
+  difference: z.number().optional(),
+  NestawayId: z.string().optional(), // Added difference field
 });
 
 type IncomeFormValues = z.infer<typeof incomeFormSchema>;
@@ -88,8 +90,10 @@ export default function IncomePage() {
       console.log("Fetched incomes:", data); // Debug log to check incoming data
       return data;
     },
+    // Enable query to fetch incomes
+    enabled: true,
   });
-  
+
   // Filter incomes based on date range
   useEffect(() => {
     if (!incomes || !Array.isArray(incomes)) {
@@ -97,25 +101,25 @@ export default function IncomePage() {
       setFilteredIncomes([]);
       return;
     }
-    
+
     console.log("Starting with incomes:", incomes.length, incomes);
     let filtered = [...incomes];
-    
+
     if (startDate && endDate) {
       console.log("Filtering by date range:", startDate, "to", endDate);
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
-      
+
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
-      
-      filtered = filtered.filter(income => {
+
+      filtered = filtered.filter((income) => {
         // Use date field for filtering, not createdAt
         const incomeDate = new Date(income.date);
         return incomeDate >= start && incomeDate <= end;
       });
     }
-    
+
     console.log("Filtered incomes:", filtered.length, filtered);
     setFilteredIncomes(filtered);
   }, [incomes, startDate, endDate]);
@@ -161,6 +165,7 @@ export default function IncomePage() {
         createdBy: 0,
         expectedIncome: 0, // Added default values for new fields
         difference: 0,
+        NestawayId: "",
       });
       // Reset attachment states
       setAttachmentId(null);
@@ -189,6 +194,7 @@ export default function IncomePage() {
       createdBy: 0, // Will be set on the server
       expectedIncome: 0, // Added default values for new fields
       difference: 0,
+      NestawayId: "",
     },
   });
 
@@ -258,6 +264,7 @@ export default function IncomePage() {
     }
   };
 
+  
   useEffect(() => {
     const selectedProperty = flatOptions.find(
       (p) => p.id === selectedPropertyId,
@@ -265,12 +272,13 @@ export default function IncomePage() {
 
     if (selectedProperty?.flat_number && selectedIncomeType) {
       fetchExpectedCharge(selectedProperty.flat_number, selectedIncomeType);
+      //const nestawayId = selectedProperty?.nestawayId || "Not Found";
     }
   }, [form.watch("propertyId"), selectedIncomeType]);
   useEffect(() => {
     setDifference(enteredAmount - expectedIncome);
   }, [enteredAmount, expectedIncome]);
-  
+
   {
     /*React.useEffect(() => {
     // Placeholder calculation - replace with actual logic
@@ -283,31 +291,31 @@ export default function IncomePage() {
     try {
       // If there's a file selected, upload it first
       let finalAttachmentId = attachmentId;
-      
+
       if (attachmentFile) {
         const formData = new FormData();
-        formData.append('file', attachmentFile);
-        formData.append('entityType', 'income');
-        
+        formData.append("file", attachmentFile);
+        formData.append("entityType", "income");
+
         // Upload the file
-        const response = await fetch('/api/attachments', {
-          method: 'POST',
+        const response = await fetch("/api/attachments", {
+          method: "POST",
           body: formData,
         });
-        
+
         if (!response.ok) {
-          throw new Error('Failed to upload attachment');
+          throw new Error("Failed to upload attachment");
         }
-        
+
         const attachmentData = await response.json();
         finalAttachmentId = attachmentData.id;
-        
-        console.log('Attachment uploaded with ID:', finalAttachmentId);
+
+        console.log("Attachment uploaded with ID:", finalAttachmentId);
       }
-      
+
       // Process the values for submission
       const propertyId = values.propertyId || 0;
-      
+
       const formattedValues = {
         ...values,
         propertyId,
@@ -317,7 +325,7 @@ export default function IncomePage() {
 
       addIncomeMutation.mutate(formattedValues);
     } catch (error) {
-      console.error('Error uploading attachment:', error);
+      console.error("Error uploading attachment:", error);
       toast({
         title: "Error uploading attachment",
         description: (error as Error).message || "Failed to upload attachment",
@@ -370,6 +378,8 @@ export default function IncomePage() {
                       )}
                     />
 
+                    
+
                     <FormField
                       control={form.control}
                       name="difference"
@@ -387,7 +397,7 @@ export default function IncomePage() {
                         </FormItem>
                       )}
                     />
-
+                   
                     <FormField
                       control={form.control}
                       name="type"
@@ -629,7 +639,7 @@ export default function IncomePage() {
                   />
                 </div>
                 <div className="flex items-end">
-                  <Button 
+                  <Button
                     variant="outline"
                     onClick={() => {
                       setStartDate("");
@@ -649,70 +659,9 @@ export default function IncomePage() {
                 <p className="text-center text-red-500 my-8">
                   Error loading income records
                 </p>
-              ) : Array.isArray(filteredIncomes) && filteredIncomes.length > 0 ? (
+              ) : Array.isArray(filteredIncomes) &&
+                filteredIncomes.length > 0 ? (
                 <div>
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-2">
-                      Last Entered Records
-                    </h3>
-                    <div className="overflow-x-auto rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Property</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead>Attachment</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {/* Show only last 5 entries */}
-                          {filteredIncomes.slice(-5).map((income) => (
-                            <TableRow key={income.id}>
-                              <TableCell className="whitespace-nowrap">
-                                {formatDate(income.date)}
-                              </TableCell>
-                              <TableCell className="capitalize">
-                                {income.type.replace("_", " ")}
-                              </TableCell>
-                              <TableCell>{income.description}</TableCell>
-                              <TableCell>
-                                {income.propertyId
-                                  ? flatOptions?.find(
-                                      (p) => p.id === income.propertyId,
-                                    )?.flat_number || `#${income.propertyId}`
-                                  : "Common"}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatCurrency(income.amount)}
-                              </TableCell>
-                              <TableCell>
-                                {income.attachmentId ? (
-                                  <a
-                                    href={`/api/attachments/${income.attachmentId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center text-blue-600 hover:text-blue-800"
-                                  >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Download
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-400 text-sm">None</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2 text-right">
-                      Showing the 5 most recent entries
-                    </p>
-                  </div>
-
                   <div className="overflow-x-auto">
                     <h3 className="text-lg font-semibold mb-2">
                       All Income Entries
@@ -726,6 +675,7 @@ export default function IncomePage() {
                           <TableHead>Property</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
                           <TableHead>Attachment</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -755,14 +705,78 @@ export default function IncomePage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download
-                                  className="flex items-center text-blue-600 hover:text-blue-800"
+                                  className="inline-flex items-center justify-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 hover:bg-blue-100"
                                 >
-                                  <Download className="h-4 w-4 mr-1" />
+                                  <Download className="h-3 w-3 mr-1" />
                                   Download
                                 </a>
                               ) : (
-                                <span className="text-gray-400 text-sm">None</span>
+                                <span className="text-gray-400 text-xs font-medium">
+                                  No attachment
+                                </span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => {
+                                    // Handle edit action
+                                    console.log("Edit income", income.id);
+                                    // Could implement edit functionality here
+                                    toast({
+                                      title: "Edit functionality",
+                                      description: "Edit functionality coming soon.",
+                                    });
+                                  }}
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="h-4 w-4"
+                                  >
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    <path d="m15 5 4 4" />
+                                  </svg>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  onClick={() => {
+                                    // Handle delete action
+                                    console.log("Delete income", income.id);
+                                    // Could implement delete functionality here
+                                    toast({
+                                      title: "Delete functionality",
+                                      description: "Delete functionality coming soon.",
+                                      variant: "destructive",
+                                    });
+                                  }}
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="h-4 w-4"
+                                  >
+                                    <path d="M3 6h18" />
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                  </svg>
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}

@@ -88,16 +88,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEntityWithAttachment(
-    entityType: 'income' | 'expense',
+    entityType: "income" | "expense",
     entityId: number,
-    attachmentId: number
+    attachmentId: number,
   ): Promise<void> {
-    if (entityType === 'income') {
+    if (entityType === "income") {
       await db
         .update(incomes)
         .set({ attachmentId })
         .where(eq(incomes.id, entityId));
-    } else if (entityType === 'expense') {
+    } else if (entityType === "expense") {
       await db
         .update(expenses)
         .set({ attachmentId })
@@ -348,7 +348,7 @@ export class DatabaseStorage implements IStorage {
 
   async getFlatNumberOptions(): Promise<{ id: number; flat_number: string }[]> {
     const results = await db.execute(
-      sql`SELECT id, flat_number FROM properties ORDER BY flat_number`,
+      sql`SELECT id, flat_number,nestaway_id FROM properties ORDER BY flat_number`,
     );
 
     return results.rows; // [{ id: 1, flat_number: 'A-101' }, ...]
