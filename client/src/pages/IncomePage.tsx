@@ -198,7 +198,10 @@ export default function IncomePage() {
   const updateIncomeMutation = useMutation({
     mutationFn: async ({ id, values }: { id: number; values: IncomeFormValues }) => {
       const res = await apiRequest("PATCH", `/api/incomes/${id}`, values);
-      return res.json();
+      if (!res.ok) {
+        throw new Error(`Error updating income: ${res.status}`);
+      }
+      return await res.json().catch(() => ({}));
     },
     onSuccess: () => {
       toast({

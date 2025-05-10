@@ -342,7 +342,10 @@ export default function ExpensesPage() {
   const updateExpenseMutation = useMutation({
     mutationFn: async ({ id, values }: { id: number; values: ExpenseFormValues }) => {
       const res = await apiRequest("PATCH", `/api/expenses/${id}`, values);
-      return res.json();
+      if (!res.ok) {
+        throw new Error(`Error updating expense: ${res.status}`);
+      }
+      return await res.json().catch(() => ({}));
     },
     onSuccess: () => {
       toast({
