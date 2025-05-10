@@ -29,11 +29,37 @@ export const constraintMessages: Record<string, string> = {
   unique_tenant_per_flat: "Same tenant already exists for this flat.",
 
   unique_vendor_vendorinfo: "Vendor already exists with the same details.",
+
+  prevent_another_income_within_29_days:
+    "Another income entry already exists within last 29 days.",
+};
+
+export const triggerMessages: Record<string, string> = {
+  prevent_another_income_within_29_days:
+    "An income of type rent for property ID 2 already exists within the last 29 days",
+
+  prevent_recent_duplicate_property_charge:
+    "A similar property charge already exists for this flat within the last month.",
 };
 
 export function getConstraintErrorMessage(error: any): string {
   if (error?.constraint && constraintMessages[error.constraint]) {
+    console.log(
+      "In db Handler now, error message is :",
+      constraintMessages[error.constraint],
+    );
     return constraintMessages[error.constraint];
+  }
+  if (typeof error.message === "string") {
+    for (const fn in triggerMessages) {
+      if (error.message.includes(fn)) {
+        console.log(
+          "In db Handler now, error message is :",
+          triggerMessages[fn],
+        );
+        return triggerMessages[fn];
+      }
+    }
   }
 
   return "A database error occurred. Please check the entered data or try again later.";

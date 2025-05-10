@@ -33,10 +33,22 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet, Download, Pencil, Trash } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  FileSpreadsheet,
+  Download,
+  Pencil,
+  Trash,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+} from "lucide-react";
 import { insertIncomeSchema, PropertyCharge } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
+import { format, parseISO } from "date-fns";
+import { Progress } from "@/components/ui/progress";
 // Bulk upload component will be implemented later
 import {
   Table,
@@ -84,7 +96,7 @@ export default function IncomePage() {
   const [filteredIncomes, setFilteredIncomes] = useState<any[]>([]);
   const [attachmentId, setAttachmentId] = useState<number | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  
+
   // Dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -193,12 +205,18 @@ export default function IncomePage() {
       });
     },
   });
-  
+
   // Mutation to update income
   const updateIncomeMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number; values: IncomeFormValues }) => {
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: number;
+      values: IncomeFormValues;
+    }) => {
       console.log("Update income mutation running with values:", values);
-      const res = await apiRequest("PATCH", `/api/incomes/${id}`, values);
+      const res = await apiRequest("PUT", `/api/incomes/${id}`, values);
       if (!res.ok) {
         throw new Error(`Error updating income: ${res.status}`);
       }
@@ -221,7 +239,7 @@ export default function IncomePage() {
       });
     },
   });
-  
+
   // Mutation to delete income
   const deleteIncomeMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -328,7 +346,6 @@ export default function IncomePage() {
     }
   };
 
-  
   useEffect(() => {
     const selectedProperty = flatOptions.find(
       (p) => p.id === selectedPropertyId,
@@ -354,7 +371,7 @@ export default function IncomePage() {
   // Function to handle edit income dialog
   function openEditDialog(income: any) {
     setSelectedIncome(income);
-    
+
     // Create edit form with values from selected income
     const editForm = {
       type: income.type || "rent",
@@ -368,10 +385,10 @@ export default function IncomePage() {
       difference: income.difference || 0,
       NestawayId: income.NestawayId || "",
     };
-    
+
     // Set form values
     form.reset(editForm);
-    
+
     // Set attachment ID if exists
     if (income.attachmentId) {
       setAttachmentId(income.attachmentId);
@@ -379,7 +396,7 @@ export default function IncomePage() {
       setAttachmentId(null);
     }
     setAttachmentFile(null);
-    
+
     // Open the edit dialog
     setIsEditDialogOpen(true);
   }
@@ -425,14 +442,14 @@ export default function IncomePage() {
         createdBy: user?.id || 0,
         attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
         expectedIncome: parseFloat(expectedIncome.toString()) || 0,
-        difference: parseFloat(difference.toString()) || 0
+        difference: parseFloat(difference.toString()) || 0,
       };
 
       if (isEditDialogOpen && selectedIncome) {
         // Update existing income
         updateIncomeMutation.mutate({
           id: selectedIncome.id,
-          values: formattedValues
+          values: formattedValues,
         });
       } else {
         // Add new income
@@ -492,8 +509,6 @@ export default function IncomePage() {
                       )}
                     />
 
-                    
-
                     <FormField
                       control={form.control}
                       name="difference"
@@ -511,7 +526,7 @@ export default function IncomePage() {
                         </FormItem>
                       )}
                     />
-                   
+
                     <FormField
                       control={form.control}
                       name="type"
@@ -610,8 +625,10 @@ export default function IncomePage() {
                           <FormMessage />
                           {/* Nestaway ID Display */}
                           {field.value && field.value > 0 && (
-                            <div className="absolute top-0 right-0 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-                              Nestaway ID: {flatOptions.find(f => f.id === field.value)?.nestaway_id || 'N/A'}
+                            <div className="absolute top-0 right-0 text-xs text-gray-700 bg-gray-100 px-5 py-1 rounded-md">
+                              Nestaway ID:{" "}
+                              {flatOptions.find((f) => f.id === field.value)
+                                ?.nestaway_id || "N/A"}
                             </div>
                           )}
                         </FormItem>
@@ -930,9 +947,7 @@ export default function IncomePage() {
             <CardContent>
               <div className="space-y-8">
                 <div className="flex flex-col space-y-2">
-                  <h3 className="text-lg font-medium">
-                    Download Template
-                  </h3>
+                  <h3 className="text-lg font-medium">Download Template</h3>
                   <Button variant="outline" size="sm" className="gap-2">
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                     Download CSV Template
@@ -961,7 +976,10 @@ export default function IncomePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Income Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -969,7 +987,9 @@ export default function IncomePage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="rent">Rent</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="maintenance">
+                            Maintenance
+                          </SelectItem>
                           <SelectItem value="tax_return">Tax Return</SelectItem>
                           <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
@@ -978,7 +998,7 @@ export default function IncomePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="amount"
@@ -997,7 +1017,7 @@ export default function IncomePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="date"
@@ -1011,7 +1031,7 @@ export default function IncomePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="propertyId"
@@ -1019,7 +1039,9 @@ export default function IncomePage() {
                     <FormItem>
                       <FormLabel>Property</FormLabel>
                       <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        onValueChange={(value) =>
+                          field.onChange(parseInt(value))
+                        }
                         value={field.value?.toString()}
                       >
                         <FormControl>
@@ -1035,7 +1057,8 @@ export default function IncomePage() {
                                 value={property.id.toString()}
                               >
                                 {property.flat_number}
-                                {property.nestaway_id && ` (Nestaway ID: ${property.nestaway_id})`}
+                                {property.nestaway_id &&
+                                  ` (Nestaway ID: ${property.nestaway_id})`}
                               </SelectItem>
                             ))}
                         </SelectContent>
@@ -1044,7 +1067,7 @@ export default function IncomePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="description"
@@ -1062,7 +1085,7 @@ export default function IncomePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="receivedFrom"
@@ -1079,7 +1102,7 @@ export default function IncomePage() {
                     </FormItem>
                   )}
                 />
-                
+
                 <div>
                   <Label>Attachment</Label>
                   <AttachmentUploader
@@ -1091,7 +1114,7 @@ export default function IncomePage() {
                   />
                 </div>
               </div>
-              
+
               <DialogFooter>
                 <Button
                   type="button"
@@ -1117,10 +1140,7 @@ export default function IncomePage() {
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit"
-                  disabled={updateIncomeMutation.isPending}
-                >
+                <Button type="submit" disabled={updateIncomeMutation.isPending}>
                   {updateIncomeMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1135,15 +1155,15 @@ export default function IncomePage() {
           </Form>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Income Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Delete Income</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this income record? This action cannot be
-              undone.
+              Are you sure you want to delete this income record? This action
+              cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

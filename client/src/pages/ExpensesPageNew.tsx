@@ -33,7 +33,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FileSpreadsheet, Download, Pencil, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  FileSpreadsheet,
+  Download,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 // import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
@@ -254,11 +261,11 @@ export default function ExpensesPage() {
         driverContact: "",
         time: "",
       });
-      
+
       // Reset attachment states
       setAttachmentId(null);
       setAttachmentFile(null);
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
     onError: (error: Error) => {
@@ -269,7 +276,7 @@ export default function ExpensesPage() {
       });
     },
   });
-  
+
   // Mutation to delete expense
   const deleteExpenseMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -290,16 +297,16 @@ export default function ExpensesPage() {
       });
     },
   });
-  
+
   // Dialog state for editing and deleting
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<any | null>(null);
-  
+
   // Function to handle edit expense dialog
   const handleEditExpense = (expense: any) => {
     setSelectedExpense(expense);
-    
+
     // Set form values from selected expense
     form.reset({
       category: expense.category,
@@ -311,7 +318,7 @@ export default function ExpensesPage() {
       propertyId: expense.propertyId,
       attachmentUrl: "",
       createdBy: expense.createdBy || user?.id || 0,
-      
+
       // Set water tanker specific fields if available
       tankerNumber: expense.tankerNumber || "",
       liters: expense.liters || 0,
@@ -319,7 +326,7 @@ export default function ExpensesPage() {
       driverContact: expense.driverContact || "",
       time: expense.time || "",
     });
-    
+
     // Set attachment ID if exists
     if (expense.attachmentId) {
       setAttachmentId(expense.attachmentId);
@@ -327,21 +334,27 @@ export default function ExpensesPage() {
       setAttachmentId(null);
     }
     setAttachmentFile(null);
-    
+
     // Open edit dialog
     setIsEditDialogOpen(true);
   };
-  
+
   // Function to handle delete expense dialog
   const handleDeleteExpense = (expense: any) => {
     setSelectedExpense(expense);
     setIsDeleteDialogOpen(true);
   };
-  
+
   // Mutation to update expense
   const updateExpenseMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: number; values: ExpenseFormValues }) => {
-      const res = await apiRequest("PATCH", `/api/expenses/${id}`, values);
+    mutationFn: async ({
+      id,
+      values,
+    }: {
+      id: number;
+      values: ExpenseFormValues;
+    }) => {
+      const res = await apiRequest("PUT", `/api/expenses/${id}`, values);
       if (!res.ok) {
         throw new Error(`Error updating expense: ${res.status}`);
       }
@@ -363,7 +376,7 @@ export default function ExpensesPage() {
         propertyId: null,
         attachmentUrl: "",
         createdBy: 0,
-        
+
         // Reset water tanker specific fields
         tankerNumber: "",
         liters: 0,
@@ -371,12 +384,12 @@ export default function ExpensesPage() {
         driverContact: "",
         time: "",
       });
-      
+
       setIsEditDialogOpen(false);
       setSelectedExpense(null);
       setAttachmentId(null);
       setAttachmentFile(null);
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/expenses"] });
     },
     onError: (error: Error) => {
@@ -392,46 +405,46 @@ export default function ExpensesPage() {
     try {
       // If there's a file selected, upload it first
       let finalAttachmentId = attachmentId;
-      
+
       if (attachmentFile) {
         const formData = new FormData();
-        formData.append('file', attachmentFile);
-        formData.append('entityType', 'expense');
-        
+        formData.append("file", attachmentFile);
+        formData.append("entityType", "expense");
+
         // Upload the file
-        const response = await fetch('/api/attachments', {
-          method: 'POST',
+        const response = await fetch("/api/attachments", {
+          method: "POST",
           body: formData,
         });
-        
+
         if (!response.ok) {
-          throw new Error('Failed to upload attachment');
+          throw new Error("Failed to upload attachment");
         }
-        
+
         const attachmentData = await response.json();
         finalAttachmentId = attachmentData.id;
-        
-        console.log('Attachment uploaded with ID:', finalAttachmentId);
+
+        console.log("Attachment uploaded with ID:", finalAttachmentId);
       }
-      
+
       // Process the values for submission
       const formattedValues = {
         ...values,
         createdBy: user?.id || 0,
         attachmentId: finalAttachmentId, // Include the attachment ID from upload or existing
       };
-  
+
       // Handle update vs. create
       if (isEditDialogOpen && selectedExpense) {
         updateExpenseMutation.mutate({
           id: selectedExpense.id,
-          values: formattedValues
+          values: formattedValues,
         });
       } else {
         addExpenseMutation.mutate(formattedValues);
       }
     } catch (error) {
-      console.error('Error uploading attachment:', error);
+      console.error("Error uploading attachment:", error);
       toast({
         title: "Error uploading attachment",
         description: (error as Error).message || "Failed to upload attachment",
@@ -599,7 +612,8 @@ export default function ExpensesPage() {
                                     value={property.id.toString()}
                                   >
                                     {property.flat_number}
-                                    {property.nestaway_id && ` (Nestaway ID: ${property.nestaway_id})`}
+                                    {property.nestaway_id &&
+                                      ` (Nestaway ID: ${property.nestaway_id})`}
                                   </SelectItem>
                                 ))}
                             </SelectContent>
@@ -839,18 +853,16 @@ export default function ExpensesPage() {
                 </div>
 
                 <div className="flex items-end">
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        setStartDate("");
-                        setEndDate("");
-                      }}
-                    >
-                      Clear Filters
-                    </Button>
-                  </div>
-                
-              
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -903,13 +915,20 @@ export default function ExpensesPage() {
                                   variant="outline"
                                   size="sm"
                                   className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                                  onClick={() => window.open(`/api/attachments/${expense.attachmentId}`, '_blank')}
+                                  onClick={() =>
+                                    window.open(
+                                      `/api/attachments/${expense.attachmentId}`,
+                                      "_blank",
+                                    )
+                                  }
                                 >
                                   <Download size={16} className="mr-1" />
                                   Download
                                 </Button>
                               ) : (
-                                <span className="text-muted-foreground text-sm">None</span>
+                                <span className="text-muted-foreground text-sm">
+                                  None
+                                </span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -991,7 +1010,7 @@ export default function ExpensesPage() {
               Update the details of this expense.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <Form {...form}>
               <form
@@ -1007,7 +1026,10 @@ export default function ExpensesPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -1015,8 +1037,8 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             {categories.map((category: any) => (
-                              <SelectItem 
-                                key={category.expense_category} 
+                              <SelectItem
+                                key={category.expense_category}
                                 value={category.expense_category}
                               >
                                 {category.expense_category}
@@ -1028,14 +1050,17 @@ export default function ExpensesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="subcategory"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Subcategory</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select subcategory" />
@@ -1043,8 +1068,8 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             {subcategories.map((subcategory: any) => (
-                              <SelectItem 
-                                key={subcategory.expense_sub_category} 
+                              <SelectItem
+                                key={subcategory.expense_sub_category}
                                 value={subcategory.expense_sub_category}
                               >
                                 {subcategory.expense_sub_category}
@@ -1057,7 +1082,7 @@ export default function ExpensesPage() {
                     )}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -1070,14 +1095,16 @@ export default function ExpensesPage() {
                             type="number"
                             placeholder="Enter amount"
                             {...field}
-                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            onChange={(e) =>
+                              field.onChange(Number(e.target.value))
+                            }
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="date"
@@ -1092,7 +1119,7 @@ export default function ExpensesPage() {
                     )}
                   />
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="description"
@@ -1100,17 +1127,14 @@ export default function ExpensesPage() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Enter description"
-                          {...field}
-                        />
+                        <Textarea placeholder="Enter description" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
-                {form.watch('category') === 'Water Tanker' && (
+
+                {form.watch("category") === "Water Tanker" && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
@@ -1120,13 +1144,16 @@ export default function ExpensesPage() {
                           <FormItem>
                             <FormLabel>Tanker Number</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter tanker number" {...field} />
+                              <Input
+                                placeholder="Enter tanker number"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="liters"
@@ -1138,7 +1165,9 @@ export default function ExpensesPage() {
                                 type="number"
                                 placeholder="Enter liters"
                                 {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  field.onChange(Number(e.target.value))
+                                }
                               />
                             </FormControl>
                             <FormMessage />
@@ -1146,7 +1175,7 @@ export default function ExpensesPage() {
                         )}
                       />
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -1155,13 +1184,16 @@ export default function ExpensesPage() {
                           <FormItem>
                             <FormLabel>Person in Charge</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter person in charge" {...field} />
+                              <Input
+                                placeholder="Enter person in charge"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="driverContact"
@@ -1169,14 +1201,17 @@ export default function ExpensesPage() {
                           <FormItem>
                             <FormLabel>Driver Contact</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter driver contact" {...field} />
+                              <Input
+                                placeholder="Enter driver contact"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-                    
+
                     <FormField
                       control={form.control}
                       name="time"
@@ -1192,7 +1227,7 @@ export default function ExpensesPage() {
                     />
                   </>
                 )}
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -1201,7 +1236,9 @@ export default function ExpensesPage() {
                       <FormItem>
                         <FormLabel>Vendor</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(Number(value))}
+                          onValueChange={(value) =>
+                            field.onChange(Number(value))
+                          }
                           defaultValue={field.value?.toString() || ""}
                         >
                           <FormControl>
@@ -1211,9 +1248,13 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="0">None</SelectItem>
-                            {vendorsBySubcategory && vendorsBySubcategory.length > 0 ? (
+                            {vendorsBySubcategory &&
+                            vendorsBySubcategory.length > 0 ? (
                               vendorsBySubcategory.map((vendor: any) => (
-                                <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                                <SelectItem
+                                  key={vendor.id}
+                                  value={vendor.id.toString()}
+                                >
                                   {vendor.name}
                                 </SelectItem>
                               ))
@@ -1228,7 +1269,7 @@ export default function ExpensesPage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="propertyId"
@@ -1236,7 +1277,9 @@ export default function ExpensesPage() {
                       <FormItem>
                         <FormLabel>Property (Flat)</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(Number(value))}
+                          onValueChange={(value) =>
+                            field.onChange(Number(value))
+                          }
                           defaultValue={field.value?.toString() || ""}
                         >
                           <FormControl>
@@ -1246,10 +1289,16 @@ export default function ExpensesPage() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="0">Common Area</SelectItem>
-                            {Array.isArray(flatOptions) && 
+                            {Array.isArray(flatOptions) &&
                               flatOptions.map((property: any) => (
-                                <SelectItem key={property.id} value={property.id.toString()}>
-                                  {property.flat_number} {property.nestaway_id ? `(${property.nestaway_id})` : ""}
+                                <SelectItem
+                                  key={property.id}
+                                  value={property.id.toString()}
+                                >
+                                  {property.flat_number}{" "}
+                                  {property.nestaway_id
+                                    ? `(${property.nestaway_id})`
+                                    : ""}
                                 </SelectItem>
                               ))}
                           </SelectContent>
@@ -1259,7 +1308,7 @@ export default function ExpensesPage() {
                     )}
                   />
                 </div>
-                
+
                 {/* Attachment upload */}
                 <div className="space-y-2">
                   <Label htmlFor="attachment">Attachment (optional)</Label>
@@ -1274,13 +1323,16 @@ export default function ExpensesPage() {
               </form>
             </Form>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               form="edit-form"
               disabled={updateExpenseMutation.isPending}
             >
@@ -1294,41 +1346,45 @@ export default function ExpensesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Expense Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this expense? This action cannot be undone.
+              Are you sure you want to delete this expense? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedExpense && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 items-center gap-4">
                 <div className="font-medium">Category:</div>
                 <div>{selectedExpense.category}</div>
-                
+
                 <div className="font-medium">Subcategory:</div>
                 <div>{selectedExpense.subcategory}</div>
-                
+
                 <div className="font-medium">Amount:</div>
                 <div>₹{selectedExpense.amount.toFixed(2)}</div>
-                
+
                 <div className="font-medium">Date:</div>
                 <div>{new Date(selectedExpense.date).toLocaleDateString()}</div>
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => {
                 if (selectedExpense) {
                   deleteExpenseMutation.mutate(selectedExpense.id);

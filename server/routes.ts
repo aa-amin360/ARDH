@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage as dbStorage } from "./storage";
 import { z } from "zod";
 import { setupAuth } from "./auth";
-import { constraintMessages } from "@shared/dbErrorHandler";
+import { getConstraintErrorMessage } from "@shared/dbErrorHandler";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -26,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       // Create uploads directory if it doesn't exist
-      const uploadDir = path.resolve('./uploads');
+      const uploadDir = path.resolve("./uploads");
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
@@ -34,33 +34,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
     filename: function (req, file, cb) {
       // Generate a unique filename with original extension
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       const ext = path.extname(file.originalname);
       cb(null, uniqueSuffix + ext);
-    }
+    },
   });
-  
+
   // File filter to validate file types
-  const fileFilter = (req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const fileFilter = (
+    req: Express.Request,
+    file: Express.Multer.File,
+    cb: multer.FileFilterCallback,
+  ) => {
     // Accept only jpg, jpeg, png, and pdf files
-    if (file.mimetype === 'image/jpeg' || 
-        file.mimetype === 'image/png' || 
-        file.mimetype === 'application/pdf') {
+    if (
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/png" ||
+      file.mimetype === "application/pdf"
+    ) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPG, PNG and PDF files are allowed.'));
+      cb(
+        new Error(
+          "Invalid file type. Only JPG, PNG and PDF files are allowed.",
+        ),
+      );
     }
   };
-  
+
   // Configure multer upload
   const upload = multer({
     storage: multerStorage,
     limits: {
       fileSize: 5 * 1024 * 1024, // 5MB file size limit
     },
-    fileFilter
+    fileFilter,
   });
-  
+
   // Set up authentication
   setupAuth(app);
 
@@ -182,8 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newProperty = await dbStorage.createProperty(propertyData);
       res.status(201).json(newProperty);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
     }
   });
@@ -206,9 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error(`Error updating property ${req.params.id}:`, error);
 
       // Send clean user-friendly message
-      let message =
-        constraintMessages[error.constraint] ||
-        "Something went wrong. Please check the entered data or try again later.";
+      let message = getConstraintErrorMessage(error);
 
       // Format validation errors more nicely
       if (error.errors) {
@@ -342,9 +349,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newIncome = await dbStorage.createIncome(incomeData);
         res.status(201).json(newIncome);
       } catch (error: any) {
-        console.error("Error creating income:", error);
-        const message =
-          constraintMessages[error.constraint] || "Something went wrong.";
+        //console.error("Error creating income:", error);
+        const message = getConstraintErrorMessage(error);
+        console.error("Message is: ", message);
         res.status(400).json({ message });
       }
     },
@@ -367,8 +374,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(updatedIncome);
       } catch (error: any) {
-        const message =
-          constraintMessages[error.constraint] || "Something went wrong.";
+        const message = getConstraintErrorMessage(error);
+
         res.status(400).json({ message });
         next(error);
       }
@@ -513,8 +520,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(newExpense);
     } catch (error: any) {
       console.error("Error creating expense:", error);
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
     }
   });
@@ -532,8 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedExpense);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
       next(error);
     }
@@ -601,7 +607,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const waterTankData = insertWaterTankSchema.partial().parse(req.body);
 
-      const updatedWaterTank = await dbStorage.updateWaterTank(id, waterTankData);
+      const updatedWaterTank = await dbStorage.updateWaterTank(
+        id,
+        waterTankData,
+      );
 
       if (!updatedWaterTank) {
         return res.status(404).json({ message: "Water tank record not found" });
@@ -743,9 +752,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newTenant = await dbStorage.createTenant(tenantData);
       res.status(201).json(newTenant);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] ||
-        "Something went wrong. Please check the entered data or try again later.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
       next(error);
     }
@@ -764,8 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedTenant);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+      const message = getConstraintErrorMessage(error);
       console.error("Error updating tenant:", error, message);
       res.status(400).json({ message });
     }
@@ -869,8 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newVendor = await dbStorage.createVendor(vendorData);
       res.status(201).json(newVendor);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
       next(error);
     }
@@ -889,9 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedVendor);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] ||
-        "Something went wrong. Please check the entered data or try again later.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
       next(error);
     }
@@ -1056,10 +1059,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         res.json(updatedCharge);
       } catch (error: any) {
-        const message =
-          constraintMessages[error.constraint] || "Something went wrong.";
+        const message = getConstraintErrorMessage(error);
         res.status(400).json({ message });
-        next(error);
       }
     },
   );
@@ -1185,7 +1186,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const id = parseInt(req.params.id);
         const chargeData = insertTenantChargeSchema.partial().parse(req.body);
 
-        const updatedCharge = await dbStorage.updateTenantCharge(id, chargeData);
+        const updatedCharge = await dbStorage.updateTenantCharge(
+          id,
+          chargeData,
+        );
 
         if (!updatedCharge) {
           return res.status(404).json({ message: "Tenant charge not found" });
@@ -1356,8 +1360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newOwner = await dbStorage.createPropertyOwner(ownerData);
       res.status(201).json(newOwner);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
     }
   });
@@ -1377,10 +1380,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedOwner);
     } catch (error: any) {
-      const message =
-        constraintMessages[error.constraint] || "Something went wrong.";
+      const message = getConstraintErrorMessage(error);
       res.status(400).json({ message });
-      next(error);
     }
   });
 
@@ -1496,7 +1497,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const propertyId = parseInt(req.params.propertyId);
         const type = req.params.type;
-        const lastDate = await dbStorage.getLastMaintenanceDate(propertyId, type);
+        const lastDate = await dbStorage.getLastMaintenanceDate(
+          propertyId,
+          type,
+        );
         res.json({ lastMaintenanceDate: lastDate });
       } catch (error) {
         console.error(`Error fetching last maintenance date:`, error);
@@ -1522,21 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Log error for debugging
         console.error("Error creating maintenance record:", error);
 
-        // Get a clean user-friendly message
-        let message = "Failed to create maintenance record";
-
-        // Handle different error types with appropriate messages
-        if (error.constraint && constraintMessages[error.constraint]) {
-          message = constraintMessages[error.constraint];
-        } else if (error.errors) {
-          // Handle validation errors
-          message =
-            "Invalid data: " +
-            error.errors
-              .map((e: any) => e.message || e.path.join("."))
-              .join(", ");
-        }
-
+        const message = getConstraintErrorMessage(error);
         // Send response without calling next(error)
         res.status(400).json({ message });
       }
@@ -1572,19 +1562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error,
         );
 
-        // Get a clean user-friendly message
-        let message = "Failed to update maintenance record";
-
-        // Handle different error types
-        if (error.constraint && constraintMessages[error.constraint]) {
-          message = constraintMessages[error.constraint];
-        } else if (error.errors) {
-          message =
-            "Invalid data: " +
-            error.errors
-              .map((e: any) => e.message || e.path.join("."))
-              .join(", ");
-        }
+        const message = getConstraintErrorMessage(error);
 
         // Send response without calling next(error)
         res.status(400).json({ message });
@@ -1634,12 +1612,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "No file uploaded" });
         }
 
-        console.log("Uploading file:", req.file.originalname, req.file.mimetype, req.file.size);
-        
+        console.log(
+          "Uploading file:",
+          req.file.originalname,
+          req.file.mimetype,
+          req.file.size,
+        );
+
         try {
           // Create attachment record in the database
-          const fileData = fs.readFileSync(req.file.path).toString('base64');
-          
+          const fileData = fs.readFileSync(req.file.path).toString("base64");
+
           const attachment = await dbStorage.createAttachment({
             filename: req.file.originalname,
             data: fileData,
@@ -1650,21 +1633,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // If entityType and entityId are provided, link the attachment to the entity
           const { entityType, entityId } = req.body;
-          if (entityType && entityId && (entityType === 'income' || entityType === 'expense')) {
+          if (
+            entityType &&
+            entityId &&
+            (entityType === "income" || entityType === "expense")
+          ) {
             await dbStorage.updateEntityWithAttachment(
               entityType,
               parseInt(entityId),
-              attachment.id
+              attachment.id,
             );
           }
 
           // Log success and return
-          console.log("Attachment created successfully with ID:", attachment.id);
+          console.log(
+            "Attachment created successfully with ID:",
+            attachment.id,
+          );
           res.status(201).json({
             id: attachment.id,
             fileName: attachment.filename,
             fileType: attachment.filetype,
-            fileSize: attachment.filesize
+            fileSize: attachment.filesize,
           });
         } catch (error) {
           console.error("Error processing file:", error);
@@ -1682,9 +1672,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (error) {
         console.error("Error uploading attachment:", error);
-        res.status(500).json({ message: "Failed to upload attachment: " + (error as Error).message });
+        res.status(500).json({
+          message: "Failed to upload attachment: " + (error as Error).message,
+        });
       }
-    }
+    },
   );
 
   // Get an attachment by ID (download the file)
@@ -1698,42 +1690,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Send the file as base64 data with proper content type
-      const buffer = Buffer.from(attachment.data, 'base64');
-      res.set('Content-Type', attachment.filetype);
-      res.set('Content-Length', buffer.length.toString());
+      const buffer = Buffer.from(attachment.data, "base64");
+      res.set("Content-Type", attachment.filetype);
+      res.set("Content-Length", buffer.length.toString());
       // Change from inline to attachment to force download
-      res.set('Content-Disposition', `attachment; filename="${attachment.filename}"`);
+      res.set(
+        "Content-Disposition",
+        `attachment; filename="${attachment.filename}"`,
+      );
       res.send(buffer);
     } catch (error) {
       console.error("Error retrieving attachment:", error);
       next(error);
     }
   });
-  
+
   // Get attachment metadata without downloading the file
-  app.get("/api/attachments/:id/metadata", isAuthenticated, async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const attachment = await dbStorage.getAttachment(id);
+  app.get(
+    "/api/attachments/:id/metadata",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const id = parseInt(req.params.id);
+        const attachment = await dbStorage.getAttachment(id);
 
-      if (!attachment) {
-        return res.status(404).json({ message: "Attachment not found" });
+        if (!attachment) {
+          return res.status(404).json({ message: "Attachment not found" });
+        }
+
+        // Send metadata only with consistent field naming
+        res.json({
+          id: attachment.id,
+          fileName: attachment.filename, // Standardize to camelCase for frontend
+          fileType: attachment.filetype, // Standardize to camelCase for frontend
+          fileSize: attachment.filesize, // Standardize to camelCase for frontend
+          uploadedAt: attachment.uploadedAt,
+          uploadedBy: attachment.uploadedBy,
+        });
+      } catch (error) {
+        console.error("Error retrieving attachment metadata:", error);
+        res.status(500).json({
+          message:
+            "Failed to retrieve attachment metadata: " +
+            (error as Error).message,
+        });
       }
-
-      // Send metadata only with consistent field naming
-      res.json({
-        id: attachment.id,
-        fileName: attachment.filename, // Standardize to camelCase for frontend
-        fileType: attachment.filetype, // Standardize to camelCase for frontend
-        fileSize: attachment.filesize, // Standardize to camelCase for frontend
-        uploadedAt: attachment.uploadedAt,
-        uploadedBy: attachment.uploadedBy
-      });
-    } catch (error) {
-      console.error("Error retrieving attachment metadata:", error);
-      res.status(500).json({ message: "Failed to retrieve attachment metadata: " + (error as Error).message });
-    }
-  });
+    },
+  );
 
   const httpServer = createServer(app);
   return httpServer;
