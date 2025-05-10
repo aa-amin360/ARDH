@@ -193,6 +193,53 @@ export default function IncomePage() {
       });
     },
   });
+  
+  // Mutation to update income
+  const updateIncomeMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: number; values: IncomeFormValues }) => {
+      const res = await apiRequest("PATCH", `/api/incomes/${id}`, values);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Income updated",
+        description: "The income has been updated successfully.",
+      });
+      setIsEditDialogOpen(false);
+      setSelectedIncome(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error updating income",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation to delete income
+  const deleteIncomeMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/incomes/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Income deleted",
+        description: "The income has been deleted successfully.",
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedIncome(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error deleting income",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Form
   const form = useForm<IncomeFormValues>({
@@ -298,6 +345,45 @@ export default function IncomePage() {
     setExpectedIncome(1000); // Replace with actual expected income calculation
     setDifference(expectedIncome - enteredAmount);
   }, [form.getValues("amount")]);*/
+  }
+
+  // Function to handle edit income dialog
+  function openEditDialog(income: any) {
+    setSelectedIncome(income);
+    
+    // Create edit form with values from selected income
+    const editForm = {
+      type: income.type || "rent",
+      amount: income.amount || 0,
+      date: new Date(income.date).toISOString().split("T")[0],
+      description: income.description || "",
+      receivedFrom: income.receivedFrom || "",
+      propertyId: income.propertyId || 0,
+      createdBy: income.createdBy || user?.id || 0,
+      expectedIncome: income.expectedIncome || 0,
+      difference: income.difference || 0,
+      NestawayId: income.NestawayId || "",
+    };
+    
+    // Set form values
+    form.reset(editForm);
+    
+    // Set attachment ID if exists
+    if (income.attachmentId) {
+      setAttachmentId(income.attachmentId);
+    } else {
+      setAttachmentId(null);
+    }
+    setAttachmentFile(null);
+    
+    // Open the edit dialog
+    setIsEditDialogOpen(true);
+  }
+
+  // Function to handle delete income dialog
+  function openDeleteDialog(income: any) {
+    setSelectedIncome(income);
+    setIsDeleteDialogOpen(true);
   }
 
   async function onSubmit(values: IncomeFormValues) {
@@ -760,12 +846,7 @@ export default function IncomePage() {
                                   className="h-8 w-8 p-0"
                                   onClick={() => {
                                     // Handle edit action
-                                    console.log("Edit income", income.id);
-                                    // Could implement edit functionality here
-                                    toast({
-                                      title: "Edit functionality",
-                                      description: "Edit functionality coming soon.",
-                                    });
+                                    openEditDialog(income);
                                   }}
                                 >
                                   <svg
@@ -788,13 +869,7 @@ export default function IncomePage() {
                                   className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                                   onClick={() => {
                                     // Handle delete action
-                                    console.log("Delete income", income.id);
-                                    // Could implement delete functionality here
-                                    toast({
-                                      title: "Delete functionality",
-                                      description: "Delete functionality coming soon.",
-                                      variant: "destructive",
-                                    });
+                                    openDeleteDialog(income);
                                   }}
                                 >
                                   <svg
