@@ -786,54 +786,18 @@ export default function ExpensesPage() {
                     />
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      type="submit"
-                      disabled={addExpenseMutation.isPending || updateExpenseMutation.isPending}
-                      className="w-full md:w-auto"
-                    >
-                      {addExpenseMutation.isPending || updateExpenseMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : isEditing ? (
-                        <Pencil className="mr-2 h-4 w-4" />
-                      ) : (
-                        <Plus className="mr-2 h-4 w-4" />
-                      )}
-                      {isEditing ? "Update Expense" : "Add Expense"}
-                    </Button>
-                    
-                    {isEditing && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full md:w-auto"
-                        onClick={() => {
-                          setIsEditing(false);
-                          setEditingExpenseId(null);
-                          form.reset({
-                            category: "",
-                            subcategory: "",
-                            amount: 0,
-                            date: new Date().toISOString().split("T")[0],
-                            description: "",
-                            vendorId: 0,
-                            propertyId: null,
-                            attachmentUrl: "",
-                            createdBy: 0,
-                            tankerNumber: "",
-                            liters: 0,
-                            personInCharge: "",
-                            driverContact: "",
-                            time: "",
-                          });
-                          setAttachmentId(null);
-                          setAttachmentFile(null);
-                        }}
-                      >
-                        Cancel Edit
-                      </Button>
+                  <Button
+                    type="submit"
+                    disabled={addExpenseMutation.isPending}
+                    className="w-full md:w-auto"
+                  >
+                    {addExpenseMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="mr-2 h-4 w-4" />
                     )}
-                  </div>
+                    Add Expense
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -957,11 +921,7 @@ export default function ExpensesPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    if (window.confirm('Are you sure you want to delete this expense?')) {
-                                      deleteExpenseMutation.mutate(expense.id);
-                                    }
-                                  }}
+                                  onClick={() => handleDeleteExpense(expense)}
                                 >
                                   <Trash2 size={16} className="text-red-500" />
                                 </Button>
@@ -1019,6 +979,358 @@ export default function ExpensesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      {/* Edit Expense Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>
+              Update the details of this expense.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <Form {...form}>
+              <form
+                id="edit-form"
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
+                {/* Form fields - same as add form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {expenseCategories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="subcategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subcategory</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select subcategory" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {subcategories.map((subcategory) => (
+                              <SelectItem key={subcategory} value={subcategory}>
+                                {subcategory}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amount (₹)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter description"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {form.watch('category') === 'Water Tanker' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="tankerNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tanker Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter tanker number" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="liters"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Liters</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                placeholder="Enter liters"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="personInCharge"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Person in Charge</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter person in charge" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="driverContact"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Driver Contact</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter driver contact" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Time</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="vendorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vendor</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          defaultValue={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select vendor" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0">None</SelectItem>
+                            {vendors.map((vendor) => (
+                              <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                                {vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="propertyId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Property (Flat)</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          defaultValue={field.value?.toString() || ""}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select property" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Common Area</SelectItem>
+                            {properties.map((property) => (
+                              <SelectItem key={property.id} value={property.id.toString()}>
+                                {property.flat_number} {property.nestaway_id ? `(${property.nestaway_id})` : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                {/* Attachment upload */}
+                <div className="space-y-2">
+                  <Label htmlFor="attachment">Attachment (optional)</Label>
+                  <AttachmentUploader
+                    attachmentId={attachmentId}
+                    setAttachmentId={setAttachmentId}
+                    attachmentFile={attachmentFile}
+                    setAttachmentFile={setAttachmentFile}
+                    className="w-full"
+                  />
+                </div>
+              </form>
+            </Form>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              form="edit-form"
+              disabled={updateExpenseMutation.isPending}
+            >
+              {updateExpenseMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Pencil className="mr-2 h-4 w-4" />
+              )}
+              Update Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Expense Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this expense? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedExpense && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 items-center gap-4">
+                <div className="font-medium">Category:</div>
+                <div>{selectedExpense.category}</div>
+                
+                <div className="font-medium">Subcategory:</div>
+                <div>{selectedExpense.subcategory}</div>
+                
+                <div className="font-medium">Amount:</div>
+                <div>₹{selectedExpense.amount.toFixed(2)}</div>
+                
+                <div className="font-medium">Date:</div>
+                <div>{new Date(selectedExpense.date).toLocaleDateString()}</div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (selectedExpense) {
+                  deleteExpenseMutation.mutate(selectedExpense.id);
+                  setIsDeleteDialogOpen(false);
+                }
+              }}
+              disabled={deleteExpenseMutation.isPending}
+            >
+              {deleteExpenseMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete Expense
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
