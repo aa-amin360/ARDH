@@ -29,24 +29,9 @@ export default function DashboardPage() {
     queryKey: ["/api/dashboard/recent-transactions"],
   });
 
-  // Placeholder data for development and testing
-  const placeholderIncomeData = [
-    { month: "2025-01", amount: 325000 },
-    { month: "2025-02", amount: 328000 },
-    { month: "2025-03", amount: 332000 },
-    { month: "2025-04", amount: 329000 },
-    { month: "2025-05", amount: 335000 },
-    { month: "2025-06", amount: 340000 },
-  ];
-
-  const placeholderExpenseData = [
-    { month: "2025-01", amount: 75000 },
-    { month: "2025-02", amount: 82000 },
-    { month: "2025-03", amount: 68000 },
-    { month: "2025-04", amount: 79000 },
-    { month: "2025-05", amount: 85000 },
-    { month: "2025-06", amount: 77000 },
-  ];
+  // Use real data from API
+  const incomeData = incomeSummary?.byMonth || [];
+  const expenseData = expenseSummary?.byMonth || [];
 
   const placeholderPropertyTypeData = [
     { type: "1BHK", count: 9 },

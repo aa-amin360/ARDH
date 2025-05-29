@@ -54,7 +54,7 @@ export default function ReportsPage() {
   });
 
   // Report type state
-  const [reportType, setReportType] = useState("income");
+  const [reportType, setReportType] = useState("occupancy");
 
   // Fetch data for reports
   const { data: incomes, isLoading: incomesLoading } = useQuery({
@@ -74,15 +74,15 @@ export default function ReportsPage() {
   });
 
   // Filter data by date range
-  const filteredIncomes = incomes?.filter((income: any) => {
+  const filteredIncomes = incomes && Array.isArray(incomes) ? incomes.filter((income: any) => {
     const incomeDate = new Date(income.date);
     return incomeDate >= dateRange.from && incomeDate <= dateRange.to;
-  });
+  }) : [];
 
-  const filteredExpenses = expenses?.filter((expense: any) => {
+  const filteredExpenses = expenses && Array.isArray(expenses) ? expenses.filter((expense: any) => {
     const expenseDate = new Date(expense.date);
     return expenseDate >= dateRange.from && expenseDate <= dateRange.to;
-  });
+  }) : [];
 
   // Group income by type for pie chart
   const incomeByType = useMemo(() => {
@@ -142,7 +142,7 @@ export default function ReportsPage() {
 
   // Calculate occupancy data
   const occupancyData = useMemo(() => {
-    if (!tenants || !properties) return [];
+    if (!tenants || !properties || !Array.isArray(tenants) || !Array.isArray(properties)) return [];
 
     const flatNumbers = properties.map((p: any) => p.flatNumber).sort();
     const results: any[] = [];
@@ -254,13 +254,7 @@ export default function ReportsPage() {
 
   return (
     <div className="py-4">
-      <Alert className="mb-4">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Under Development</AlertTitle>
-        <AlertDescription>
-          The reports page is currently under development. Some features may not work as expected.
-        </AlertDescription>
-      </Alert>
+
       
       <Card className="mb-6">
         <CardHeader>
@@ -338,6 +332,101 @@ export default function ReportsPage() {
 
           {/* Report Content */}
           <Tabs value={reportType} onValueChange={setReportType}>
+            <TabsContent value="occupancy" className="mt-0">
+              <div className="mb-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Occupancy Report</CardTitle>
+                    <CardDescription>
+                      Flat-wise occupancy analysis for the period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-8">
+                      {occupancyStats.map((flat: any) => (
+                        <div key={flat.flatNumber} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">Flat {flat.flatNumber}</h3>
+                            <div className="text-sm text-muted-foreground">
+                              {flat.tenants.length} tenant(s) in period
+                            </div>
+                          </div>
+                          
+                          {flat.tenants.length > 0 ? (
+                            <div className="space-y-4">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Tenant ID</TableHead>
+                                    <TableHead>Tenant Name</TableHead>
+                                    <TableHead>Lease Start</TableHead>
+                                    <TableHead>Lease End</TableHead>
+                                    <TableHead>Days Occupied</TableHead>
+                                    <TableHead>Months Occupied</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {flat.tenants.map((tenant: any) => (
+                                    <TableRow key={`${flat.flatNumber}-${tenant.tenantId}`}>
+                                      <TableCell>{tenant.tenantId}</TableCell>
+                                      <TableCell>{tenant.tenantName}</TableCell>
+                                      <TableCell>{format(new Date(tenant.leaseStartDate), "dd/MM/yyyy")}</TableCell>
+                                      <TableCell>
+                                        {tenant.leaseEndDate ? format(new Date(tenant.leaseEndDate), "dd/MM/yyyy") : "Current"}
+                                      </TableCell>
+                                      <TableCell>{tenant.totalDaysOccupied}</TableCell>
+                                      <TableCell>{tenant.totalMonthsOccupied}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                              
+                              <div className="bg-gray-50 p-4 rounded-md">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <div className="font-medium text-green-600">Total days occupied:</div>
+                                    <div className="text-lg font-bold">{flat.totalDaysOccupied} Days</div>
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-green-600">Total months occupied:</div>
+                                    <div className="text-lg font-bold">{flat.totalMonthsOccupied} Months</div>
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-red-600">Total days vacant:</div>
+                                    <div className="text-lg font-bold">{flat.totalDaysVacant} Days</div>
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-red-600">Total months vacant:</div>
+                                    <div className="text-lg font-bold">{flat.totalMonthsVacant} Months</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center text-muted-foreground py-8">
+                              <p>No tenants found for this flat in the selected period</p>
+                              <div className="mt-4 bg-red-50 p-4 rounded-md">
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <div className="font-medium text-red-600">Total days vacant:</div>
+                                    <div className="text-lg font-bold">{flat.totalDaysInRange} Days</div>
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-red-600">Total months vacant:</div>
+                                    <div className="text-lg font-bold">{flat.totalMonthsInRange} Months</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
             <TabsContent value="income" className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="bg-primary-50">
