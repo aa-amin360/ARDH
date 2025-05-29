@@ -62,23 +62,23 @@ export default function ReportsPage() {
 
   // Fetch data for reports - only when report is generated
   const { data: incomes, isLoading: incomesLoading } = useQuery({
-    queryKey: ["/api/incomes"],
-    enabled: isReportGenerated && (reportType === "income" || reportType === "summary"),
+    queryKey: ["/api/incomes", isReportGenerated],
+    enabled: isReportGenerated,
   });
 
   const { data: expenses, isLoading: expensesLoading } = useQuery({
-    queryKey: ["/api/expenses"],
-    enabled: isReportGenerated && (reportType === "expense" || reportType === "summary"),
+    queryKey: ["/api/expenses", isReportGenerated],
+    enabled: isReportGenerated,
   });
 
   const { data: properties, isLoading: propertiesLoading } = useQuery({
-    queryKey: ["/api/properties"],
+    queryKey: ["/api/properties", isReportGenerated],
     enabled: isReportGenerated,
   });
 
   const { data: tenants, isLoading: tenantsLoading } = useQuery({
-    queryKey: ["/api/tenants"],
-    enabled: isReportGenerated && reportType === "occupancy",
+    queryKey: ["/api/tenants", isReportGenerated],
+    enabled: isReportGenerated,
   });
 
   // Filter data by date range
@@ -264,8 +264,10 @@ export default function ReportsPage() {
   const handleGenerateReport = async () => {
     setIsGenerating(true);
     try {
-      // Simulate a brief loading state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Reset previous report state
+      setIsReportGenerated(false);
+      // Brief delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
       setIsReportGenerated(true);
     } finally {
       setIsGenerating(false);
@@ -594,6 +596,18 @@ export default function ReportsPage() {
             </TabsContent>
 
             <TabsContent value="income" className="mt-0">
+              {!isReportGenerated ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Income Report</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view income analysis
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="bg-primary-50">
                   <CardHeader className="pb-2">
@@ -737,10 +751,23 @@ export default function ReportsPage() {
                     </Table>
                   </CardContent>
                 </Card>
-              </div>
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="expense" className="mt-0">
+              {!isReportGenerated ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <PieChart className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Expense Report</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view expense analysis
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="bg-red-50">
                   <CardHeader className="pb-2">
