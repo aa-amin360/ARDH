@@ -69,6 +69,10 @@ export default function ReportsPage() {
     queryKey: ["/api/properties"],
   });
 
+  const { data: tenants, isLoading: tenantsLoading } = useQuery({
+    queryKey: ["/api/tenants"],
+  });
+
   // Filter data by date range
   const filteredIncomes = incomes?.filter((income: any) => {
     const incomeDate = new Date(income.date);
@@ -135,6 +139,99 @@ export default function ReportsPage() {
 
   // Calculate profit
   const profit = totalIncome - totalExpenses;
+
+  // Calculate occupancy data
+  const occupancyData = useMemo(() => {
+    if (!tenants || !properties) return [];
+
+    const flatNumbers = properties.map((p: any) => p.flatNumber).sort();
+    const results: any[] = [];
+
+    flatNumbers.forEach((flatNumber: string) => {
+      const flatTenants = tenants.filter((t: any) => t.flatNumber === flatNumber);
+      
+      if (flatTenants.length === 0) {
+        // No tenants for this flat
+        results.push({
+          flatNumber,
+          tenantId: null,
+          tenantName: 'Vacant',
+          leaseStartDate: null,
+          leaseEndDate: null,
+          totalDaysOccupied: 0,
+          totalMonthsOccupied: 0,
+          isVacant: true
+        });
+        return;
+      }
+
+      let flatTotalDays = 0;
+      let flatTotalMonths = 0;
+
+      flatTenants.forEach((tenant: any) => {
+        const leaseStart = new Date(tenant.leaseStartDate);
+        const leaseEnd = tenant.leaseEndDate ? new Date(tenant.leaseEndDate) : new Date();
+        
+        // Calculate overlap with date range
+        const overlapStart = new Date(Math.max(leaseStart.getTime(), dateRange.from.getTime()));
+        const overlapEnd = new Date(Math.min(leaseEnd.getTime(), dateRange.to.getTime()));
+        
+        if (overlapStart <= overlapEnd) {
+          const daysOccupied = Math.ceil((overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const monthsOccupied = daysOccupied / 30.44; // Average days per month
+          
+          flatTotalDays += daysOccupied;
+          flatTotalMonths += monthsOccupied;
+
+          results.push({
+            flatNumber,
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            leaseStartDate: tenant.leaseStartDate,
+            leaseEndDate: tenant.leaseEndDate,
+            totalDaysOccupied: daysOccupied,
+            totalMonthsOccupied: parseFloat(monthsOccupied.toFixed(2)),
+            isVacant: false
+          });
+        }
+      });
+    });
+
+    return results;
+  }, [tenants, properties, dateRange]);
+
+  // Calculate total occupancy statistics
+  const occupancyStats = useMemo(() => {
+    const totalDaysInRange = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const totalMonthsInRange = totalDaysInRange / 30.44;
+    
+    const groupedByFlat = occupancyData.reduce((acc: any, item: any) => {
+      if (!acc[item.flatNumber]) {
+        acc[item.flatNumber] = {
+          flatNumber: item.flatNumber,
+          tenants: [],
+          totalDaysOccupied: 0,
+          totalMonthsOccupied: 0
+        };
+      }
+      
+      if (!item.isVacant) {
+        acc[item.flatNumber].tenants.push(item);
+        acc[item.flatNumber].totalDaysOccupied += item.totalDaysOccupied;
+        acc[item.flatNumber].totalMonthsOccupied += item.totalMonthsOccupied;
+      }
+      
+      return acc;
+    }, {});
+
+    return Object.values(groupedByFlat).map((flat: any) => ({
+      ...flat,
+      totalDaysVacant: totalDaysInRange - flat.totalDaysOccupied,
+      totalMonthsVacant: parseFloat((totalMonthsInRange - flat.totalMonthsOccupied).toFixed(2)),
+      totalDaysInRange,
+      totalMonthsInRange: parseFloat(totalMonthsInRange.toFixed(2))
+    }));
+  }, [occupancyData, dateRange]);
 
   // Colors for pie charts
   const INCOME_COLORS = ["#1E88E5", "#26A69A", "#FFC107", "#9C27B0"];
@@ -222,6 +319,7 @@ export default function ReportsPage() {
                 <SelectValue placeholder="Report Type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="occupancy">Occupancy Report</SelectItem>
                 <SelectItem value="income">Income Report</SelectItem>
                 <SelectItem value="expense">Expense Report</SelectItem>
                 <SelectItem value="summary">Financial Summary</SelectItem>
