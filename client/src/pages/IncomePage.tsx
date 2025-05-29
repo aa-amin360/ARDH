@@ -97,7 +97,7 @@ export default function IncomePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
   const [isFilterApplied, setIsFilterApplied] = useState(false);
-  
+
   // Calculate pagination details
   const totalPages = Math.ceil(filteredIncomes.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -182,13 +182,14 @@ export default function IncomePage() {
       maximumFractionDigits: 0,
     }).format(amount);
   };
-  
+
   // Apply date filter function
   const applyDateFilter = () => {
     if (!startDate || !endDate) {
       toast({
         title: "Date range required",
-        description: "Please select both start and end dates to filter records.",
+        description:
+          "Please select both start and end dates to filter records.",
         variant: "destructive",
       });
       return;
@@ -738,7 +739,7 @@ export default function IncomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>
                   <Label htmlFor="start-date">Start Date</Label>
                   <Input
@@ -757,14 +758,8 @@ export default function IncomePage() {
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                 </div>
-                <div className="flex items-end">
-                  <Button 
-                    onClick={applyDateFilter}
-                  >
-                    Apply Filter
-                  </Button>
-                </div>
-                <div className="flex items-end">
+                <div className="flex items-end space-x-2">
+                  <Button onClick={applyDateFilter}>Apply Filter</Button>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -795,7 +790,9 @@ export default function IncomePage() {
                         Income Entries ({filteredIncomes.length} total)
                       </h3>
                       <div className="text-sm text-muted-foreground">
-                        Showing {filteredIncomes.length > 0 ? startIndex + 1 : 0} to {endIndex} of {filteredIncomes.length}
+                        Showing{" "}
+                        {filteredIncomes.length > 0 ? startIndex + 1 : 0} to{" "}
+                        {endIndex} of {filteredIncomes.length}
                       </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -812,45 +809,47 @@ export default function IncomePage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredIncomes.slice(startIndex, endIndex).map((income) => (
-                            <TableRow key={income.id}>
-                              <TableCell className="whitespace-nowrap">
-                                {formatDate(income.date)}
-                              </TableCell>
-                              <TableCell className="capitalize">
-                                {income.type.replace("_", " ")}
-                              </TableCell>
-                              <TableCell>
-                                {formatCurrency(income.amount)}
-                              </TableCell>
-                              <TableCell>
-                                {income.propertyId
-                                  ? flatOptions?.find(
-                                      (p) => p.id === income.propertyId,
-                                    )?.flat_number || `#${income.propertyId}`
-                                  : "Common"}
-                              </TableCell>
-                              <TableCell>{income.receivedFrom}</TableCell>
-                              <TableCell>
-                                {income.attachmentId ? (
-                                  <a
-                                    href={`/api/attachments/${income.attachmentId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    download
-                                    className="flex items-center text-blue-600 hover:text-blue-800"
-                                  >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Download
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-400 text-sm">
-                                    None
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {filteredIncomes
+                            .slice(startIndex, endIndex)
+                            .map((income) => (
+                              <TableRow key={income.id}>
+                                <TableCell className="whitespace-nowrap">
+                                  {formatDate(income.date)}
+                                </TableCell>
+                                <TableCell className="capitalize">
+                                  {income.type.replace("_", " ")}
+                                </TableCell>
+                                <TableCell>
+                                  {formatCurrency(income.amount)}
+                                </TableCell>
+                                <TableCell>
+                                  {income.propertyId
+                                    ? flatOptions?.find(
+                                        (p) => p.id === income.propertyId,
+                                      )?.flat_number || `#${income.propertyId}`
+                                    : "Common"}
+                                </TableCell>
+                                <TableCell>{income.receivedFrom}</TableCell>
+                                <TableCell>
+                                  {income.attachmentId ? (
+                                    <a
+                                      href={`/api/attachments/${income.attachmentId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      download
+                                      className="flex items-center text-blue-600 hover:text-blue-800"
+                                    >
+                                      <Download className="h-4 w-4 mr-1" />
+                                      Download
+                                    </a>
+                                  ) : (
+                                    <span className="text-gray-400 text-sm">
+                                      None
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
                         </TableBody>
                       </Table>
                     </div>

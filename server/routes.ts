@@ -575,22 +575,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/expenses/bulk-upload",
     isAuthenticated,
+    csvUpload.single("file"),
     async (req, res, next) => {
       try {
-        // In a real implementation, this would:
-        // 1. Parse the CSV file from req.files (using a package like 'multer' for file uploads)
-        // 2. Validate each row of the CSV
-        // 3. Create expense records for each valid row
-        // 4. Return success count and any errors
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
 
-        // For the prototype, we'll simulate a successful upload
-        setTimeout(() => {
-          res.json({
-            success: true,
-            count: 5, // Simulating 5 records uploaded
-            message: "Uploaded expenses successfully",
+        const csvData = req.file.buffer.toString("utf-8");
+        const lines = csvData.split("\n").filter(line => line.trim() !== "");
+        
+        if (lines.length < 2) {
+          return res.status(400).json({ message: "CSV file must contain at least a header row and one data row" });
+        }
+
+        const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+        const expectedHeaders = ["subcategory", "amount", "date", "property", "description"];
+        
+        // Validate headers
+        const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+          return res.status(400).json({ 
+            message: `Missing required headers: ${missingHeaders.join(", ")}` 
           });
-        }, 1000); // Simulated 1 second delay
+        }
+
+        // Get all properties to map flat numbers to property IDs
+        const properties = await dbStorage.getProperties();
+        const flatToPropertyMap = new Map();
+        properties.forEach(prop => {
+          if (prop.flatNumber) {
+            flatToPropertyMap.set(prop.flatNumber, prop.id);
+          }
+        });
+
+        // Get all expense categories and subcategories to map subcategory to category
+        const categories = await dbStorage.getDistinctExpenseCategories();
+        const subcategoryToCategoryMap = new Map();
+        
+        for (const categoryObj of categories) {
+          const subcategories = await dbStorage.getExpenseSubcategories(categoryObj.expense_category);
+          subcategories.forEach((subcat: any) => {
+            subcategoryToCategoryMap.set(subcat.expense_sub_category, categoryObj.expense_category);
+          });
+        }
+
+        let successful = 0;
+        let failed = 0;
+        const failedRecords: any[] = [];
+
+        // Process each data row
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, "")); // Remove quotes
+          
+          if (values.length < expectedHeaders.length) {
+            failedRecords.push({
+              subcategory: values[0] || "",
+              amount: values[1] || "",
+              date: values[2] || "",
+              property: values[3] || "",
+              description: values[4] || "",
+              error_message: "Insufficient columns in CSV row"
+            });
+            failed++;
+            continue;
+          }
+
+          const record: any = {};
+          headers.forEach((header, index) => {
+            record[header] = values[index];
+          });
+
+          try {
+            // Map flat number to property ID
+            const flatNumber = record.property;
+            const propertyId = flatToPropertyMap.get(flatNumber);
+            
+            if (!propertyId) {
+              failedRecords.push({
+                ...record,
+                error_message: `Flat number '${flatNumber}' not found in properties`
+              });
+              failed++;
+              continue;
+            }
+
+            // Map subcategory to category
+            const subcategory = record.subcategory;
+            const category = subcategoryToCategoryMap.get(subcategory);
+            
+            if (!category) {
+              failedRecords.push({
+                ...record,
+                error_message: `Subcategory '${subcategory}' not found in expense categories`
+              });
+              failed++;
+              continue;
+            }
+
+            // Validate and create expense record
+            const expenseData = {
+              date: record.date,
+              amount: parseFloat(record.amount),
+              category: category,
+              subcategory: subcategory,
+              description: record.description || "",
+              propertyId: propertyId,
+              createdBy: (req.user as any).id,
+              attachmentId: null
+            };
+
+            // Validate with schema
+            const validatedData = insertExpenseSchema.parse(expenseData);
+            await dbStorage.createExpense(validatedData);
+            successful++;
+
+          } catch (error: any) {
+            failedRecords.push({
+              ...record,
+              error_message: error.message || "Failed to create expense record"
+            });
+            failed++;
+          }
+        }
+
+        res.json({
+          successful,
+          failed,
+          total: successful + failed,
+          failedRecords
+        });
+
       } catch (error) {
         console.error("Bulk upload error:", error);
         next(error);

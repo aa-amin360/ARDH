@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { insertExpenseSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-// import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
+import ExpenseBulkUpload from "@/components/bulk-upload/ExpenseBulkUpload";
 import {
   Table,
   TableBody,
@@ -970,35 +970,7 @@ export default function ExpensesPage() {
         </TabsContent>
 
         <TabsContent value="bulk" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bulk Upload Expenses</CardTitle>
-              <CardDescription>
-                Upload multiple expenses at once using a template.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="flex flex-col gap-2">
-                  <p className="text-muted-foreground">
-                    Download the template, fill it with your expense data, and
-                    upload it back to import multiple expenses at once.
-                  </p>
-                  <Button variant="outline" className="w-full md:w-auto">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Download Template
-                  </Button>
-                </div>
-
-                {/* <ExpenseBulkUpload /> */}
-                <div className="border-2 border-dashed border-border rounded-md p-8 text-center">
-                  <p className="text-muted-foreground mb-2">
-                    Bulk upload feature coming soon...
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <ExpenseBulkUpload />
         </TabsContent>
       </Tabs>
       {/* Edit Expense Dialog */}
