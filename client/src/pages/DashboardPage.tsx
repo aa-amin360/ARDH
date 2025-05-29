@@ -30,67 +30,16 @@ export default function DashboardPage() {
   });
 
   // Use real data from API
-  const incomeData = incomeSummary?.byMonth || [];
-  const expenseData = expenseSummary?.byMonth || [];
-
-  const placeholderPropertyTypeData = [
-    { type: "1BHK", count: 9 },
-    { type: "2BHK", count: 7 },
-    { type: "3BHK", count: 1 },
-    { type: "penthouse", count: 1 },
-  ];
-
-  const placeholderTransactions = [
-    {
-      id: 1,
-      date: new Date().toISOString(),
-      type: "rent",
-      amount: 20000,
-      description: "Rent payment for Flat 101",
-    },
-    {
-      id: 2,
-      date: new Date().toISOString(),
-      category: "electricity",
-      amount: 5000,
-      description: "Electricity bill for common areas",
-    },
-    {
-      id: 3,
-      date: new Date().toISOString(),
-      type: "maintenance",
-      amount: 1500,
-      description: "Maintenance fee for Flat 204",
-    },
-    {
-      id: 4,
-      date: new Date().toISOString(),
-      category: "repair",
-      amount: 8500,
-      description: "Plumbing repair for Flat 302",
-    },
-    {
-      id: 5,
-      date: new Date().toISOString(),
-      type: "rent",
-      amount: 25000,
-      description: "Rent payment for Flat 201",
-    },
-  ];
-
-  // Use real data if available, otherwise use placeholder data
-  const incomeData = (incomeSummary?.byMonth || placeholderIncomeData);
-  const expenseData = (expenseSummary?.byMonth || placeholderExpenseData);
-  const propertyTypeData = (propertySummary?.byType || placeholderPropertyTypeData);
-  const transactions = (recentTransactions || placeholderTransactions);
+  const incomeData = (incomeSummary as any)?.byMonth || [];
+  const expenseData = (expenseSummary as any)?.byMonth || [];
+  const propertyTypeData = (propertySummary as any)?.byType || [];
+  const transactions = (recentTransactions as any) || [];
 
   // Derived values for stats cards
-  const totalIncome = isAdmin 
-    ? incomeSummary?.total || placeholderIncomeData.reduce((sum, item) => sum + item.amount, 0)
-    : null;
+  const totalIncome = isAdmin ? (incomeSummary as any)?.total || 0 : null;
     
-  const totalExpense = expenseSummary?.total || placeholderExpenseData.reduce((sum, item) => sum + item.amount, 0);
-  const occupancyRate = propertySummary?.occupancyRate || 85;
+  const totalExpense = (expenseSummary as any)?.total || 0;
+  const occupancyRate = (propertySummary as any)?.occupancyRate || 0;
   const netIncome = isAdmin ? (totalIncome ? totalIncome - totalExpense : null) : null;
 
   // Format currency
@@ -175,7 +124,7 @@ export default function DashboardPage() {
           totalRentalUnits={18}
           rentedUnits={16}
           vacantUnits={2}
-          totalMonthlyRent={(propertySummary?.totalMonthlyRent || 325000)}
+          totalMonthlyRent={((propertySummary as any)?.totalMonthlyRent || 0)}
           maintenanceCollection={{
             oneBhk: 9000,
             twoBhk: 10500,
@@ -190,7 +139,7 @@ export default function DashboardPage() {
         />
         
         <RecentTransactions
-          transactions={transactions}
+          transactions={Array.isArray(transactions) ? transactions : []}
           isLoading={isTransactionsLoading}
         />
       </div>
