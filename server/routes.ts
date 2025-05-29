@@ -8,8 +8,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Configure multer for file uploads
-const upload = multer({
+// Configure multer for CSV file uploads (bulk upload)
+const csvUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/incomes/bulk-upload",
     isAuthenticated,
     adminOnlyForIncome,
-    upload.single("file"),
+    csvUpload.single("file"),
     async (req, res, next) => {
       try {
         if (!req.file) {
