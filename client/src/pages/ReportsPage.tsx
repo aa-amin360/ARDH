@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
-import { CalendarIcon, FileDown, PieChart, BarChart3, ChevronDown, AlertCircle } from "lucide-react";
+import { CalendarIcon, FileDown, PieChart, BarChart3, ChevronDown, AlertCircle, LineChart } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
@@ -55,22 +55,30 @@ export default function ReportsPage() {
 
   // Report type state
   const [reportType, setReportType] = useState("occupancy");
+  
+  // Report generation state
+  const [isReportGenerated, setIsReportGenerated] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  // Fetch data for reports
+  // Fetch data for reports - only when report is generated
   const { data: incomes, isLoading: incomesLoading } = useQuery({
     queryKey: ["/api/incomes"],
+    enabled: isReportGenerated && (reportType === "income" || reportType === "summary"),
   });
 
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ["/api/expenses"],
+    enabled: isReportGenerated && (reportType === "expense" || reportType === "summary"),
   });
 
   const { data: properties, isLoading: propertiesLoading } = useQuery({
     queryKey: ["/api/properties"],
+    enabled: isReportGenerated,
   });
 
   const { data: tenants, isLoading: tenantsLoading } = useQuery({
     queryKey: ["/api/tenants"],
+    enabled: isReportGenerated && reportType === "occupancy",
   });
 
   // Filter data by date range
@@ -252,6 +260,131 @@ export default function ReportsPage() {
     return `₹${amount.toLocaleString("en-IN")}`;
   };
 
+  // Generate report function
+  const handleGenerateReport = async () => {
+    setIsGenerating(true);
+    try {
+      // Simulate a brief loading state
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsReportGenerated(true);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Export report function
+  const handleExportReport = () => {
+    if (!isReportGenerated) return;
+
+    if (reportType === "occupancy") {
+      exportOccupancyReport();
+    } else if (reportType === "income") {
+      exportIncomeReport();
+    } else if (reportType === "expense") {
+      exportExpenseReport();
+    }
+  };
+
+  // Export occupancy report as CSV
+  const exportOccupancyReport = () => {
+    const headers = ["Flat Number", "Tenant ID", "Tenant Name", "Lease Start", "Lease End", "Days Occupied", "Months Occupied"];
+    const rows: string[] = [headers.join(",")];
+
+    occupancyStats.forEach((flat: any) => {
+      if (flat.tenants.length > 0) {
+        flat.tenants.forEach((tenant: any) => {
+          rows.push([
+            flat.flatNumber,
+            tenant.tenantId,
+            `"${tenant.tenantName}"`,
+            format(new Date(tenant.leaseStartDate), "dd/MM/yyyy"),
+            tenant.leaseEndDate ? format(new Date(tenant.leaseEndDate), "dd/MM/yyyy") : "Current",
+            tenant.totalDaysOccupied,
+            tenant.totalMonthsOccupied
+          ].join(","));
+        });
+        
+        // Add summary row for each flat
+        rows.push([
+          `"Summary for ${flat.flatNumber}"`,
+          "",
+          "",
+          "",
+          "",
+          `"Total Occupied: ${flat.totalDaysOccupied}"`,
+          `"Total Vacant: ${flat.totalDaysVacant}"`
+        ].join(","));
+        rows.push(""); // Empty row separator
+      }
+    });
+
+    const csvContent = rows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `occupancy_report_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export income report as CSV
+  const exportIncomeReport = () => {
+    const headers = ["Date", "Type", "Description", "Amount", "Property"];
+    const rows: string[] = [headers.join(",")];
+
+    filteredIncomes.forEach((income: any) => {
+      rows.push([
+        format(new Date(income.date), "dd/MM/yyyy"),
+        income.type,
+        `"${income.description}"`,
+        income.amount,
+        income.propertyId || ""
+      ].join(","));
+    });
+
+    const csvContent = rows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `income_report_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export expense report as CSV
+  const exportExpenseReport = () => {
+    const headers = ["Date", "Category", "Subcategory", "Description", "Amount", "Property"];
+    const rows: string[] = [headers.join(",")];
+
+    filteredExpenses.forEach((expense: any) => {
+      rows.push([
+        format(new Date(expense.date), "dd/MM/yyyy"),
+        expense.category,
+        expense.subcategory,
+        `"${expense.description}"`,
+        expense.amount,
+        expense.propertyId || ""
+      ].join(","));
+    });
+
+    const csvContent = rows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `expense_report_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="py-4">
 
@@ -320,28 +453,60 @@ export default function ReportsPage() {
               </SelectContent>
             </Select>
 
-            {/* Export Button */}
-            <Button
-              className="ml-auto"
-              onClick={() => alert('Export functionality would be implemented here')}
-            >
-              <FileDown className="mr-2 h-4 w-4" />
-              Export Report
-            </Button>
+            {/* Generate and Export Buttons */}
+            <div className="ml-auto flex gap-2">
+              <Button
+                onClick={handleGenerateReport}
+                disabled={isGenerating}
+                variant="default"
+              >
+                {isGenerating ? (
+                  <>
+                    <LineChart className="mr-2 h-4 w-4 animate-pulse" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <LineChart className="mr-2 h-4 w-4" />
+                    Generate Report
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={handleExportReport}
+                disabled={!isReportGenerated}
+                variant="outline"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Report
+              </Button>
+            </div>
           </div>
 
           {/* Report Content */}
           <Tabs value={reportType} onValueChange={setReportType}>
             <TabsContent value="occupancy" className="mt-0">
-              <div className="mb-6">
+              {!isReportGenerated ? (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Occupancy Report</CardTitle>
-                    <CardDescription>
-                      Flat-wise occupancy analysis for the period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <LineChart className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Occupancy Report</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view occupancy analysis
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="mb-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Occupancy Report</CardTitle>
+                      <CardDescription>
+                        Flat-wise occupancy analysis for the period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
                     <div className="space-y-8">
                       {occupancyStats.map((flat: any) => (
                         <div key={flat.flatNumber} className="border rounded-lg p-4">
@@ -422,9 +587,10 @@ export default function ReportsPage() {
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="income" className="mt-0">
