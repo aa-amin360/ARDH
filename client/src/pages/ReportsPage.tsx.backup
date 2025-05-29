@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
-import { CalendarIcon, FileDown, PieChart, BarChart3, LineChart } from "lucide-react";
+import { CalendarIcon, FileDown, PieChart, BarChart3, ChevronDown, AlertCircle, LineChart } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,7 +20,18 @@ import {
   Cell,
   Tooltip,
   Legend,
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from "recharts";
+
+// Define types
+type DateRange = {
+  from: Date | undefined;
+  to: Date | undefined;
+};
 
 export default function ReportsPage() {
   // Date range state
@@ -97,7 +109,7 @@ export default function ReportsPage() {
 
   // Calculate occupancy statistics
   const occupancyStats = useMemo(() => {
-    if (!properties || !tenants || !Array.isArray(properties) || !Array.isArray(tenants)) return [];
+    if (!properties || !tenants) return [];
 
     const totalDaysInRange = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
     const totalMonthsInRange = Math.ceil(totalDaysInRange / 30);
@@ -144,6 +156,16 @@ export default function ReportsPage() {
   // Colors for charts
   const INCOME_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
   const EXPENSE_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+
+  // Sample data for financial summary
+  const monthlyTrends = [
+    { month: "Jan", Income: 450000, Expenses: 85000 },
+    { month: "Feb", Income: 445000, Expenses: 92000 },
+    { month: "Mar", Income: 455000, Expenses: 78000 },
+    { month: "Apr", Income: 440000, Expenses: 87500 },
+    { month: "May", Income: 440000, Expenses: 87500 },
+    { month: "Jun", Income: 435000, Expenses: 88000 },
+  ];
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -277,18 +299,6 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const renderEmptyReportState = (reportName: string, icon: React.ReactNode) => (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        {icon}
-        <h3 className="text-lg font-semibold mb-2">Generate {reportName}</h3>
-        <p className="text-muted-foreground text-center mb-4">
-          Select your date range and click "Generate Report" to view {reportName.toLowerCase()}
-        </p>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="py-4">
       <Card>
@@ -412,91 +422,109 @@ export default function ReportsPage() {
           <Tabs value={reportType} onValueChange={setReportType}>
             <TabsContent value="occupancy" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Occupancy Report", <LineChart className="h-12 w-12 text-muted-foreground mb-4" />)
-              ) : (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Occupancy Report</CardTitle>
-                    <CardDescription>
-                      Flat-wise occupancy analysis for the period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-8">
-                      {occupancyStats.map((flat: any) => (
-                        <div key={flat.flatNumber} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-lg font-semibold">Flat {flat.flatNumber}</h4>
-                            <div className="text-sm text-muted-foreground">
-                              Period: {flat.totalDaysInRange} days ({flat.totalMonthsInRange} months)
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <LineChart className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Occupancy Report</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view occupancy analysis
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="mb-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Occupancy Report</CardTitle>
+                      <CardDescription>
+                        Flat-wise occupancy analysis for the period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-8">
+                        {occupancyStats.map((flat: any) => (
+                          <div key={flat.flatNumber} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-center mb-4">
+                              <h4 className="text-lg font-semibold">Flat {flat.flatNumber}</h4>
+                              <div className="text-sm text-muted-foreground">
+                                Period: {flat.totalDaysInRange} days ({flat.totalMonthsInRange} months)
+                              </div>
                             </div>
-                          </div>
-                          
-                          {flat.tenants.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                              No tenants found for this period
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {flat.tenants.map((tenant: any, index: number) => (
-                                <div key={index} className="bg-gray-50 p-3 rounded">
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                      <div className="font-medium text-blue-600">Tenant:</div>
-                                      <div className="text-sm">{tenant.tenantName}</div>
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-green-600">Lease Period:</div>
-                                      <div className="text-sm">
-                                        {format(new Date(tenant.leaseStartDate), "dd/MM/yyyy")} - {" "}
-                                        {tenant.leaseEndDate ? format(new Date(tenant.leaseEndDate), "dd/MM/yyyy") : "Current"}
+                            
+                            {flat.tenants.length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                No tenants found for this period
+                              </div>
+                            ) : (
+                              <div className="space-y-4">
+                                {flat.tenants.map((tenant: any, index: number) => (
+                                  <div key={index} className="bg-gray-50 p-3 rounded">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                      <div>
+                                        <div className="font-medium text-blue-600">Tenant:</div>
+                                        <div className="text-sm">{tenant.tenantName}</div>
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-green-600">Lease Period:</div>
+                                        <div className="text-sm">
+                                          {format(new Date(tenant.leaseStartDate), "dd/MM/yyyy")} - {" "}
+                                          {tenant.leaseEndDate ? format(new Date(tenant.leaseEndDate), "dd/MM/yyyy") : "Current"}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-purple-600">Days Occupied:</div>
+                                        <div className="text-lg font-bold">{tenant.totalDaysOccupied} Days</div>
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-orange-600">Months Occupied:</div>
+                                        <div className="text-lg font-bold">{tenant.totalMonthsOccupied} Months</div>
                                       </div>
                                     </div>
+                                  </div>
+                                ))}
+                                
+                                <div className="mt-4 pt-4 border-t">
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
-                                      <div className="font-medium text-purple-600">Days Occupied:</div>
-                                      <div className="text-lg font-bold">{tenant.totalDaysOccupied} Days</div>
+                                      <div className="font-medium text-green-600">Total days occupied:</div>
+                                      <div className="text-lg font-bold">{flat.totalDaysOccupied} Days</div>
                                     </div>
                                     <div>
-                                      <div className="font-medium text-orange-600">Months Occupied:</div>
-                                      <div className="text-lg font-bold">{tenant.totalMonthsOccupied} Months</div>
+                                      <div className="font-medium text-green-600">Total months occupied:</div>
+                                      <div className="text-lg font-bold">{Math.ceil(flat.totalDaysOccupied / 30)} Months</div>
                                     </div>
-                                  </div>
-                                </div>
-                              ))}
-                              
-                              <div className="mt-4 pt-4 border-t">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                  <div>
-                                    <div className="font-medium text-green-600">Total days occupied:</div>
-                                    <div className="text-lg font-bold">{flat.totalDaysOccupied} Days</div>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-green-600">Total months occupied:</div>
-                                    <div className="text-lg font-bold">{Math.ceil(flat.totalDaysOccupied / 30)} Months</div>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-red-600">Total days vacant:</div>
-                                    <div className="text-lg font-bold">{flat.totalDaysVacant} Days</div>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-red-600">Total months vacant:</div>
-                                    <div className="text-lg font-bold">{Math.ceil(flat.totalDaysVacant / 30)} Months</div>
+                                    <div>
+                                      <div className="font-medium text-red-600">Total days vacant:</div>
+                                      <div className="text-lg font-bold">{flat.totalDaysVacant} Days</div>
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-red-600">Total months vacant:</div>
+                                      <div className="text-lg font-bold">{flat.totalMonthsInRange} Months</div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
             </TabsContent>
 
             <TabsContent value="income" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Income Report", <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />)
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Income Report</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view income analysis
+                    </p>
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -517,6 +545,41 @@ export default function ReportsPage() {
                     </Card>
                   </div>
 
+                  {/* Income by Type Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Income by Type</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={incomeByType}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={100}
+                              fill="#8884d8"
+                              dataKey="value"
+                              nameKey="name"
+                              label={(entry) => `${entry.name}: ${formatCurrency(entry.value)}`}
+                            >
+                              {incomeByType.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={INCOME_COLORS[index % INCOME_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              formatter={(value: number) => formatCurrency(value)}
+                            />
+                            <Legend />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Income Table */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Income Records</CardTitle>
@@ -550,7 +613,15 @@ export default function ReportsPage() {
             
             <TabsContent value="expense" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Expense Report", <PieChart className="h-12 w-12 text-muted-foreground mb-4" />)
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <PieChart className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Expense Report</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view expense analysis
+                    </p>
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -571,6 +642,41 @@ export default function ReportsPage() {
                     </Card>
                   </div>
 
+                  {/* Expense by Category Chart */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Expenses by Category</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart>
+                            <Pie
+                              data={expenseByCategory}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={100}
+                              fill="#8884d8"
+                              dataKey="value"
+                              nameKey="name"
+                              label={(entry) => `${entry.name}: ${formatCurrency(entry.value)}`}
+                            >
+                              {expenseByCategory.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              formatter={(value: number) => formatCurrency(value)}
+                            />
+                            <Legend />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Expense Table */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Expense Records</CardTitle>
@@ -604,9 +710,18 @@ export default function ReportsPage() {
 
             <TabsContent value="summary" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Financial Summary", <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />)
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Generate Financial Summary</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Select your date range and click "Generate Report" to view financial summary
+                    </p>
+                  </CardContent>
+                </Card>
               ) : (
                 <div className="space-y-6">
+                  {/* Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card>
                       <CardHeader className="pb-2">
@@ -638,6 +753,7 @@ export default function ReportsPage() {
                     </Card>
                   </div>
 
+                  {/* Financial Summary Table */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Financial Summary</CardTitle>
