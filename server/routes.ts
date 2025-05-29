@@ -544,6 +544,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  app.get(
+    "/api/expenses/all-subcategories",
+    isAuthenticated,
+    async (req, res, next) => {
+      try {
+        const subcategories = await dbStorage.getAllExpenseSubcategories();
+        res.json(subcategories);
+      } catch (error) {
+        console.error("Error fetching all expense subcategories:", error);
+        next(error);
+      }
+    },
+  );
+
   // Get maintenance types (from expense subcategories where category is "General Maintenance Works")
   app.get("/api/maintenance-types", isAuthenticated, async (req, res, next) => {
     try {
@@ -647,17 +661,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           try {
-            // Map flat number to property ID
+            // Map flat number to property ID (allow empty flat numbers)
             const flatNumber = record.property;
-            const propertyId = flatToPropertyMap.get(flatNumber);
+            let propertyId = null;
             
-            if (!propertyId) {
-              failedRecords.push({
-                ...record,
-                error_message: `Flat number '${flatNumber}' not found in properties`
-              });
-              failed++;
-              continue;
+            if (flatNumber && flatNumber.trim() !== "") {
+              propertyId = flatToPropertyMap.get(flatNumber);
+              if (!propertyId) {
+                failedRecords.push({
+                  ...record,
+                  error_message: `Flat number '${flatNumber}' not found in properties`
+                });
+                failed++;
+                continue;
+              }
             }
 
             // Map subcategory to category

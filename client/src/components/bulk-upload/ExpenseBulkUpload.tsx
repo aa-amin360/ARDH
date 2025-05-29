@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,53 @@ export function ExpenseBulkUpload() {
     failed: number;
     total: number;
   } | null>(null);
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+
+  // Fetch all subcategories for reference CSV
+  const { data: allSubcategories } = useQuery({
+    queryKey: ["/api/expenses/all-subcategories"],
+    queryFn: async () => {
+      const response = await fetch("/api/expenses/all-subcategories");
+      if (!response.ok) throw new Error("Failed to fetch subcategories");
+      return response.json();
+    }
+  });
+
+  // Download subcategories reference CSV
+  const downloadSubcategoriesReference = () => {
+    if (!allSubcategories || allSubcategories.length === 0) {
+      toast({
+        title: "No data available",
+        description: "No subcategories found to download.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const headers = ["subcategory", "category"];
+    const csvContent = [
+      headers.join(","),
+      ...allSubcategories.map((item: any) => [
+        item.subcategory,
+        item.category
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "available_subcategories.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Reference downloaded",
+      description: "Available subcategories reference has been downloaded."
+    });
+  };
 
   // Template download function
   const downloadTemplate = () => {
@@ -212,19 +259,30 @@ export function ExpenseBulkUpload() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div>
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               variant="outline" 
               onClick={downloadTemplate}
-              className="w-full md:w-auto"
+              className="flex-1 sm:flex-none"
             >
               <Download className="mr-2 h-4 w-4" />
               Download Template
             </Button>
-            <p className="text-sm text-muted-foreground mt-2">
-              Download the template, fill in your data, and upload it back. 
-              <br />
-              <strong>Note:</strong> Enter subcategory name and flat number in the respective fields.
+            <Button 
+              variant="secondary" 
+              onClick={downloadSubcategoriesReference}
+              className="flex-1 sm:flex-none"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download Subcategories Reference
+            </Button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Download the template, fill in your data, and upload it back.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <strong>Note:</strong> Use the subcategories reference to see available options. Flat number is optional.
             </p>
           </div>
 

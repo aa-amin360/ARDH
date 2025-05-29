@@ -755,6 +755,15 @@ export class DatabaseStorage implements IStorage {
     return result.rows;
   }
 
+  async getAllExpenseSubcategories() {
+    const result = await db.execute(sql`
+      SELECT DISTINCT expense_sub_category as subcategory, expense_category as category 
+      FROM expense_categories 
+      ORDER BY expense_category, expense_sub_category;
+    `);
+    return result.rows;
+  }
+
   async getMaintenanceTypes() {
     try {
       console.log("Getting maintenance types from expense subcategories");
