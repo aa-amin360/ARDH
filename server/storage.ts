@@ -74,6 +74,15 @@ export interface IStorage {
   ): Promise<Expense | undefined>;
   deleteExpense(id: number): Promise<boolean>;
 
+  // Expense categories and subcategories
+  getDistinctExpenseCategories(): Promise<any[]>;
+  getExpenseSubcategories(category: string): Promise<any[]>;
+  getAllExpenseSubcategories(): Promise<any[]>;
+  getMaintenanceTypes(): Promise<string[]>;
+  getDistinctVendorServiceTypes(): Promise<any[]>;
+  getVendorsByExpenseSubcategory(subcategory: string): Promise<Vendor[]>;
+  getVendorsByMaintenanceType(maintenanceType: string): Promise<Vendor[]>;
+
   // Water Tank
   getWaterTank(id: number): Promise<WaterTank | undefined>;
   getWaterTanks(): Promise<WaterTank[]>;
