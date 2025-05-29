@@ -131,7 +131,16 @@ export function IncomeBulkUpload() {
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/incomes/bulk-upload", formData);
+      const res = await fetch("/api/incomes/bulk-upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Upload failed");
+      }
+      
       return await res.json();
     },
     onSuccess: (data) => {
