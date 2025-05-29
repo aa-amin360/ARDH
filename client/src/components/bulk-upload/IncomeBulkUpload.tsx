@@ -8,34 +8,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileUp, Download, AlertCircle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export function IncomeBulkUpload() {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [failedRecords, setFailedRecords] = useState<any[]>([]);
+  const [uploadResult, setUploadResult] = useState<{
+    successful: number;
+    failed: number;
+    total: number;
+  } | null>(null);
 
   // Template download function
   const downloadTemplate = () => {
-    // Create the headers
+    // Create the headers as per specification
     const headers = [
       "date",
-      "amount",
+      "amount", 
       "type",
       "description",
-      "flatNumber",
-      "receivedFrom",
-      "notes"
+      "property_id",
+      "received_from"
     ];
 
-    // Create sample data
+    // Create sample data with flat_number in property_id field
     const sampleData = [
-      "2023-04-01",
+      "2025-01-15",
       "15000",
       "rent",
-      "April 2023 Rent",
+      "January 2025 Rent",
       "101",
-      "John Doe",
-      "Rent for April 2023"
+      "John Doe"
     ];
 
     // Create CSV content
@@ -78,6 +85,49 @@ export function IncomeBulkUpload() {
     }
   };
 
+  // Function to download failed records CSV
+  const downloadFailedRecords = () => {
+    if (failedRecords.length === 0) return;
+
+    const headers = [
+      "date",
+      "amount",
+      "type", 
+      "description",
+      "property_id",
+      "received_from",
+      "error_message"
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      ...failedRecords.map(record => [
+        record.date || "",
+        record.amount || "",
+        record.type || "",
+        record.description || "",
+        record.property_id || "",
+        record.received_from || "",
+        `"${record.error_message || ""}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "failed_income_records.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Failed records downloaded",
+      description: "CSV with failed records and error messages has been downloaded."
+    });
+  };
+
   // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -85,12 +135,24 @@ export function IncomeBulkUpload() {
       return await res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Income records uploaded",
-        description: `Successfully uploaded ${data.count} income records.`
+      setUploadResult({
+        successful: data.successful || 0,
+        failed: data.failed || 0,
+        total: data.total || 0
       });
+      
+      if (data.failedRecords && data.failedRecords.length > 0) {
+        setFailedRecords(data.failedRecords);
+      }
+
+      toast({
+        title: "Upload completed",
+        description: `Successfully uploaded ${data.successful} out of ${data.total} records.${data.failed > 0 ? ` ${data.failed} records failed.` : ""}`
+      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/incomes"] });
       setFile(null);
+      setUploadProgress(0);
     },
     onError: (error: any) => {
       toast({
@@ -98,6 +160,7 @@ export function IncomeBulkUpload() {
         description: error.message,
         variant: "destructive"
       });
+      setUploadProgress(0);
     }
   });
 
@@ -110,9 +173,25 @@ export function IncomeBulkUpload() {
       return;
     }
     
+    // Reset previous results
+    setUploadResult(null);
+    setFailedRecords([]);
+    setUploadProgress(10);
+    
     // Create form data
     const formData = new FormData();
     formData.append("file", file);
+    
+    // Simulate progress during upload
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 200);
     
     // Upload file
     uploadMutation.mutate(formData);
@@ -138,7 +217,9 @@ export function IncomeBulkUpload() {
               Download Template
             </Button>
             <p className="text-sm text-muted-foreground mt-2">
-              Download the template, fill in your data, and upload it back
+              Download the template, fill in your data, and upload it back. 
+              <br />
+              <strong>Note:</strong> Enter flat number (e.g., 101, 102) in the property_id field.
             </p>
           </div>
 
@@ -166,6 +247,17 @@ export function IncomeBulkUpload() {
               )}
             </div>
 
+            {/* Progress bar during upload */}
+            {uploadMutation.isPending && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Uploading...</span>
+                  <span>{uploadProgress}%</span>
+                </div>
+                <Progress value={uploadProgress} className="w-full" />
+              </div>
+            )}
+
             <Button 
               type="submit" 
               disabled={!file || uploadMutation.isPending}
@@ -183,6 +275,82 @@ export function IncomeBulkUpload() {
               )}
             </Button>
           </form>
+
+          {/* Upload Results */}
+          {uploadResult && (
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold mb-2">Upload Results</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Total Records:</span>
+                    <div className="font-medium">{uploadResult.total}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Successful:</span>
+                    <div className="font-medium text-green-600">{uploadResult.successful}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Failed:</span>
+                    <div className="font-medium text-red-600">{uploadResult.failed}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Failed Records Table */}
+              {failedRecords.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-semibold text-red-600">Failed Records</h4>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={downloadFailedRecords}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Failed Records
+                    </Button>
+                  </div>
+                  <div className="border rounded-lg max-h-64 overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Property ID</TableHead>
+                          <TableHead>Error Message</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {failedRecords.map((record, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{record.date || "-"}</TableCell>
+                            <TableCell>{record.amount || "-"}</TableCell>
+                            <TableCell>{record.type || "-"}</TableCell>
+                            <TableCell>{record.property_id || "-"}</TableCell>
+                            <TableCell className="text-red-600 text-sm">
+                              {record.error_message || "Unknown error"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {failedRecords.length === 0 && uploadResult.failed === 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Success!</AlertTitle>
+                  <AlertDescription>
+                    All {uploadResult.successful} records were uploaded successfully.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

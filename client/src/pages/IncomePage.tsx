@@ -49,7 +49,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { AttachmentUploader } from "@/components/AttachmentUploader";
 import { format, parseISO } from "date-fns";
 import { Progress } from "@/components/ui/progress";
-// Bulk upload component will be implemented later
+import IncomeBulkUpload from "@/components/bulk-upload/IncomeBulkUpload";
 import {
   Table,
   TableBody,
@@ -980,25 +980,7 @@ export default function IncomePage() {
         </TabsContent>
 
         <TabsContent value="bulk" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bulk Upload Income</CardTitle>
-              <CardDescription>
-                Upload a CSV file to add multiple income records at once.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-8">
-                <div className="flex flex-col space-y-2">
-                  <h3 className="text-lg font-medium">Download Template</h3>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Download CSV Template
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <IncomeBulkUpload />
         </TabsContent>
       </Tabs>
       {/* Edit Income Dialog */}

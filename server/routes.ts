@@ -7,6 +7,21 @@ import { getConstraintErrorMessage } from "@shared/dbErrorHandler";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
 import {
   insertUserSchema,
   insertPropertySchema,
@@ -289,22 +304,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "/api/incomes/bulk-upload",
     isAuthenticated,
     adminOnlyForIncome,
+    upload.single("file"),
     async (req, res, next) => {
       try {
-        // In a real implementation, this would:
-        // 1. Parse the CSV file from req.files
-        // 2. Validate each row of the CSV
-        // 3. Create income records for each valid row
-        // 4. Return success count and any errors
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
 
-        // For the prototype, we'll simulate a successful upload
-        setTimeout(() => {
-          res.json({
-            success: true,
-            count: 5, // Simulating 5 records uploaded
-            message: "Uploaded income records successfully",
+        const csvData = req.file.buffer.toString("utf-8");
+        const lines = csvData.split("\n").filter(line => line.trim() !== "");
+        
+        if (lines.length < 2) {
+          return res.status(400).json({ message: "CSV file must contain at least a header row and one data row" });
+        }
+
+        const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+        const expectedHeaders = ["date", "amount", "type", "description", "property_id", "received_from"];
+        
+        // Validate headers
+        const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+          return res.status(400).json({ 
+            message: `Missing required headers: ${missingHeaders.join(", ")}` 
           });
-        }, 1000); // Simulated 1 second delay
+        }
+
+        // Get all properties to map flat numbers to property IDs
+        const properties = await dbStorage.getProperties();
+        const flatToPropertyMap = new Map();
+        properties.forEach(prop => {
+          if (prop.flatNumber) {
+            flatToPropertyMap.set(prop.flatNumber, prop.id);
+          }
+        });
+
+        let successful = 0;
+        let failed = 0;
+        const failedRecords: any[] = [];
+
+        // Process each data row
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",").map(v => v.trim().replace(/^"|"$/g, "")); // Remove quotes
+          
+          if (values.length < expectedHeaders.length) {
+            failedRecords.push({
+              date: values[0] || "",
+              amount: values[1] || "",
+              type: values[2] || "",
+              description: values[3] || "",
+              property_id: values[4] || "",
+              received_from: values[5] || "",
+              error_message: "Insufficient columns in CSV row"
+            });
+            failed++;
+            continue;
+          }
+
+          const record: any = {};
+          headers.forEach((header, index) => {
+            record[header] = values[index];
+          });
+
+          try {
+            // Map flat number to property ID
+            const flatNumber = record.property_id;
+            const propertyId = flatToPropertyMap.get(flatNumber);
+            
+            if (!propertyId) {
+              failedRecords.push({
+                ...record,
+                error_message: `Flat number '${flatNumber}' not found in properties`
+              });
+              failed++;
+              continue;
+            }
+
+            // Validate and create income record
+            const incomeData = {
+              date: record.date,
+              amount: parseFloat(record.amount),
+              type: record.type,
+              description: record.description || "",
+              propertyId: propertyId,
+              receivedFrom: record.received_from,
+              createdBy: (req.user as any).id,
+              attachmentId: null
+            };
+
+            // Validate with schema
+            const validatedData = insertIncomeSchema.parse(incomeData);
+            await dbStorage.createIncome(validatedData);
+            successful++;
+
+          } catch (error: any) {
+            failedRecords.push({
+              ...record,
+              error_message: error.message || "Failed to create income record"
+            });
+            failed++;
+          }
+        }
+
+        res.json({
+          successful,
+          failed,
+          total: successful + failed,
+          failedRecords
+        });
+
       } catch (error) {
         console.error("Bulk upload error:", error);
         next(error);
