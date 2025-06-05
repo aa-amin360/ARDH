@@ -7,6 +7,8 @@ import {
   PieChart,
   BarChart3,
   LineChart,
+  TrendingDown,
+  Droplets,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
