@@ -41,22 +41,27 @@ export default function ReportsPage() {
   // Fetch data for reports - only when report is generated
   const { data: incomes, isLoading: incomesLoading } = useQuery({
     queryKey: ["/api/incomes", isReportGenerated],
-    enabled: isReportGenerated,
+    enabled: isReportGenerated && (reportType === "income" || reportType === "summary"),
   });
 
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ["/api/expenses", isReportGenerated],
-    enabled: isReportGenerated,
+    enabled: isReportGenerated && (reportType === "expense" || reportType === "summary"),
   });
 
-  const { data: properties, isLoading: propertiesLoading } = useQuery({
-    queryKey: ["/api/properties", isReportGenerated],
-    enabled: isReportGenerated,
-  });
-
-  const { data: tenants, isLoading: tenantsLoading } = useQuery({
-    queryKey: ["/api/tenants", isReportGenerated],
-    enabled: isReportGenerated,
+  // Fetch occupancy report data using the new API endpoint
+  const { data: occupancyData, isLoading: occupancyLoading } = useQuery({
+    queryKey: ["/api/occupancy-report", isReportGenerated, dateRange.from, dateRange.to],
+    queryFn: async () => {
+      const fromDate = format(dateRange.from, "yyyy-MM-dd");
+      const toDate = format(dateRange.to, "yyyy-MM-dd");
+      const response = await fetch(`/api/occupancy-report?fromDate=${fromDate}&toDate=${toDate}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch occupancy report');
+      }
+      return response.json();
+    },
+    enabled: isReportGenerated && reportType === "occupancy",
   });
 
   // Filter data by date range
@@ -95,51 +100,22 @@ export default function ReportsPage() {
     return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
   }, [filteredExpenses]);
 
-  // Calculate occupancy statistics
+  // Use occupancy data from the API endpoint
   const occupancyStats = useMemo(() => {
-    if (!properties || !tenants || !Array.isArray(properties) || !Array.isArray(tenants)) return [];
-
-    const totalDaysInRange = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
-    const totalMonthsInRange = Math.ceil(totalDaysInRange / 30);
-
-    return properties.map((property: any) => {
-      const flatTenants = tenants.filter((tenant: any) => tenant.flat_number === property.flat_number);
-      
-      let totalDaysOccupied = 0;
-      const tenantDetails = flatTenants.map((tenant: any) => {
-        const leaseStart = new Date(tenant.lease_start_date);
-        const leaseEnd = tenant.lease_end_date ? new Date(tenant.lease_end_date) : new Date();
-        
-        const effectiveStart = leaseStart > dateRange.from ? leaseStart : dateRange.from;
-        const effectiveEnd = leaseEnd < dateRange.to ? leaseEnd : dateRange.to;
-        
-        const daysOccupied = effectiveEnd > effectiveStart ? 
-          Math.ceil((effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-        
-        totalDaysOccupied += daysOccupied;
-        
-        return {
-          tenantId: tenant.id,
-          tenantName: tenant.name,
-          leaseStartDate: tenant.lease_start_date,
-          leaseEndDate: tenant.lease_end_date,
-          totalDaysOccupied: daysOccupied,
-          totalMonthsOccupied: Math.ceil(daysOccupied / 30)
-        };
-      });
-
-      const totalDaysVacant = Math.max(0, totalDaysInRange - totalDaysOccupied);
-
-      return {
-        flatNumber: property.flat_number,
-        totalDaysInRange,
-        totalMonthsInRange,
-        totalDaysOccupied,
-        totalDaysVacant,
-        tenants: tenantDetails
-      };
-    });
-  }, [properties, tenants, dateRange]);
+    if (!occupancyData || !Array.isArray(occupancyData)) return [];
+    
+    return occupancyData.map((record: any) => ({
+      flatNumber: record.flat_number,
+      tenantId: record.tenant_id,
+      tenantName: record.tenant_name,
+      startDate: record.start_date,
+      endDate: record.end_date,
+      originalLeaseStart: record.original_lease_start,
+      originalLeaseEnd: record.original_lease_end,
+      totalDaysOccupied: record.total_days_occupied,
+      totalMonthsOccupied: record.total_months_occupied
+    }));
+  }, [occupancyData]);
 
   // Colors for charts
   const INCOME_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -179,35 +155,17 @@ export default function ReportsPage() {
 
   // Export occupancy report as CSV
   const exportOccupancyReport = () => {
-    const headers = ["Flat Number", "Tenant ID", "Tenant Name", "Lease Start", "Lease End", "Days Occupied", "Months Occupied"];
+    const headers = ["Flat Number", "Start Date", "End Date", "Total Days Occupied", "Total Months Occupied"];
     const rows: string[] = [headers.join(",")];
 
-    occupancyStats.forEach((flat: any) => {
-      if (flat.tenants.length > 0) {
-        flat.tenants.forEach((tenant: any) => {
-          rows.push([
-            flat.flatNumber,
-            tenant.tenantId,
-            `"${tenant.tenantName}"`,
-            format(new Date(tenant.leaseStartDate), "dd/MM/yyyy"),
-            tenant.leaseEndDate ? format(new Date(tenant.leaseEndDate), "dd/MM/yyyy") : "Current",
-            tenant.totalDaysOccupied,
-            tenant.totalMonthsOccupied
-          ].join(","));
-        });
-        
-        // Add summary row for each flat
-        rows.push([
-          `"Summary for ${flat.flatNumber}"`,
-          "",
-          "",
-          "",
-          "",
-          `"Total Occupied: ${flat.totalDaysOccupied}"`,
-          `"Total Vacant: ${flat.totalDaysVacant}"`
-        ].join(","));
-        rows.push(""); // Empty row separator
-      }
+    occupancyStats.forEach((record: any) => {
+      rows.push([
+        record.flatNumber,
+        format(new Date(record.startDate), "dd/MM/yyyy"),
+        format(new Date(record.endDate), "dd/MM/yyyy"),
+        record.totalDaysOccupied,
+        record.totalMonthsOccupied
+      ].join(","));
     });
 
     const csvContent = rows.join("\n");
@@ -422,73 +380,39 @@ export default function ReportsPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-8">
-                      {occupancyStats.map((flat: any) => (
-                        <div key={flat.flatNumber} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-lg font-semibold">Flat {flat.flatNumber}</h4>
-                            <div className="text-sm text-muted-foreground">
-                              Period: {flat.totalDaysInRange} days ({flat.totalMonthsInRange} months)
-                            </div>
-                          </div>
-                          
-                          {flat.tenants.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                              No tenants found for this period
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {flat.tenants.map((tenant: any, index: number) => (
-                                <div key={index} className="bg-gray-50 p-3 rounded">
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                      <div className="font-medium text-blue-600">Tenant:</div>
-                                      <div className="text-sm">{tenant.tenantName}</div>
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-green-600">Lease Period:</div>
-                                      <div className="text-sm">
-                                        {format(new Date(tenant.leaseStartDate), "dd/MM/yyyy")} - {" "}
-                                        {tenant.leaseEndDate ? format(new Date(tenant.leaseEndDate), "dd/MM/yyyy") : "Current"}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-purple-600">Days Occupied:</div>
-                                      <div className="text-lg font-bold">{tenant.totalDaysOccupied} Days</div>
-                                    </div>
-                                    <div>
-                                      <div className="font-medium text-orange-600">Months Occupied:</div>
-                                      <div className="text-lg font-bold">{tenant.totalMonthsOccupied} Months</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                              
-                              <div className="mt-4 pt-4 border-t">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                  <div>
-                                    <div className="font-medium text-green-600">Total days occupied:</div>
-                                    <div className="text-lg font-bold">{flat.totalDaysOccupied} Days</div>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-green-600">Total months occupied:</div>
-                                    <div className="text-lg font-bold">{Math.ceil(flat.totalDaysOccupied / 30)} Months</div>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-red-600">Total days vacant:</div>
-                                    <div className="text-lg font-bold">{flat.totalDaysVacant} Days</div>
-                                  </div>
-                                  <div>
-                                    <div className="font-medium text-red-600">Total months vacant:</div>
-                                    <div className="text-lg font-bold">{Math.ceil(flat.totalDaysVacant / 30)} Months</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {occupancyLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                        <p className="mt-2 text-muted-foreground">Loading occupancy data...</p>
+                      </div>
+                    ) : occupancyStats.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No occupancy data found for the selected date range
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Flat Number</TableHead>
+                            <TableHead>Start Date</TableHead>
+                            <TableHead>End Date</TableHead>
+                            <TableHead className="text-right">Total Days Occupied</TableHead>
+                            <TableHead className="text-right">Total Months Occupied</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {occupancyStats.map((record: any, index: number) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{record.flatNumber}</TableCell>
+                              <TableCell>{format(new Date(record.startDate), "dd/MM/yyyy")}</TableCell>
+                              <TableCell>{format(new Date(record.endDate), "dd/MM/yyyy")}</TableCell>
+                              <TableCell className="text-right">{record.totalDaysOccupied}</TableCell>
+                              <TableCell className="text-right">{record.totalMonthsOccupied}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </CardContent>
                 </Card>
               )}

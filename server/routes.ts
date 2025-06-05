@@ -1977,6 +1977,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Occupancy Report route
+  app.get("/api/occupancy-report", isAuthenticated, async (req, res, next) => {
+    try {
+      const { fromDate, toDate } = req.query;
+      
+      if (!fromDate || !toDate) {
+        return res.status(400).json({ 
+          error: "Both fromDate and toDate parameters are required" 
+        });
+      }
+
+      console.log(`Generating occupancy report from ${fromDate} to ${toDate}`);
+      const reportData = await dbStorage.getOccupancyReport(
+        fromDate as string, 
+        toDate as string
+      );
+      
+      res.json(reportData);
+    } catch (error) {
+      console.error("Error generating occupancy report:", error);
+      next(error);
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
