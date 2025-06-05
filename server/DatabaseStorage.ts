@@ -1777,4 +1777,66 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  async getOccupancyReport(fromDate: string, toDate: string): Promise<any[]> {
+    try {
+      console.log(`Generating occupancy report from ${fromDate} to ${toDate}`);
+      
+      const query = `
+        WITH filtered_leases AS (
+          SELECT DISTINCT ON (flat_number)
+            flat_number,
+            tenant_id,
+            tenant_name,
+            lease_start_date,
+            lease_end_date
+          FROM occupancy_view
+          WHERE (
+            lease_start_date <= $1::date OR 
+            (lease_start_date > $1::date AND lease_start_date <= $2::date)
+          )
+          AND (lease_end_date IS NULL OR lease_end_date <= $2::date)
+          ORDER BY flat_number, ABS(EXTRACT(EPOCH FROM (lease_start_date - $1::date)))
+        ),
+        calculated_occupancy AS (
+          SELECT 
+            flat_number,
+            tenant_id,
+            tenant_name,
+            CASE 
+              WHEN lease_start_date < $1::date THEN $1::date
+              ELSE lease_start_date
+            END as start_date,
+            CASE 
+              WHEN lease_end_date IS NULL THEN $2::date
+              WHEN lease_end_date > $2::date THEN $2::date
+              ELSE lease_end_date
+            END as end_date,
+            lease_start_date as original_lease_start,
+            lease_end_date as original_lease_end
+          FROM filtered_leases
+        )
+        SELECT 
+          flat_number,
+          tenant_id,
+          tenant_name,
+          start_date,
+          end_date,
+          original_lease_start,
+          original_lease_end,
+          (end_date - start_date) as total_days_occupied,
+          ROUND((end_date - start_date) / 30.4375, 2) as total_months_occupied
+        FROM calculated_occupancy
+        WHERE start_date <= end_date
+        ORDER BY flat_number;
+      `;
+
+      const result = await pool.query(query, [fromDate, toDate]);
+      console.log(`Found ${result.rows.length} occupancy records`);
+      return result.rows;
+    } catch (error) {
+      console.error(`Error generating occupancy report: ${error}`);
+      throw error;
+    }
+  }
 }
