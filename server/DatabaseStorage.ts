@@ -1849,7 +1849,7 @@ ORDER BY flat_number;
         FROM expenses
         WHERE date >= $1::date 
           AND date <= $2::date
-          AND LOWER(subcategory) NOT LIKE '%water tanker%'
+          AND subcategory != 'Water Tanker'
         ORDER BY date DESC;
       `;
 
@@ -1866,18 +1866,19 @@ ORDER BY flat_number;
     try {
       console.log(`Generating water tanker report from ${fromDate} to ${toDate}`);
       
-      // Query water_tanks table for water tanker records
+      // Query expenses table for water tanker records
       const query = `
         SELECT 
           id,
           date,
-          cost as amount,
-          'Water tanker delivery' as description,
+          amount,
+          description,
           tanker_number,
           liters
-        FROM water_tanks
+        FROM expenses
         WHERE date >= $1::date 
           AND date <= $2::date
+          AND subcategory = 'Water Tanker'
         ORDER BY date DESC;
       `;
 
