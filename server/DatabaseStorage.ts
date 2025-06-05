@@ -1841,6 +1841,7 @@ ORDER BY flat_number;
       
       const query = `
         SELECT 
+          id,
           date,
           amount,
           category,
@@ -1865,17 +1866,18 @@ ORDER BY flat_number;
     try {
       console.log(`Generating water tanker report from ${fromDate} to ${toDate}`);
       
+      // Query water_tanks table for water tanker records
       const query = `
         SELECT 
+          id,
           date,
-          amount,
-          description,
+          cost as amount,
+          'Water tanker delivery' as description,
           tanker_number,
           liters
-        FROM expenses
+        FROM water_tanks
         WHERE date >= $1::date 
           AND date <= $2::date
-          AND LOWER(subcategory) LIKE '%water tanker%'
         ORDER BY date DESC;
       `;
 
