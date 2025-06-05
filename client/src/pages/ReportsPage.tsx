@@ -178,6 +178,16 @@ export default function ReportsPage() {
   );
   const profit = totalIncome - totalExpenses;
 
+  // Calculate totals for new report types
+  const totalExpenseReportAmount = (expenseReportData || []).reduce(
+    (sum: number, expense: any) => sum + (expense.amount || 0),
+    0,
+  );
+  const totalWaterTankerAmount = (waterTankerReportData || []).reduce(
+    (sum: number, record: any) => sum + (record.amount || 0),
+    0,
+  );
+
   // Calculate income by type
   const incomeByType = useMemo(() => {
     const typeMap = new Map();
@@ -534,7 +544,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Generate and Export Buttons */}
-            <div className="ml-auto flex gap-2">
+            <div className="flex gap-2 mt-4 sm:mt-0">
               <Button
                 onClick={handleGenerateReport}
                 disabled={isGenerating}
@@ -775,16 +785,36 @@ export default function ReportsPage() {
                   <TrendingDown className="h-12 w-12 text-muted-foreground mb-4" />,
                 )
               ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Expense Report</CardTitle>
-                    <CardDescription>
-                      Expense breakdown (excluding Water Tanker) for the period{" "}
-                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                      {format(dateRange.to, "MMM d, yyyy")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <Card className="bg-red-50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Total Expenses
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(totalExpenseReportAmount)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          For period {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Expense Report</CardTitle>
+                      <CardDescription>
+                        Expense breakdown (excluding Water Tanker) for the period{" "}
+                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                        {format(dateRange.to, "MMM d, yyyy")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
                     {expenseReportLoading ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -834,16 +864,36 @@ export default function ReportsPage() {
                   <Droplets className="h-12 w-12 text-muted-foreground mb-4" />,
                 )
               ) : (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Water Tanker Report</CardTitle>
-                    <CardDescription>
-                      Water tanker records for the period{" "}
-                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                      {format(dateRange.to, "MMM d, yyyy")}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <Card className="bg-blue-50">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">
+                          Total Water Tanker Cost
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(totalWaterTankerAmount)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          For period {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Water Tanker Report</CardTitle>
+                      <CardDescription>
+                        Water tanker records for the period{" "}
+                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                        {format(dateRange.to, "MMM d, yyyy")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
                     {waterTankerReportLoading ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -885,6 +935,7 @@ export default function ReportsPage() {
                     )}
                   </CardContent>
                 </Card>
+                </div>
               )}
             </TabsContent>
 
