@@ -104,6 +104,50 @@ export default function ReportsPage() {
     enabled: isReportGenerated && reportType === "occupancy",
   });
 
+  // Fetch expense report data
+  const { data: expenseReportData, isLoading: expenseReportLoading } = useQuery({
+    queryKey: [
+      "/api/expense-report",
+      isReportGenerated,
+      dateRange.from,
+      dateRange.to,
+    ],
+    queryFn: async () => {
+      const fromDate = format(dateRange.from, "yyyy-MM-dd");
+      const toDate = format(dateRange.to, "yyyy-MM-dd");
+      const response = await fetch(
+        `/api/expense-report?fromDate=${fromDate}&toDate=${toDate}`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch expense report");
+      }
+      return response.json();
+    },
+    enabled: isReportGenerated && reportType === "expense",
+  });
+
+  // Fetch water tanker report data
+  const { data: waterTankerReportData, isLoading: waterTankerReportLoading } = useQuery({
+    queryKey: [
+      "/api/water-tanker-report",
+      isReportGenerated,
+      dateRange.from,
+      dateRange.to,
+    ],
+    queryFn: async () => {
+      const fromDate = format(dateRange.from, "yyyy-MM-dd");
+      const toDate = format(dateRange.to, "yyyy-MM-dd");
+      const response = await fetch(
+        `/api/water-tanker-report?fromDate=${fromDate}&toDate=${toDate}`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch water tanker report");
+      }
+      return response.json();
+    },
+    enabled: isReportGenerated && reportType === "water-tanker",
+  });
+
   // Filter data by date range
   const filteredIncomes =
     incomes && Array.isArray(incomes)
@@ -216,7 +260,9 @@ export default function ReportsPage() {
     } else if (reportType === "income") {
       exportIncomeReport();
     } else if (reportType === "expense") {
-      exportExpenseReport();
+      exportExpenseReportNew();
+    } else if (reportType === "water-tanker") {
+      exportWaterTankerReport();
     }
   };
 
@@ -315,6 +361,59 @@ export default function ReportsPage() {
     const link = document.createElement("a");
     link.href = url;
     link.download = `expense_report_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export expense report as CSV (new version for the specific report)
+  const exportExpenseReportNew = () => {
+    const headers = ["Date", "Amount", "Category", "SubCategory"];
+    const rows: string[] = [headers.join(",")];
+
+    (expenseReportData || []).forEach((expense: any) => {
+      rows.push([
+        format(new Date(expense.date), "dd/MM/yyyy"),
+        expense.amount,
+        expense.category,
+        expense.subcategory
+      ].join(","));
+    });
+
+    const csvContent = rows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `expense_report_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export water tanker report as CSV
+  const exportWaterTankerReport = () => {
+    const headers = ["Date", "Amount", "Description", "Tanker Number", "Liters"];
+    const rows: string[] = [headers.join(",")];
+
+    (waterTankerReportData || []).forEach((record: any) => {
+      rows.push([
+        format(new Date(record.date), "dd/MM/yyyy"),
+        record.amount,
+        `"${record.description || ''}"`,
+        record.tanker_number || '',
+        record.liters || ''
+      ].join(","));
+    });
+
+    const csvContent = rows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `water_tanker_report_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -664,6 +763,126 @@ export default function ReportsPage() {
                     </CardContent>
                   </Card>
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="expense" className="mt-0">
+              {!isReportGenerated ? (
+                renderEmptyReportState(
+                  "Expense Report",
+                  <TrendingDown className="h-12 w-12 text-muted-foreground mb-4" />,
+                )
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Expense Report</CardTitle>
+                    <CardDescription>
+                      Expense breakdown (excluding Water Tanker) for the period{" "}
+                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM d, yyyy")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {expenseReportLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                        <p className="mt-2 text-muted-foreground">
+                          Loading expense data...
+                        </p>
+                      </div>
+                    ) : !expenseReportData || expenseReportData.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No expense data found for the selected date range
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>SubCategory</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {expenseReportData.map((expense: any) => (
+                            <TableRow key={expense.id}>
+                              <TableCell>
+                                {format(new Date(expense.date), "dd/MM/yyyy")}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(expense.amount)}
+                              </TableCell>
+                              <TableCell>{expense.category}</TableCell>
+                              <TableCell>{expense.subcategory}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="water-tanker" className="mt-0">
+              {!isReportGenerated ? (
+                renderEmptyReportState(
+                  "Water Tanker Report",
+                  <Droplets className="h-12 w-12 text-muted-foreground mb-4" />,
+                )
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Water Tanker Report</CardTitle>
+                    <CardDescription>
+                      Water tanker records for the period{" "}
+                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM d, yyyy")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {waterTankerReportLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                        <p className="mt-2 text-muted-foreground">
+                          Loading water tanker data...
+                        </p>
+                      </div>
+                    ) : !waterTankerReportData || waterTankerReportData.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No water tanker data found for the selected date range
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Tanker Number</TableHead>
+                            <TableHead>Liters</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {waterTankerReportData.map((record: any) => (
+                            <TableRow key={record.id}>
+                              <TableCell>
+                                {format(new Date(record.date), "dd/MM/yyyy")}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(record.amount)}
+                              </TableCell>
+                              <TableCell>{record.description || '-'}</TableCell>
+                              <TableCell>{record.tanker_number || '-'}</TableCell>
+                              <TableCell>{record.liters || '-'}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 
