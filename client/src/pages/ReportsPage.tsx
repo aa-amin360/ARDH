@@ -1,15 +1,44 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
-import { CalendarIcon, FileDown, PieChart, BarChart3, LineChart } from "lucide-react";
+import {
+  CalendarIcon,
+  FileDown,
+  PieChart,
+  BarChart3,
+  LineChart,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import {
@@ -33,7 +62,7 @@ export default function ReportsPage() {
 
   // Report type state
   const [reportType, setReportType] = useState("occupancy");
-  
+
   // Report generation state
   const [isReportGenerated, setIsReportGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -41,23 +70,34 @@ export default function ReportsPage() {
   // Fetch data for reports - only when report is generated
   const { data: incomes, isLoading: incomesLoading } = useQuery({
     queryKey: ["/api/incomes", isReportGenerated],
-    enabled: isReportGenerated && (reportType === "income" || reportType === "summary"),
+    enabled:
+      isReportGenerated &&
+      (reportType === "income" || reportType === "summary"),
   });
 
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ["/api/expenses", isReportGenerated],
-    enabled: isReportGenerated && (reportType === "expense" || reportType === "summary"),
+    enabled:
+      isReportGenerated &&
+      (reportType === "expense" || reportType === "summary"),
   });
 
   // Fetch occupancy report data using the new API endpoint
   const { data: occupancyData, isLoading: occupancyLoading } = useQuery({
-    queryKey: ["/api/occupancy-report", isReportGenerated, dateRange.from, dateRange.to],
+    queryKey: [
+      "/api/occupancy-report",
+      isReportGenerated,
+      dateRange.from,
+      dateRange.to,
+    ],
     queryFn: async () => {
       const fromDate = format(dateRange.from, "yyyy-MM-dd");
       const toDate = format(dateRange.to, "yyyy-MM-dd");
-      const response = await fetch(`/api/occupancy-report?fromDate=${fromDate}&toDate=${toDate}`);
+      const response = await fetch(
+        `/api/occupancy-report?fromDate=${fromDate}&toDate=${toDate}`,
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch occupancy report');
+        throw new Error("Failed to fetch occupancy report");
       }
       return response.json();
     },
@@ -65,45 +105,66 @@ export default function ReportsPage() {
   });
 
   // Filter data by date range
-  const filteredIncomes = incomes && Array.isArray(incomes) ? incomes.filter((income: any) => {
-    const incomeDate = new Date(income.date);
-    return incomeDate >= dateRange.from && incomeDate <= dateRange.to;
-  }) : [];
+  const filteredIncomes =
+    incomes && Array.isArray(incomes)
+      ? incomes.filter((income: any) => {
+          const incomeDate = new Date(income.date);
+          return incomeDate >= dateRange.from && incomeDate <= dateRange.to;
+        })
+      : [];
 
-  const filteredExpenses = expenses && Array.isArray(expenses) ? expenses.filter((expense: any) => {
-    const expenseDate = new Date(expense.date);
-    return expenseDate >= dateRange.from && expenseDate <= dateRange.to;
-  }) : [];
+  const filteredExpenses =
+    expenses && Array.isArray(expenses)
+      ? expenses.filter((expense: any) => {
+          const expenseDate = new Date(expense.date);
+          return expenseDate >= dateRange.from && expenseDate <= dateRange.to;
+        })
+      : [];
 
   // Calculate totals
-  const totalIncome = filteredIncomes.reduce((sum: number, income: any) => sum + (income.amount || 0), 0);
-  const totalExpenses = filteredExpenses.reduce((sum: number, expense: any) => sum + (expense.amount || 0), 0);
+  const totalIncome = filteredIncomes.reduce(
+    (sum: number, income: any) => sum + (income.amount || 0),
+    0,
+  );
+  const totalExpenses = filteredExpenses.reduce(
+    (sum: number, expense: any) => sum + (expense.amount || 0),
+    0,
+  );
   const profit = totalIncome - totalExpenses;
 
   // Calculate income by type
   const incomeByType = useMemo(() => {
     const typeMap = new Map();
     filteredIncomes.forEach((income: any) => {
-      const type = income.type || 'Unknown';
+      const type = income.type || "Unknown";
       typeMap.set(type, (typeMap.get(type) || 0) + income.amount);
     });
-    return Array.from(typeMap.entries()).map(([name, value]) => ({ name, value }));
+    return Array.from(typeMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+    }));
   }, [filteredIncomes]);
 
   // Calculate expense by category
   const expenseByCategory = useMemo(() => {
     const categoryMap = new Map();
     filteredExpenses.forEach((expense: any) => {
-      const category = expense.category || 'Unknown';
-      categoryMap.set(category, (categoryMap.get(category) || 0) + expense.amount);
+      const category = expense.category || "Unknown";
+      categoryMap.set(
+        category,
+        (categoryMap.get(category) || 0) + expense.amount,
+      );
     });
-    return Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
+    return Array.from(categoryMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+    }));
   }, [filteredExpenses]);
 
   // Use occupancy data from the API endpoint
   const occupancyStats = useMemo(() => {
     if (!occupancyData || !Array.isArray(occupancyData)) return [];
-    
+
     return occupancyData.map((record: any) => ({
       flatNumber: record.flat_number,
       tenantId: record.tenant_id,
@@ -113,13 +174,19 @@ export default function ReportsPage() {
       originalLeaseStart: record.original_lease_start,
       originalLeaseEnd: record.original_lease_end,
       totalDaysOccupied: record.total_days_occupied,
-      totalMonthsOccupied: record.total_months_occupied
+      totalMonthsOccupied: record.total_months_occupied,
     }));
   }, [occupancyData]);
 
   // Colors for charts
-  const INCOME_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-  const EXPENSE_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'];
+  const INCOME_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+  const EXPENSE_COLORS = [
+    "#FF6B6B",
+    "#4ECDC4",
+    "#45B7D1",
+    "#96CEB4",
+    "#FFEAA7",
+  ];
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -133,7 +200,7 @@ export default function ReportsPage() {
       // Reset previous report state
       setIsReportGenerated(false);
       // Brief delay to show loading state
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       setIsReportGenerated(true);
     } finally {
       setIsGenerating(false);
@@ -155,17 +222,25 @@ export default function ReportsPage() {
 
   // Export occupancy report as CSV
   const exportOccupancyReport = () => {
-    const headers = ["Flat Number", "Start Date", "End Date", "Total Days Occupied", "Total Months Occupied"];
+    const headers = [
+      "Flat Number",
+      "Start Date",
+      "End Date",
+      "Total Days Occupied",
+      "Total Months Occupied",
+    ];
     const rows: string[] = [headers.join(",")];
 
     occupancyStats.forEach((record: any) => {
-      rows.push([
-        record.flatNumber,
-        format(new Date(record.startDate), "dd/MM/yyyy"),
-        format(new Date(record.endDate), "dd/MM/yyyy"),
-        record.totalDaysOccupied,
-        record.totalMonthsOccupied
-      ].join(","));
+      rows.push(
+        [
+          record.flatNumber,
+          format(new Date(record.startDate), "dd/MM/yyyy"),
+          format(new Date(record.endDate), "dd/MM/yyyy"),
+          record.totalDaysOccupied,
+          record.totalMonthsOccupied,
+        ].join(","),
+      );
     });
 
     const csvContent = rows.join("\n");
@@ -186,13 +261,15 @@ export default function ReportsPage() {
     const rows: string[] = [headers.join(",")];
 
     filteredIncomes.forEach((income: any) => {
-      rows.push([
-        format(new Date(income.date), "dd/MM/yyyy"),
-        income.type,
-        `"${income.description}"`,
-        income.amount,
-        income.propertyId || ""
-      ].join(","));
+      rows.push(
+        [
+          format(new Date(income.date), "dd/MM/yyyy"),
+          income.type,
+          `"${income.description}"`,
+          income.amount,
+          income.propertyId || "",
+        ].join(","),
+      );
     });
 
     const csvContent = rows.join("\n");
@@ -209,18 +286,27 @@ export default function ReportsPage() {
 
   // Export expense report as CSV
   const exportExpenseReport = () => {
-    const headers = ["Date", "Category", "Subcategory", "Description", "Amount", "Property"];
+    const headers = [
+      "Date",
+      "Category",
+      "Subcategory",
+      "Description",
+      "Amount",
+      "Property",
+    ];
     const rows: string[] = [headers.join(",")];
 
     filteredExpenses.forEach((expense: any) => {
-      rows.push([
-        format(new Date(expense.date), "dd/MM/yyyy"),
-        expense.category,
-        expense.subcategory,
-        `"${expense.description}"`,
-        expense.amount,
-        expense.propertyId || ""
-      ].join(","));
+      rows.push(
+        [
+          format(new Date(expense.date), "dd/MM/yyyy"),
+          expense.category,
+          expense.subcategory,
+          `"${expense.description}"`,
+          expense.amount,
+          expense.propertyId || "",
+        ].join(","),
+      );
     });
 
     const csvContent = rows.join("\n");
@@ -235,13 +321,17 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
-  const renderEmptyReportState = (reportName: string, icon: React.ReactNode) => (
+  const renderEmptyReportState = (
+    reportName: string,
+    icon: React.ReactNode,
+  ) => (
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12">
         {icon}
         <h3 className="text-lg font-semibold mb-2">Generate {reportName}</h3>
         <p className="text-muted-foreground text-center mb-4">
-          Select your date range and click "Generate Report" to view {reportName.toLowerCase()}
+          Select your date range and click "Generate Report" to view{" "}
+          {reportName.toLowerCase()}
         </p>
       </CardContent>
     </Card>
@@ -253,7 +343,8 @@ export default function ReportsPage() {
         <CardHeader>
           <CardTitle>Reports & Analytics</CardTitle>
           <CardDescription>
-            Generate comprehensive reports for income, expenses, and occupancy analysis
+            Generate comprehensive reports for income, expenses, and occupancy
+            analysis
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -269,7 +360,7 @@ export default function ReportsPage() {
                       variant={"outline"}
                       className={cn(
                         "w-[240px] justify-start text-left font-normal",
-                        !dateRange.from && "text-muted-foreground"
+                        !dateRange.from && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -284,19 +375,22 @@ export default function ReportsPage() {
                     <Calendar
                       mode="single"
                       selected={dateRange.from}
-                      onSelect={(date) => date && setDateRange(prev => ({ ...prev, from: date }))}
+                      onSelect={(date) =>
+                        date &&
+                        setDateRange((prev) => ({ ...prev, from: date }))
+                      }
                       initialFocus
                     />
                   </PopoverContent>
                 </Popover>
-                
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
                       className={cn(
                         "w-[240px] justify-start text-left font-normal",
-                        !dateRange.to && "text-muted-foreground"
+                        !dateRange.to && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
@@ -311,7 +405,9 @@ export default function ReportsPage() {
                     <Calendar
                       mode="single"
                       selected={dateRange.to}
-                      onSelect={(date) => date && setDateRange(prev => ({ ...prev, to: date }))}
+                      onSelect={(date) =>
+                        date && setDateRange((prev) => ({ ...prev, to: date }))
+                      }
                       initialFocus
                     />
                   </PopoverContent>
@@ -330,6 +426,7 @@ export default function ReportsPage() {
                   <SelectItem value="occupancy">Occupancy Report</SelectItem>
                   <SelectItem value="income">Income Report</SelectItem>
                   <SelectItem value="expense">Expense Report</SelectItem>
+                  <SelectItem value="water-tanker">Water Tanker Report</SelectItem>
                   <SelectItem value="summary">Financial Summary</SelectItem>
                 </SelectContent>
               </Select>
@@ -341,6 +438,7 @@ export default function ReportsPage() {
                 onClick={handleGenerateReport}
                 disabled={isGenerating}
                 variant="default"
+                className="min-w-[140px]"
               >
                 {isGenerating ? (
                   <>
@@ -354,11 +452,12 @@ export default function ReportsPage() {
                   </>
                 )}
               </Button>
-              
+
               <Button
                 onClick={handleExportReport}
                 disabled={!isReportGenerated}
                 variant="outline"
+                className="min-w-[140px]"
               >
                 <FileDown className="mr-2 h-4 w-4" />
                 Export Report
@@ -370,20 +469,27 @@ export default function ReportsPage() {
           <Tabs value={reportType} onValueChange={setReportType}>
             <TabsContent value="occupancy" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Occupancy Report", <LineChart className="h-12 w-12 text-muted-foreground mb-4" />)
+                renderEmptyReportState(
+                  "Occupancy Report",
+                  <LineChart className="h-12 w-12 text-muted-foreground mb-4" />,
+                )
               ) : (
                 <Card>
                   <CardHeader>
                     <CardTitle>Occupancy Report</CardTitle>
                     <CardDescription>
-                      Flat-wise occupancy analysis for the period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                      Flat-wise occupancy analysis for the period{" "}
+                      {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                      {format(dateRange.to, "MMM d, yyyy")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {occupancyLoading ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                        <p className="mt-2 text-muted-foreground">Loading occupancy data...</p>
+                        <p className="mt-2 text-muted-foreground">
+                          Loading occupancy data...
+                        </p>
                       </div>
                     ) : occupancyStats.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
@@ -396,18 +502,35 @@ export default function ReportsPage() {
                             <TableHead>Flat Number</TableHead>
                             <TableHead>Start Date</TableHead>
                             <TableHead>End Date</TableHead>
-                            <TableHead className="text-right">Total Days Occupied</TableHead>
-                            <TableHead className="text-right">Total Months Occupied</TableHead>
+                            <TableHead className="text-right">
+                              Total Days Occupied
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Total Months Occupied
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {occupancyStats.map((record: any, index: number) => (
                             <TableRow key={index}>
-                              <TableCell className="font-medium">{record.flatNumber}</TableCell>
-                              <TableCell>{format(new Date(record.startDate), "dd/MM/yyyy")}</TableCell>
-                              <TableCell>{format(new Date(record.endDate), "dd/MM/yyyy")}</TableCell>
-                              <TableCell className="text-right">{record.totalDaysOccupied}</TableCell>
-                              <TableCell className="text-right">{record.totalMonthsOccupied}</TableCell>
+                              <TableCell className="font-medium">
+                                {record.flatNumber}
+                              </TableCell>
+                              <TableCell>
+                                {format(
+                                  new Date(record.startDate),
+                                  "dd/MM/yyyy",
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(record.endDate), "dd/MM/yyyy")}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {record.totalDaysOccupied}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {record.totalMonthsOccupied}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -420,7 +543,10 @@ export default function ReportsPage() {
 
             <TabsContent value="income" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Income Report", <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />)
+                renderEmptyReportState(
+                  "Income Report",
+                  <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />,
+                )
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -435,7 +561,8 @@ export default function ReportsPage() {
                           {formatCurrency(totalIncome)}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          For period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                          For period {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
                         </p>
                       </CardContent>
                     </Card>
@@ -458,10 +585,14 @@ export default function ReportsPage() {
                         <TableBody>
                           {filteredIncomes.map((income: any, index: number) => (
                             <TableRow key={index}>
-                              <TableCell>{format(new Date(income.date), "dd/MM/yyyy")}</TableCell>
+                              <TableCell>
+                                {format(new Date(income.date), "dd/MM/yyyy")}
+                              </TableCell>
                               <TableCell>{income.type}</TableCell>
                               <TableCell>{income.description}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(income.amount)}</TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(income.amount)}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -471,10 +602,13 @@ export default function ReportsPage() {
                 </div>
               )}
             </TabsContent>
-            
+
             <TabsContent value="expense" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Expense Report", <PieChart className="h-12 w-12 text-muted-foreground mb-4" />)
+                renderEmptyReportState(
+                  "Expense Report",
+                  <PieChart className="h-12 w-12 text-muted-foreground mb-4" />,
+                )
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -489,7 +623,8 @@ export default function ReportsPage() {
                           {formatCurrency(totalExpenses)}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          For period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                          For period {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
                         </p>
                       </CardContent>
                     </Card>
@@ -510,14 +645,20 @@ export default function ReportsPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredExpenses.map((expense: any, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell>{format(new Date(expense.date), "dd/MM/yyyy")}</TableCell>
-                              <TableCell>{expense.category}</TableCell>
-                              <TableCell>{expense.description}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(expense.amount)}</TableCell>
-                            </TableRow>
-                          ))}
+                          {filteredExpenses.map(
+                            (expense: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell>
+                                  {format(new Date(expense.date), "dd/MM/yyyy")}
+                                </TableCell>
+                                <TableCell>{expense.category}</TableCell>
+                                <TableCell>{expense.description}</TableCell>
+                                <TableCell className="text-right">
+                                  {formatCurrency(expense.amount)}
+                                </TableCell>
+                              </TableRow>
+                            ),
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -528,34 +669,49 @@ export default function ReportsPage() {
 
             <TabsContent value="summary" className="mt-0">
               {!isReportGenerated ? (
-                renderEmptyReportState("Financial Summary", <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />)
+                renderEmptyReportState(
+                  "Financial Summary",
+                  <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />,
+                )
               ) : (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+                        <CardTitle className="text-sm font-medium">
+                          Total Income
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatCurrency(totalIncome)}
+                        </div>
                       </CardContent>
                     </Card>
-                    
+
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                        <CardTitle className="text-sm font-medium">
+                          Total Expenses
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
+                        <div className="text-2xl font-bold text-red-600">
+                          {formatCurrency(totalExpenses)}
+                        </div>
                       </CardContent>
                     </Card>
-                    
+
                     <Card>
                       <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+                        <CardTitle className="text-sm font-medium">
+                          Net Profit
+                        </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <div
+                          className={`text-2xl font-bold ${profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
                           {formatCurrency(profit)}
                         </div>
                       </CardContent>
@@ -566,7 +722,9 @@ export default function ReportsPage() {
                     <CardHeader>
                       <CardTitle>Financial Summary</CardTitle>
                       <CardDescription>
-                        Summary for period {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                        Summary for period{" "}
+                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                        {format(dateRange.to, "MMM d, yyyy")}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -575,29 +733,53 @@ export default function ReportsPage() {
                           <TableRow>
                             <TableHead>Category</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-right">Percentage</TableHead>
+                            <TableHead className="text-right">
+                              Percentage
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           <TableRow>
-                            <TableCell className="font-medium">Total Income</TableCell>
-                            <TableCell className="text-right">{formatCurrency(totalIncome)}</TableCell>
+                            <TableCell className="font-medium">
+                              Total Income
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(totalIncome)}
+                            </TableCell>
                             <TableCell className="text-right">100%</TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell className="font-medium">Total Expenses</TableCell>
-                            <TableCell className="text-right">{formatCurrency(totalExpenses)}</TableCell>
+                            <TableCell className="font-medium">
+                              Total Expenses
+                            </TableCell>
                             <TableCell className="text-right">
-                              {totalIncome > 0 ? `${((totalExpenses / totalIncome) * 100).toFixed(1)}%` : 'N/A'}
+                              {formatCurrency(totalExpenses)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {totalIncome > 0
+                                ? `${((totalExpenses / totalIncome) * 100).toFixed(1)}%`
+                                : "N/A"}
                             </TableCell>
                           </TableRow>
-                          <TableRow className={profit >= 0 ? 'bg-green-50' : 'bg-red-50'}>
-                            <TableCell className="font-medium">Net Profit</TableCell>
-                            <TableCell className={`text-right ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <TableRow
+                            className={
+                              profit >= 0 ? "bg-green-50" : "bg-red-50"
+                            }
+                          >
+                            <TableCell className="font-medium">
+                              Net Profit
+                            </TableCell>
+                            <TableCell
+                              className={`text-right ${profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
                               {formatCurrency(profit)}
                             </TableCell>
-                            <TableCell className={`text-right ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {totalIncome > 0 ? `${((profit / totalIncome) * 100).toFixed(1)}%` : 'N/A'}
+                            <TableCell
+                              className={`text-right ${profit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {totalIncome > 0
+                                ? `${((profit / totalIncome) * 100).toFixed(1)}%`
+                                : "N/A"}
                             </TableCell>
                           </TableRow>
                         </TableBody>

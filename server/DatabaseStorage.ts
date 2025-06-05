@@ -1781,53 +1781,49 @@ export class DatabaseStorage implements IStorage {
   async getOccupancyReport(fromDate: string, toDate: string): Promise<any[]> {
     try {
       console.log(`Generating occupancy report from ${fromDate} to ${toDate}`);
-      
+
       const query = `
-        WITH filtered_leases AS (
-          SELECT DISTINCT ON (flat_number)
-            flat_number,
-            tenant_id,
-            tenant_name,
-            lease_start_date,
-            lease_end_date
-          FROM occupancy_view
-          WHERE (
-            lease_start_date <= $2::date
-          )
-          AND (lease_end_date IS NULL OR lease_end_date >= $1::date)
-          ORDER BY flat_number, lease_start_date DESC
-        ),
-        calculated_occupancy AS (
-          SELECT 
-            flat_number,
-            tenant_id,
-            tenant_name,
-            CASE 
-              WHEN lease_start_date < $1::date THEN $1::date
-              ELSE lease_start_date
-            END as start_date,
-            CASE 
-              WHEN lease_end_date IS NULL THEN $2::date
-              WHEN lease_end_date > $2::date THEN $2::date
-              ELSE lease_end_date
-            END as end_date,
-            lease_start_date as original_lease_start,
-            lease_end_date as original_lease_end
-          FROM filtered_leases
-        )
-        SELECT 
-          flat_number,
-          tenant_id,
-          tenant_name,
-          start_date,
-          end_date,
-          original_lease_start,
-          original_lease_end,
-          (end_date - start_date) as total_days_occupied,
-          ROUND((end_date - start_date)::numeric / 30.4375, 2) as total_months_occupied
-        FROM calculated_occupancy
-        WHERE start_date <= end_date
-        ORDER BY flat_number;
+       WITH inputs AS (
+  SELECT 
+    $1::date AS from_date,
+    LEAST($2::date, CURRENT_DATE) AS to_date -- Cap to_date at today
+),
+relevant_leases AS (
+  SELECT
+    ov.flat_number,
+    ov.tenant_id,
+    ov.tenant_name,
+    GREATEST(ov.lease_start_date::date, i.from_date) AS start_date,
+    LEAST(ov.lease_end_date::date, i.to_date) AS end_date
+  FROM occupancy_view ov, inputs i
+  WHERE 
+    ov.lease_start_date::date <= i.to_date AND
+    ov.lease_end_date::date >= i.from_date
+),
+durations AS (
+  SELECT
+    flat_number,
+    tenant_id,
+    tenant_name,
+    start_date,
+    end_date,
+    (end_date - start_date) AS total_days_occupied,
+    ROUND((end_date - start_date)::numeric / 30.4375, 2) AS total_months_occupied
+  FROM relevant_leases
+  WHERE start_date <= end_date
+),
+aggregated AS (
+  SELECT
+    flat_number,
+    MIN(start_date) AS start_date,
+    MAX(end_date) AS end_date,
+    SUM(total_days_occupied) AS total_days_occupied,
+    ROUND(SUM(total_days_occupied)::numeric / 30.4375, 2) AS total_months_occupied
+  FROM durations
+  GROUP BY flat_number
+)
+SELECT * FROM aggregated
+ORDER BY flat_number;
       `;
 
       const result = await pool.query(query, [fromDate, toDate]);
@@ -1835,6 +1831,59 @@ export class DatabaseStorage implements IStorage {
       return result.rows;
     } catch (error) {
       console.error(`Error generating occupancy report: ${error}`);
+      throw error;
+    }
+  }
+
+  async getExpenseReport(fromDate: string, toDate: string): Promise<any[]> {
+    try {
+      console.log(`Generating expense report from ${fromDate} to ${toDate}`);
+      
+      const query = `
+        SELECT 
+          date,
+          amount,
+          category,
+          subcategory
+        FROM expenses
+        WHERE date >= $1::date 
+          AND date <= $2::date
+          AND LOWER(subcategory) NOT LIKE '%water tanker%'
+        ORDER BY date DESC;
+      `;
+
+      const result = await pool.query(query, [fromDate, toDate]);
+      console.log(`Found ${result.rows.length} expense records`);
+      return result.rows;
+    } catch (error) {
+      console.error('Error generating expense report:', error);
+      throw error;
+    }
+  }
+
+  async getWaterTankerReport(fromDate: string, toDate: string): Promise<any[]> {
+    try {
+      console.log(`Generating water tanker report from ${fromDate} to ${toDate}`);
+      
+      const query = `
+        SELECT 
+          date,
+          amount,
+          description,
+          tanker_number,
+          liters
+        FROM expenses
+        WHERE date >= $1::date 
+          AND date <= $2::date
+          AND LOWER(subcategory) LIKE '%water tanker%'
+        ORDER BY date DESC;
+      `;
+
+      const result = await pool.query(query, [fromDate, toDate]);
+      console.log(`Found ${result.rows.length} water tanker records`);
+      return result.rows;
+    } catch (error) {
+      console.error('Error generating water tanker report:', error);
       throw error;
     }
   }
