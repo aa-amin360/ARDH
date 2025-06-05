@@ -1792,11 +1792,10 @@ export class DatabaseStorage implements IStorage {
             lease_end_date
           FROM occupancy_view
           WHERE (
-            lease_start_date <= $1::date OR 
-            (lease_start_date > $1::date AND lease_start_date <= $2::date)
+            lease_start_date <= $2::date
           )
-          AND (lease_end_date IS NULL OR lease_end_date <= $2::date)
-          ORDER BY flat_number, ABS(EXTRACT(EPOCH FROM (lease_start_date - $1::date)))
+          AND (lease_end_date IS NULL OR lease_end_date >= $1::date)
+          ORDER BY flat_number, lease_start_date DESC
         ),
         calculated_occupancy AS (
           SELECT 
@@ -1825,7 +1824,7 @@ export class DatabaseStorage implements IStorage {
           original_lease_start,
           original_lease_end,
           (end_date - start_date) as total_days_occupied,
-          ROUND((end_date - start_date) / 30.4375, 2) as total_months_occupied
+          ROUND((end_date - start_date)::numeric / 30.4375, 2) as total_months_occupied
         FROM calculated_occupancy
         WHERE start_date <= end_date
         ORDER BY flat_number;
