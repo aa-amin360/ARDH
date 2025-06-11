@@ -471,53 +471,31 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Property</TableHead>
                             <TableHead>Flat Number</TableHead>
-                            <TableHead>Owner</TableHead>
-                            <TableHead>Lease Status</TableHead>
-                            <TableHead>Rental Income</TableHead>
-                            <TableHead>Maintenance Fee</TableHead>
-                            <TableHead>Water Fee</TableHead>
-                            <TableHead>Tenants Count</TableHead>
+                            <TableHead>Start Date</TableHead>
+                            <TableHead>End Date</TableHead>
+                            <TableHead>Total Days Occupied</TableHead>
+                            <TableHead>Total Months Occupied</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {occupancies.map((property: any, index: number) => (
+                          {occupancies.map((occupancy: any, index: number) => (
                             <TableRow key={index}>
                               <TableCell className="font-medium">
-                                {property.flatType} - Floor {property.apartmentFloor}
-                              </TableCell>
-                              <TableCell>{property.flatNumber}</TableCell>
-                              <TableCell>{property.ownerName}</TableCell>
-                              <TableCell>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs ${
-                                    property.leaseStatus === "Rented"
-                                      ? "bg-green-100 text-green-800"
-                                      : property.leaseStatus === "Vacant"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-yellow-100 text-yellow-800"
-                                  }`}
-                                >
-                                  {property.leaseStatus}
-                                </span>
+                                {occupancy.flat_number}
                               </TableCell>
                               <TableCell>
-                                {property.totalRentIncome > 0
-                                  ? formatCurrency(property.totalRentIncome)
+                                {occupancy.start_date
+                                  ? format(new Date(occupancy.start_date), "dd/MM/yyyy")
                                   : "-"}
                               </TableCell>
                               <TableCell>
-                                {property.totalMaintenanceFees > 0
-                                  ? formatCurrency(property.totalMaintenanceFees)
+                                {occupancy.end_date
+                                  ? format(new Date(occupancy.end_date), "dd/MM/yyyy")
                                   : "-"}
                               </TableCell>
-                              <TableCell>
-                                {property.totalWaterFees > 0
-                                  ? formatCurrency(property.totalWaterFees)
-                                  : "-"}
-                              </TableCell>
-                              <TableCell>{property.tenantsCount}</TableCell>
+                              <TableCell>{occupancy.total_days_occupied || 0}</TableCell>
+                              <TableCell>{occupancy.total_months_occupied || "0.00"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
