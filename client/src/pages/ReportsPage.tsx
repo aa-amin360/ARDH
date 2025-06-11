@@ -68,8 +68,9 @@ export default function ReportsPage() {
       const fromDate = format(dateRange.from, "yyyy-MM-dd");
       const toDate = format(dateRange.to, "yyyy-MM-dd");
       const response = await fetch(
-        `/api/occupancy-report?from=${fromDate}&to=${toDate}`,
+        `/api/occupancy-report?fromDate=${fromDate}&toDate=${toDate}`,
       );
+
       if (!response.ok) throw new Error("Failed to fetch occupancy data");
       return response.json();
     },
@@ -105,8 +106,9 @@ export default function ReportsPage() {
       const fromDate = format(dateRange.from, "yyyy-MM-dd");
       const toDate = format(dateRange.to, "yyyy-MM-dd");
       const response = await fetch(
-        `/api/expense-report?from=${fromDate}&to=${toDate}`,
+        `/api/expense-report?fromDate=${fromDate}&toDate=${toDate}`,
       );
+
       if (!response.ok) throw new Error("Failed to fetch expense report");
       return response.json();
     },
@@ -123,7 +125,7 @@ export default function ReportsPage() {
       const fromDate = format(dateRange.from, "yyyy-MM-dd");
       const toDate = format(dateRange.to, "yyyy-MM-dd");
       const response = await fetch(
-        `/api/water-tanker-report?from=${fromDate}&to=${toDate}`,
+        `/api/water-tanker-report?fromDate=${fromDate}&toDate=${toDate}`,
       );
       if (!response.ok) throw new Error("Failed to fetch water tanker report");
       return response.json();
@@ -219,7 +221,8 @@ export default function ReportsPage() {
     switch (reportType) {
       case "occupancy":
         csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Flat Number,Tenant,Occupancy Status,Start Date,End Date\n";
+        csvContent +=
+          "Flat Number,Tenant,Occupancy Status,Start Date,End Date\n";
         if (occupancies) {
           occupancies.forEach((item: any) => {
             csvContent += `${item.flat_number},${item.tenant_name || ""},${
@@ -371,7 +374,8 @@ export default function ReportsPage() {
                         mode="single"
                         selected={dateRange.to}
                         onSelect={(date) =>
-                          date && setDateRange((prev) => ({ ...prev, to: date }))
+                          date &&
+                          setDateRange((prev) => ({ ...prev, to: date }))
                         }
                         initialFocus
                       />
@@ -391,7 +395,9 @@ export default function ReportsPage() {
                     <SelectItem value="occupancy">Occupancy Report</SelectItem>
                     <SelectItem value="income">Income Report</SelectItem>
                     <SelectItem value="expense">Expense Report</SelectItem>
-                    <SelectItem value="water-tanker">Water Tanker Report</SelectItem>
+                    <SelectItem value="water-tanker">
+                      Water Tanker Report
+                    </SelectItem>
                     <SelectItem value="summary">Financial Summary</SelectItem>
                   </SelectContent>
                 </Select>
@@ -465,29 +471,53 @@ export default function ReportsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead>Property</TableHead>
                             <TableHead>Flat Number</TableHead>
-                            <TableHead>Tenant</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Start Date</TableHead>
-                            <TableHead>End Date</TableHead>
+                            <TableHead>Owner</TableHead>
+                            <TableHead>Lease Status</TableHead>
+                            <TableHead>Rental Income</TableHead>
+                            <TableHead>Maintenance Fee</TableHead>
+                            <TableHead>Water Fee</TableHead>
+                            <TableHead>Tenants Count</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {occupancies.map((item: any, index: number) => (
+                          {occupancies.map((property: any, index: number) => (
                             <TableRow key={index}>
-                              <TableCell>{item.flat_number}</TableCell>
-                              <TableCell>{item.tenant_name || "-"}</TableCell>
-                              <TableCell>{item.status}</TableCell>
+                              <TableCell className="font-medium">
+                                {property.flatType} - Floor {property.apartmentFloor}
+                              </TableCell>
+                              <TableCell>{property.flatNumber}</TableCell>
+                              <TableCell>{property.ownerName}</TableCell>
                               <TableCell>
-                                {item.start_date
-                                  ? format(new Date(item.start_date), "dd/MM/yyyy")
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs ${
+                                    property.leaseStatus === "Rented"
+                                      ? "bg-green-100 text-green-800"
+                                      : property.leaseStatus === "Vacant"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
+                                  {property.leaseStatus}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {property.totalRentIncome > 0
+                                  ? formatCurrency(property.totalRentIncome)
                                   : "-"}
                               </TableCell>
                               <TableCell>
-                                {item.end_date
-                                  ? format(new Date(item.end_date), "dd/MM/yyyy")
+                                {property.totalMaintenanceFees > 0
+                                  ? formatCurrency(property.totalMaintenanceFees)
                                   : "-"}
                               </TableCell>
+                              <TableCell>
+                                {property.totalWaterFees > 0
+                                  ? formatCurrency(property.totalWaterFees)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell>{property.tenantsCount}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -591,8 +621,8 @@ export default function ReportsPage() {
                     <CardHeader>
                       <CardTitle>Expense Report</CardTitle>
                       <CardDescription>
-                        Expense breakdown (excluding Water Tanker) for the period{" "}
-                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                        Expense breakdown (excluding Water Tanker) for the
+                        period {format(dateRange.from, "MMM d, yyyy")} -{" "}
                         {format(dateRange.to, "MMM d, yyyy")}
                       </CardDescription>
                     </CardHeader>
@@ -604,7 +634,8 @@ export default function ReportsPage() {
                             Loading expense data...
                           </p>
                         </div>
-                      ) : !expenseReportData || expenseReportData.length === 0 ? (
+                      ) : !expenseReportData ||
+                        expenseReportData.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
                           No expense data found for the selected date range
                         </div>
@@ -615,7 +646,9 @@ export default function ReportsPage() {
                               <TableHead>Date</TableHead>
                               <TableHead>Category</TableHead>
                               <TableHead>Description</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
+                              <TableHead className="text-right">
+                                Amount
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -684,7 +717,8 @@ export default function ReportsPage() {
                             Loading water tanker data...
                           </p>
                         </div>
-                      ) : !waterTankerReportData || waterTankerReportData.length === 0 ? (
+                      ) : !waterTankerReportData ||
+                        waterTankerReportData.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
                           No water tanker data found for the selected date range
                         </div>
@@ -708,9 +742,13 @@ export default function ReportsPage() {
                                 <TableCell className="text-right">
                                   {formatCurrency(record.amount)}
                                 </TableCell>
-                                <TableCell>{record.description || '-'}</TableCell>
-                                <TableCell>{record.tanker_number || '-'}</TableCell>
-                                <TableCell>{record.liters || '-'}</TableCell>
+                                <TableCell>
+                                  {record.description || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  {record.tanker_number || "-"}
+                                </TableCell>
+                                <TableCell>{record.liters || "-"}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
